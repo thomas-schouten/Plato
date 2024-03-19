@@ -4,14 +4,13 @@
 # Thomas Schouten and Edward Clennett, 2023
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Import packages
+# Import libraries
+# Standard libraries
 import numpy as _numpy
 import pandas as _pandas
-import xarray as _xarray
+import pygplates
 from scipy.optimize import newton
-import matplotlib.pyplot as plt
-from gplately import pygplates
-from scipy.spatial import cKDTree
+import xarray as _xarray
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # MECHANICAL PARAMETERS AND CONSTANTS
@@ -83,7 +82,7 @@ constants = set_constants()
 # SUBDUCTION ZONES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def slab_pull_force(slabs, options, mech, constants):
+def compute_slab_pull_force(slabs, options, mech):
     """
     Function to optimise slab pull force at subduction zones
 
@@ -117,7 +116,7 @@ def slab_pull_force(slabs, options, mech, constants):
 
     return slabs
 
-def interface_shear_force(slabs, options, mech, constants):
+def compute_interface_shear_force(slabs, options, mech, constants):
     """
     Function to calculate interface shear force at subduction zones
 
@@ -159,7 +158,7 @@ def interface_shear_force(slabs, options, mech, constants):
 
     return slabs
 
-def slab_bending_force(slabs, options, mech, constants):
+def compute_slab_bending_force(slabs, options, mech, constants):
     """
     Function to calculate the slab bending force
 
@@ -353,7 +352,7 @@ def conrad_hager(v_plate, interface_viscosity, slab_pull, lf, denominator, shear
 # GRAVITATIONAL POTENTIAL ENERGY
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def GPE_force(points, seafloor, options, mech, age_variable="seafloor_age"):
+def compute_GPE_force(points, seafloor, options, mech, age_variable="seafloor_age"):
     """
     Function to calculate GPE force at points
 
@@ -394,7 +393,7 @@ def GPE_force(points, seafloor, options, mech, age_variable="seafloor_age"):
     minus_dy_lon = _numpy.where(minus_dy_lon > 180, minus_dy_lon - 360, minus_dy_lon)
 
     # Sample ages and compute crustal thicknesses at points
-    points["lithospheric_mantle_thickness"], points["crustal_thickness"], points["water_depth"] = calculate_thicknesses(
+    points["lithospheric_mantle_thickness"], points["crustal_thickness"], points["water_depth"] = compute_thicknesses(
                 points["seafloor_age"],
                 options
     )
@@ -429,7 +428,7 @@ def GPE_force(points, seafloor, options, mech, age_variable="seafloor_age"):
             sampling_lat = minus_dy_lat; sampling_lon = minus_dy_lon
 
         ages[i] = sample_ages(sampling_lat, sampling_lon, seafloor[age_variable])
-        lithospheric_mantle_thickness, crustal_thickness, water_depth = calculate_thicknesses(
+        lithospheric_mantle_thickness, crustal_thickness, water_depth = compute_thicknesses(
                     ages[i],
                     options
         )
@@ -493,7 +492,7 @@ def sample_ages(lat, lon, seafloor, coords=["latitude", "longitude"]):
 # BASAL TRACTIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def mantle_drag_force(torques, points, slabs, options, mech, constants):
+def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
     """
     Function to calculate mantle drag force at points
 
@@ -625,7 +624,7 @@ def mantle_drag_force(torques, points, slabs, options, mech, constants):
 # GENERAL FUNCTIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def calculate_thicknesses(ages, options, crust=True, water=True):
+def compute_thicknesses(ages, options, crust=True, water=True):
     """
     Calculate lithospheric mantle thickness, crustal thickness, and water depth based on seafloor age profiles.
 
@@ -696,7 +695,7 @@ def calculate_thicknesses(ages, options, crust=True, water=True):
 
     return lithospheric_mantle_thickness, crustal_thickness, water_depth
 
-def torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, segment_length_lat, segment_length_lon, constants, torque_variable="torque"):
+def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, segment_length_lat, segment_length_lon, constants, torque_variable="torque"):
     """
     Calculate and update torque information on plates based on latitudinal, longitudinal forces, and segment dimensions.
 

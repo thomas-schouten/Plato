@@ -330,9 +330,9 @@ class PlateForces():
                 if self.options[key]["Slab pull torque"]:
                     these_slabs = self.slabs[reconstruction_time][key]
                     these_plates = self.plates[reconstruction_time][key]
-                    these_slabs = functions_main.slab_pull_force(these_slabs, self.options[key], self.mech, self.constants)
+                    these_slabs = functions_main.compute_slab_pull_force(these_slabs, self.options[key], self.mech, self.constants)
 
-                    these_plates = functions_main.torque_on_plates(
+                    these_plates = functions_main.compute_torque_on_plates(
                         these_plates, 
                         these_slabs.lat, 
                         these_slabs.lon, 
@@ -374,8 +374,8 @@ class PlateForces():
                     self.seafloor.load()
                     this_seafloor = self.seafloor.sel(age=reconstruction_time, method="nearest").drop("age")
                     self.seafloor.close()
-                    these_points = functions_main.GPE_force(these_points, this_seafloor, self.options[key], self.mech)
-                    these_plates = functions_main.torque_on_plates(
+                    these_points = functions_main.compute_GPE_force(these_points, this_seafloor, self.options[key], self.mech)
+                    these_plates = functions_main.compute_torque_on_plates(
                         these_plates, 
                         these_points.lat, 
                         these_points.lon, 
@@ -416,8 +416,8 @@ class PlateForces():
                 if self.options[key]["Interface shear torque"]:
                     these_slabs = self.slabs[reconstruction_time][key]
                     these_plates = self.plates[reconstruction_time][key]
-                    these_slabs = functions_main.interface_shear_force(these_slabs, self.options[key], self.mech, self.constants)
-                    these_plates = functions_main.torque_on_plates(
+                    these_slabs = functions_main.compute_interface_shear_force(these_slabs, self.options[key], self.mech, self.constants)
+                    these_plates = functions_main.compute_torque_on_plates(
                         these_plates, 
                         these_slabs.lat, 
                         these_slabs.lon, 
@@ -454,8 +454,8 @@ class PlateForces():
                 if self.options[key]["Slab bend torque"]:
                     these_slabs = self.slabs[reconstruction_time][key].copy()
                     these_plates = self.plates[reconstruction_time][key].copy()
-                    these_slabs = functions_main.slab_bend_force(these_slabs, self.options[key], self.mech, self.constants)
-                    these_plates = functions_main.torque_on_plates(
+                    these_slabs = functions_main.compute_slab_bend_force(these_slabs, self.options[key], self.mech, self.constants)
+                    these_plates = functions_main.compute_torque_on_plates(
                         these_plates, 
                         these_slabs.lat, 
                         these_slabs.lon, 
@@ -497,10 +497,10 @@ class PlateForces():
                         these_plates = self.plates[reconstruction_time][key].copy()
 
                         # Calculate mantle drag force
-                        these_plates, these_points, these_slabs = functions_main.mantle_drag_force(these_plates, these_points, these_slabs, self.options[key], self.mech, self.constants)
+                        these_plates, these_points, these_slabs = functions_main.compute_mantle_drag_force(these_plates, these_points, these_slabs, self.options[key], self.mech, self.constants)
                         
                         # Calculate mantle drag torque
-                        these_plates = functions_main.torque_on_plates(
+                        these_plates = functions_main.compute_torque_on_plates(
                             these_plates, 
                             these_points.lat, 
                             these_points.lon, 
@@ -561,12 +561,12 @@ class PlateForces():
                             print(_numpy.mean(old_slabs["v_convergence_mag"].values))
                             # Compute interface shear force
                             if self.options[case]["Interface shear torque"]:
-                                new_slabs = functions_main.interface_shear_force(old_slabs, self.options[case], self.mech, self.constants)
+                                new_slabs = functions_main.compute_interface_shear_force(old_slabs, self.options[case], self.mech, self.constants)
                             else:
                                 new_slabs = old_slabs.copy()
 
                             # Compute interface shear torque
-                            new_plates = functions_main.torque_on_plates(
+                            new_plates = functions_main.compute_torque_on_plates(
                                 old_plates,
                                 new_slabs.lat,
                                 new_slabs.lon,
@@ -580,10 +580,10 @@ class PlateForces():
                             )
 
                             # Compute mantle drag force
-                            new_plates, new_points, new_slabs = functions_main.mantle_drag_force(old_plates, old_points, new_slabs, self.options[case], self.mech, self.constants)
+                            new_plates, new_points, new_slabs = functions_main.compute_mantle_drag_force(old_plates, old_points, new_slabs, self.options[case], self.mech, self.constants)
 
                             # Compute mantle drag torque
-                            new_plates = functions_main.torque_on_plates(
+                            new_plates = functions_main.compute_torque_on_plates(
                                 new_plates, 
                                 new_points.lat, 
                                 new_points.lon, 
@@ -627,7 +627,17 @@ class PlateForces():
 # OPTIMISATION 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def minimise_residual_torque(self, opt_time, opt_case, plates_of_interest=None, grid_size=500, visc_range=[1e19, 5e20], plot=True, weight_by_area=True, minimum_plate_area=0):
+    def minimise_residual_torque(
+            self,
+            opt_time,
+            opt_case,
+            plates_of_interest=None,
+            grid_size=500,
+            visc_range=[1e19, 5e20],
+            plot=True,
+            weight_by_area=True,
+            minimum_plate_area=0
+        ):
         """
         Function to find optimised coefficients to match plate motions using a grid search
 
@@ -643,12 +653,13 @@ class PlateForces():
         :type plot:                     boolean
         :param weight_by_area:          whether or not to weight the residual torque by plate area
         :type weight_by_area:           boolean
+
+        :return:                        None
         """
-        # Generate grid
+        # Generate grid of viscosities and slab pull coefficients
         viscs = _numpy.linspace(visc_range[0],visc_range[1],grid_size)
         sp_consts = _numpy.linspace(1e-4,1,grid_size)
-        visc_grid = _numpy.repeat(viscs[_numpy.newaxis, :], grid_size, axis=0)
-        sp_const_grid = _numpy.repeat(sp_consts[:, _numpy.newaxis], grid_size, axis=1)
+        visc_grid, sp_const_grid = _numpy.meshgrid(viscs, sp_consts)
         ones_grid = _numpy.ones_like(visc_grid)
 
         # Filter plates
@@ -755,7 +766,8 @@ class PlateForces():
             ax.scatter(self.opt_j[opt_time][opt_case], self.opt_i[opt_time][opt_case], marker="*", facecolor="none", edgecolor="k", s=30)  # Adjust the marker style and size as needed
             fig.colorbar(im, label = "Log(residual torque/driving torque)")
             plt.show()
-        
+
+        # Print results
         print(f"Optimal coefficients for ", ", ".join(selected_plates.name.astype(str)), " plate(s), (PlateIDs: ", ", ".join(selected_plates.plateID.astype(str)), ")")
         print("Minimum residual torque: {:.2%} of driving torque".format(10**(_numpy.amin(self.residual_torque_normalised[opt_time][opt_case]))))
         print("Optimum viscosity [Pa s]: {:.2e}".format(self.opt_visc[opt_time][opt_case]))
