@@ -5,26 +5,25 @@
 # Thomas Schouten and Edward Clennett, 2023
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Import packages
+# Import libraries
+# Standard libraries
+import os
+import multiprocessing
+from typing import List, Optional
+import itertools
+from copy import deepcopy
+
+# Third-party libraries
 import numpy as _numpy
-import pandas as pd
-import xarray as xr
-from scipy.optimize import newton
 import matplotlib.pyplot as plt
 import gplately
 from gplately import pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
-import multiprocessing
-import os
-from typing import List, Optional
-import itertools
-from copy import deepcopy
 
-import preprocessing
+# Local libraries
 import setup
 import functions_main
-import plotting
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATE FORCES OBJECT

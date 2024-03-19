@@ -5,59 +5,61 @@
 # Thomas Schouten, 2023
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Import packages
-import numpy as _numpy
-import xarray as xr
-import pandas as pd
+# Import libraries
+# Standard libraries
 import os
-import gplately
-import warnings
-import math
-import gplately
-import pygplates
-from shapely.geometry import Point
-import geopandas as gpd
-from collections import defaultdict
 import sys
+import math
+import tempfile
+import shutil
+from collections import defaultdict
 from typing import Optional
+from typing import Union
+
+# Third-party libraries
+import numpy as _numpy
+import xarray as _xarray
+import pandas as _pandas
+import gplately as _gplately
+import pygplates as _pygplates
+from shapely.geometry import Point
+import geopandas as _geopandas
+import matplotlib.pyplot as plt
+
+# Local libraries
 from functions_main import set_constants
 from functions_main import mag_azi2lat_lon
 from functions_main import project_points
-import tempfile
-import shutil
-from copy import deepcopy
-import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALISATION 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def get_plates(
-        rotations,
+        rotations: _pygplates.RotationModel,
         reconstruction_time: int,
-        resolved_topologies, 
+        resolved_topologies: list, 
         options: dict,
     ):
-
     """
-    Function to get data on plates in reconstruction
+    Function to get data on plates in reconstruction.
 
     :param rotations:             rotation model
-    :type rotations:              pygplates.RotationModel object
+    :type rotations:              _pygplates.RotationModel object
     :param reconstruction_time:   reconstruction time
     :type reconstruction_time:    integer
     :param resolved_topologies:   resolved topologies
     :type resolved_topologies:    list of resolved topologies
-    :param options:               options
+    :param options:               options for the case
     :type options:                dict
 
     :return:                      plates
-    :rtype:                       pd.DataFrame
+    :rtype:                       pandas.DataFrame
     """
     # Set constants
     constants = set_constants()
 
-    # Make pd.df with all plates
+    # Make _pandas.df with all plates
     # Initialise list
     plates = _numpy.zeros([len(resolved_topologies),10])
     
@@ -96,7 +98,7 @@ def get_plates(
         plates[n,9] = centroid_velocity[2]
 
     # Convert to DataFrame    
-    plates = pd.DataFrame(plates)
+    plates = _pandas.DataFrame(plates)
 
     # Initialise columns
     plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "v_absolute_lon", "v_absolute_lat", "v_absolute_mag"]
@@ -120,24 +122,28 @@ def get_plates(
     return plates
 
 def get_slabs(
-        reconstruction,
+        reconstruction: _gplately.PlateReconstruction,
         reconstruction_time: int,
-        plates,
-        topology_geometries,
-        options
+        plates: _pandas.DataFrame,
+        topology_geometries: _geopandas.GeoDataFrame,
+        options: dict,
     ):
     """
-    Function to get data on points in reconstruction
+    Function to get data on slabs in reconstruction.
 
     :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
+    :type reconstruction:         _gplately.PlateReconstruction
     :param reconstruction_time:   reconstruction time
     :type reconstruction_time:    integer
-    :param tesselation_spacing:   tesselation spacing
-    :type tesselation_spacing:    int or float
+    :param plates:                plates
+    :type plates:                 pandas.DataFrame
+    :param topology_geometries:   topology geometries
+    :type topology_geometries:    geopandas.GeoDataFrame
+    :param options:               options for the case
+    :type options:                dict
     
     :return:                      slabs
-    :rtype:                       pd.DataFrame
+    :rtype:                       pandas.DataFrame
     """
     # Set constants
     constants = set_constants()
@@ -145,8 +151,8 @@ def get_slabs(
     # Tesselate subduction zones and get slab pull and bend torques along subduction zones
     slabs = reconstruction.tessellate_subduction_zones(reconstruction_time, ignore_warnings=True, tessellation_threshold_radians=(options["Slab tesselation spacing"]/constants.mean_Earth_radius_km))
 
-    # Convert to pd.DataFrame
-    slabs = pd.DataFrame(slabs)
+    # Convert to _pandas.DataFrame
+    slabs = _pandas.DataFrame(slabs)
 
     # Kick unused columns
     slabs = slabs.drop(columns=[2, 3, 4, 5])
@@ -214,24 +220,28 @@ def get_slabs(
     return slabs
 
 def get_points(
-        reconstruction,
+        reconstruction: _gplately.PlateReconstruction,
         reconstruction_time: int,
-        plates,
-        topology_geometries,
-        options,
+        plates: _pandas.DataFrame,
+        topology_geometries: _geopandas.GeoDataFrame,
+        options: dict,
     ):
     """
-    Function to get data on points in reconstruction
+    Function to get data on regularly spaced grid points in reconstruction.
 
     :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
+    :type reconstruction:         _gplately.PlateReconstruction
     :param reconstruction_time:   reconstruction time
     :type reconstruction_time:    integer
-    :param grid_spacing:          grid spacing
-    :type grid_spacing:           float or int
+    :param plates:                plates
+    :type plates:                 pandas.DataFrame
+    :param topology_geometries:   topology geometries
+    :type topology_geometries:    geopandas.GeoDataFrame
+    :param options:               options for the case
+    :type options:                dict
 
     :return:                      points
-    :rtype:                       pd.DataFrame    
+    :rtype:                       pandas.DataFrame    
     """
     # Set constants
     constants = set_constants()
@@ -284,7 +294,7 @@ def get_points(
     segment_length_lon = constants.mean_Earth_radius_m * (_numpy.pi/180) * _numpy.cos(_numpy.deg2rad(lat_grid)) * options["Grid spacing"]
 
     # Organise as DataFrame
-    points = pd.DataFrame({"lat": lat_grid, 
+    points = _pandas.DataFrame({"lat": lat_grid, 
                            "lon": lon_grid, 
                            "plateID": plateIDs, 
                            "segment_length_lat": segment_length_lat,
@@ -302,29 +312,26 @@ def get_points(
     
     return points
 
-# def get_torques(
-#         reconstruction_times: list or _numpy.array,
-#         plates: dict
-#     ):
-#     plate_ids
-#     for items in plates:
-
 def get_plateIDs(
-        reconstruction,
-        topology_geometries,
-        lats,
-        lons,
+        reconstruction: _gplately.PlateReconstruction,
+        topology_geometries: _geopandas.GeoDataFrame,
+        lats: Union[list or _numpy.array],
+        lons: Union[list or _numpy.array],
         reconstruction_time: int,
     ):
     """
-    Function to get plate IDs for a set of latitudes and longitudes
-    
-    :param reconstructed_geometries:   reconstructed geometries
-    :type reconstructed_geometries:    list of reconstructed geometries
-    :param lat:                        latitudes
-    :type lat:                         list or _numpy.array
-    :param lon:                        longitudes
-    :type lon:                         list or _numpy.array
+    Function to get plate IDs for a set of latitudes and longitudes.
+
+    :param reconstruction:             reconstruction
+    :type reconstruction:              _gplately.PlateReconstruction
+    :param topology_geometries:        topology geometries
+    :type topology_geometries:         geopandas.GeoDataFrame
+    :param lats:                       latitudes
+    :type lats:                        list or _numpy.array
+    :param lons:                       longitudes
+    :type lons:                        list or _numpy.array
+    :param reconstruction_time:        reconstruction time
+    :type reconstruction_time:         integer
 
     :return:                           plateIDs
     :rtype:                            list
@@ -334,7 +341,7 @@ def get_plateIDs(
     lons = _numpy.array(lons)
 
     # Create a GeoDataFrame with grid
-    grid = gpd.GeoDataFrame({"geometry": [Point(lon, lat) for lon, lat in zip(lons, lats)]})
+    grid = _geopandas.GeoDataFrame({"geometry": [Point(lon, lat) for lon, lat in zip(lons, lats)]})
 
     # Initialise empty array to store plateIDs
     plateIDs = _numpy.zeros(len(lons))
@@ -351,8 +358,8 @@ def get_plateIDs(
         no_plateID_lat = lats[no_plateID]
         no_plateID_lon = lons[no_plateID]
 
-        # Use pygplates to fill in remaining plate IDs
-        no_plateID_grid = gplately.Points(reconstruction, no_plateID_lon, no_plateID_lat, time=reconstruction_time)
+        # Use _pygplates to fill in remaining plate IDs
+        no_plateID_grid = _gplately.Points(reconstruction, no_plateID_lon, no_plateID_lat, time=reconstruction_time)
 
         # Insert plate IDs into array
         plateIDs[no_plateID] = no_plateID_grid.plate_id
@@ -360,26 +367,22 @@ def get_plateIDs(
     return plateIDs
 
 def get_velocities(
-        lats,
-        lons,
-        stage_rotation,
+        lats: Union[list or _numpy.array],
+        lons: Union[list or _numpy.array],
+        stage_rotation: tuple,
     ):
     """
     Function to get velocities for a set of latitudes and longitudes.
 
-    :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
-    :param plateIDs:              plate IDs
-    :type plateIDs:               list or _numpy.array
-    :param lat:                   latitudes
-    :type lat:                    list or _numpy.array
-    :param lon:                   longitudes
-    :type lon:                    list or _numpy.array
-    :param reconstruction_time:   reconstruction time
-    :type reconstruction_time:    integer
+    :param lats:                     latitudes
+    :type lats:                      list or numpy.array
+    :param lons:                     longitudes
+    :type lons:                      list or numpy.array
+    :param stage_rotation:           stage rotation defined by pole latitude, pole longitude and pole angle
+    :type stage_rotation:            tuple
 
-    :return:                      velocities
-    :rtype:                       list
+    :return:                         velocities_lat, velocities_lon, velocities_mag, velocities_azi
+    :rtype:                          numpy.array, numpy.array, numpy.array, numpy.array
     """
     # Convert lats and lons to numpy arrays if they are not already
     lats = _numpy.array(lats)
@@ -394,17 +397,17 @@ def get_velocities(
     # Loop through points to get velocities
     for i, _ in enumerate(lats):
         # Convert to LocalCartesian
-        point = pygplates.PointOnSphere((lats[i], lons[i]))
+        point = _pygplates.PointOnSphere((lats[i], lons[i]))
 
         # Calculate magnitude and azimuth of velocities at points
         velocity_mag_azi = _numpy.asarray(
-            pygplates.LocalCartesian.convert_from_geocentric_to_magnitude_azimuth_inclination(
+            _pygplates.LocalCartesian.convert_from_geocentric_to_magnitude_azimuth_inclination(
                 point,
-                pygplates.calculate_velocities(
+                _pygplates.calculate_velocities(
                     point, 
-                    pygplates.FiniteRotation((stage_rotation[0], stage_rotation[1]), _numpy.deg2rad(stage_rotation[2])), 
+                    _pygplates.FiniteRotation((stage_rotation[0], stage_rotation[1]), _numpy.deg2rad(stage_rotation[2])), 
                     1.,
-                    velocity_units = pygplates.VelocityUnits.cms_per_yr
+                    velocity_units = _pygplates.VelocityUnits.cms_per_yr
                 )
             )
         )
@@ -426,23 +429,23 @@ def get_topology_geometries(
     Function to resolve topologies and get geometries as a GeoDataFrame
 
     :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
+    :type reconstruction:         _gplately.PlateReconstruction
     :param reconstruction_time:   reconstruction time
     :type reconstruction_time:    integer
     :param anchor_plateID:        anchor plate ID
     :type anchor_plateID:         integer
 
     :return:                      resolved_topologies
-    :rtype:                       gpd.GeoDataFrame
+    :rtype:                       _geopandas.GeoDataFrame
     """
     # Make temporary directory to hold shapefiles
     temp_dir = tempfile.mkdtemp()
 
     # Resolve topological networks and load as GeopandasDataFrame
     topology_file = os.path.join(temp_dir, "topologies.shp")
-    pygplates.resolve_topologies(reconstruction.topology_features, reconstruction.rotation_model, topology_file, reconstruction_time, anchor_plate_id = anchor_plateID)
+    _pygplates.resolve_topologies(reconstruction.topology_features, reconstruction.rotation_model, topology_file, reconstruction_time, anchor_plate_id = anchor_plateID)
     if os.path.exists(topology_file):
-        topology_geometries = gpd.read_file(topology_file)
+        topology_geometries = _geopandas.read_file(topology_file)
 
     # Remove temporary directory
     shutil.rmtree(temp_dir)
@@ -450,13 +453,13 @@ def get_topology_geometries(
     return topology_geometries
 
 def get_plate_names(
-        plate_id_list
+        plate_id_list: Union[list or _numpy.array],
     ):
     """
     Function to get plate names corresponding to plate ids
 
     :param plate_id_list:        list of plate ids
-    :type plate_id_list:         list or _numpy.array
+    :type plate_id_list:         list or numpy.array
 
     :return:                     plate_names
     :rtype:                      list
@@ -517,7 +520,7 @@ def get_options(
     :rtype:                      list, dict
     """
     # Read file
-    case_options = pd.read_excel(file_name, sheet_name=sheet_name, comment="#")
+    case_options = _pandas.read_excel(file_name, sheet_name=sheet_name, comment="#")
 
     # Initialise list of cases
     cases = []
@@ -525,6 +528,7 @@ def get_options(
     # Initialise options dictionary
     options = {}
 
+    # Define all options
     all_options = ["Slab pull torque",
                    "GPE torque",
                    "Mantle drag torque",
@@ -551,6 +555,7 @@ def get_options(
                    "Velocity time step"
                    ]
     
+    # Define default values
     default_values = [True,
                       True,
                       True,
@@ -578,7 +583,14 @@ def get_options(
                       ]
 
     # Adjust TRUE/FALSE values in excel file to boolean
-    boolean_options = ["Slab pull torque", "GPE torque", "Mantle drag torque", "Slab bend torque", "Reconstructed motions", "Continental crust", "Randomise trench orientation", "Randomise slab age"]
+    boolean_options = ["Slab pull torque",
+                       "GPE torque",
+                       "Mantle drag torque",
+                       "Slab bend torque",
+                       "Reconstructed motions",
+                       "Continental crust",
+                       "Randomise trench orientation",
+                       "Randomise slab age"]
 
     # Loop over rows to obtain options from excel file
     for _, row in case_options.iterrows():
@@ -606,12 +618,12 @@ def get_seafloor_grid(
         output_dir: Optional[str] = None,
     ):
     """
-    Function to obtain seafloor grid from gplately or local directory
+    Function to obtain seafloor grid from GPlately DataServer or local directory
 
     :param reconstruction_name:    name of reconstruction
     :type reconstruction_name:     string
     :param reconstruction_times:   reconstruction times
-    :type reconstruction_times:    list or _numpy.array
+    :type reconstruction_times:    list or numpy.array
     :param age_grid_file:          filepath to age grid, if available
     :type age_grid_file:           string
     :param grid_files:             filepath to sediment grids, if available
@@ -622,21 +634,21 @@ def get_seafloor_grid(
     :type output_dir:              string
 
     :return:                       seafloor_grids
-    :rtype:                        xr.Dataset
+    :rtype:                        xarray.Dataset
     """
     # Get age grids
     age_grids = {}
 
     # Download age grid if unavailable
     if not age_grid_file:
-        # Check if the reconstruction is supported by gplately
+        # Check if the reconstruction is supported by _gplately
         supported_models = ["Seton2012", "Muller2016", "Muller2019", "Torsvik2019", "Clennet2020"]
         if reconstruction_name not in supported_models:
             print(f"Plate topology for the {reconstruction_name} reconstruction not available. Exiting now")
             sys.exit()
 
-        # Call GPlately"s DataServer from the download.py module
-        gdownload = gplately.download.DataServer(reconstruction_name)
+        # Call _gplately"s DataServer from the download.py module
+        gdownload = _gplately.download.DataServer(reconstruction_name)
 
         # Make temporary directory to store files
         temp_dir = tempfile.mkdtemp()
@@ -653,8 +665,8 @@ def get_seafloor_grid(
             temp_file_path = os.path.join(temp_dir, "temp_file.nc")
             age_grid_temp.save_to_netcdf4(temp_file_path)
 
-            # Load the temporary file as an xr.dataset
-            age_grids[reconstruction_time] = xr.open_dataset(temp_file_path)
+            # Load the temporary file as an _xarray.dataset
+            age_grids[reconstruction_time] = _xarray.open_dataset(temp_file_path)
 
             # Step 4: Delete the temporary file and directory
             os.remove(temp_file_path)
@@ -664,16 +676,16 @@ def get_seafloor_grid(
     # Load age grid if available
     elif age_grid_file:
         for reconstruction_time in reconstruction_times:
-            age_grids[reconstruction_time] = xr.open_dataset(age_grid_file)
+            age_grids[reconstruction_time] = _xarray.open_dataset(age_grid_file)
 
-    # Initialise xr.DataSet
+    # Initialise _xarray.DataSet
     # Create coordinate arrays
     coords = {
         "latitude": age_grids[reconstruction_times[0]].lat.values,
         "longitude": age_grids[reconstruction_times[0]].lon.values,
         "age": reconstruction_times,
     }
-    seafloor_grids = xr.Dataset(coords=coords)
+    seafloor_grids = _xarray.Dataset(coords=coords)
 
     empty_data = _numpy.repeat(_numpy.zeros_like(age_grids[reconstruction_times[0]].z.values)[:, :, _numpy.newaxis], len(reconstruction_times), axis=2)
 
@@ -681,7 +693,7 @@ def get_seafloor_grid(
     for reconstruction_time in reconstruction_times:
         seafloor_grids["seafloor_age"].loc[dict(age=reconstruction_time)] = age_grids[reconstruction_time].z.values
 
-    # Load other grids and add to the xr.DataSet
+    # Load other grids and add to the _xarray.DataSet
     if grid_files and variable_names:
         for grid_file, variable_name in zip(grid_files, variable_names):
             # Initialise variable in seafloor grid file
@@ -689,7 +701,7 @@ def get_seafloor_grid(
 
             # Loop through times to load, interpolate and store variables in seafloor grid
             for reconstruction_time in reconstruction_times:
-                grid = xr.open_dataset(grid_file)
+                grid = _xarray.open_dataset(grid_file)
                 grid = grid.interp_like(age_grids[reconstruction_times[0]])
                 seafloor_grids[variable_name].loc[dict(age=reconstruction_time)] = grid.z.values
     
@@ -701,7 +713,8 @@ def get_seafloor_grid(
 
 def process_cases(cases, options, target_options):
     """
-    Function to process cases and options to accelerate computation
+    Function to process cases and options to accelerate computation. Each case is assigned a dictionary of identical cases for a given set of target options.
+    The goal here is that if these target options are identical, the computation is only peformed once and the results are copied to the other cases.
 
     :param cases:           cases
     :type cases:            list
@@ -713,21 +726,29 @@ def process_cases(cases, options, target_options):
     :return:                case_dict
     :rtype:                 dict
     """
+    # Initialise dictionary to store processed cases
     processed_cases = set()
     case_dict = {}
 
+    # Loop through cases to process
     for case in cases:
+        # Ignore processed cases
         if case in processed_cases:
             continue
-
+        
+        # Initialise list to store similar cases
         case_dict[case] = [case]
 
+        # Add case to processed cases
         processed_cases.add(case)
 
+        # Loop through other cases to find similar cases
         for other_case in cases:
+            # Ignore if it is the same case
             if case == other_case:
                 continue
-
+            
+            # Add case to processed cases if it is similar
             if all(options[case][opt] == options[other_case][opt] for opt in target_options):
                 case_dict[case].append(other_case)
                 processed_cases.add(other_case)
@@ -743,7 +764,7 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     Function to save DataFrame to a folder
 
     :param data:                  data
-    :type data:                   pd.DataFrame
+    :type data:                   _pandas.DataFrame
     :param data_name:             name of dataset
     :type data_name:              string
     :param reconstruction_name:   name of reconstruction
@@ -775,7 +796,7 @@ def DataSet_to_netCDF(data, data_name, reconstruction_name, times, folder):
     Function to save Xarray Dataset to a folder
 
     :param data:                  data
-    :type data:                   xr.Dataset
+    :type data:                   _xarray.Dataset
     :param data_name:             name of dataset
     :type data_name:              string
     :param reconstruction_name:   name of reconstruction
@@ -833,7 +854,7 @@ def load_data(
     :param data:                  data
     :type data:                   dict
     :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
+    :type reconstruction:         _gplately.PlateReconstruction
     :param reconstruction_name:   name of reconstruction
     :type reconstruction_name:    string
     :param reconstruction_times:  reconstruction times
@@ -909,7 +930,7 @@ def DataFrame_from_csv(folder, type, reconstruction_name, case, reconstruction_t
     :type reconstruction_time:   integer
     
     :return:                     data
-    :rtype:                      pd.DataFrame
+    :rtype:                      _pandas.DataFrame
     """
     # Get target folder
     if folder:
@@ -920,7 +941,7 @@ def DataFrame_from_csv(folder, type, reconstruction_name, case, reconstruction_t
     # Check if target file exists
     if os.path.exists(target_file):
         # Load data
-        data = pd.read_csv(os.path.join(target_file))
+        data = _pandas.read_csv(os.path.join(target_file))
 
         return data
     else:
@@ -940,7 +961,7 @@ def Dataset_from_netCDF(folder, reconstruction_times, reconstruction_name, data_
     :type data_name:             string
 
     :return:                     data
-    :rtype:                      xr.Dataset
+    :rtype:                      _xarray.Dataset
     """
     # Get target folder
     if folder:
@@ -951,7 +972,7 @@ def Dataset_from_netCDF(folder, reconstruction_times, reconstruction_name, data_
     # Check if target folder exists
     if os.path.exists(target_file):
         # Load data
-        data = xr.open_dataset(os.path.join(target_file))
+        data = _xarray.open_dataset(os.path.join(target_file))
 
         return data
     else:
