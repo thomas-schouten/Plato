@@ -89,12 +89,6 @@ class PlateForces():
         # Set mechanical parameters and constants
         self.mech = functions_main.set_mech_params()
         self.constants = functions_main.set_constants()
-        
-        # Load or initialise seafloor ages and sediment grid
-        if files_dir:
-            self.seafloor = setup.Dataset_from_netCDF(files_dir, self.times, self.name, "Seafloor")
-            if not self.seafloor:
-                self.seafloor = setup.get_seafloor_grid(self.name,self.times)
 
         # Subdivide cases to accelerate computation
         # For loading
@@ -121,6 +115,7 @@ class PlateForces():
         self.plates = {}
         self.slabs = {}
         self.points = {}
+        self.seafloor = {}
 
         # Load or initialise plates
         self.plates = setup.load_data(
@@ -167,8 +162,18 @@ class PlateForces():
             resolved_geometries = self.resolved_geometries
         )
 
-        # # Load or initialise torques
-        # self.torques = 
+        # Load or initialise seafloor
+        self.seafloor = setup.load_data(
+            self.seafloor,
+            self.reconstruction,
+            self.name,
+            self.times,
+            "Seafloor",
+            self.cases,
+            self.options,
+            self.point_cases,
+            files_dir,
+        )
 
         # Set sampling flags to False:
         self.sampled_points = False
@@ -202,9 +207,7 @@ class PlateForces():
             # Select cases
             for key, entries in self.slab_pull_cases.items():
                 # Select dictionaries
-                self.seafloor.load()
-                this_seafloor = self.seafloor.sel(age=reconstruction_time, method="nearest").drop("age")
-                self.seafloor.close()
+                this_seafloor = self.seafloor[reconstruction_time][key]
 
                 if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
                     # Sample age and sediment thickness of lower plate from seafloor
@@ -220,7 +223,7 @@ class PlateForces():
                     )
 
                     # Calculate lower plate thickness
-                    self.slabs[reconstruction_time][key]["lower_plate_thickness"], crust_thickness, water_depth = functions_main.calculate_thicknesses(
+                    self.slabs[reconstruction_time][key]["lower_plate_thickness"], crust_thickness, water_depth = functions_main.compute_thicknesses(
                         self.slabs[reconstruction_time][key].lower_plate_age,
                         self.options[key],
                         crust = False, 
@@ -247,9 +250,7 @@ class PlateForces():
             # Select cases
             for key, entries in self.slab_pull_cases.items():
                 # Select dictionaries
-                self.seafloor.load()
-                this_seafloor = self.seafloor.sel(age=reconstruction_time, method="nearest").drop("age")
-                self.seafloor.close()
+                this_seafloor = self.seafloor[reconstruction_time][key]
 
                 # Sample age and arc type of upper plate from seafloor
                 self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"] = functions_main.sample_slabs_from_seafloor(
@@ -277,9 +278,7 @@ class PlateForces():
             print(f"Sampling points at {reconstruction_time} Ma")
             for key, entries in self.gpe_cases.items():
                 # Select dictionaries
-                self.seafloor.load()
-                this_seafloor = self.seafloor.sel(age=reconstruction_time, method="nearest").drop("age")
-                self.seafloor.close()
+                this_seafloor = self.seafloor[reconstruction_time][key]
                 
                 self.points[reconstruction_time][key]["seafloor_age"] = functions_main.sample_ages(self.points[reconstruction_time][key].lat, self.points[reconstruction_time][key].lon, this_seafloor["seafloor_age"])
                 for entry in entries[1:]:
@@ -330,7 +329,7 @@ class PlateForces():
                 if self.options[key]["Slab pull torque"]:
                     these_slabs = self.slabs[reconstruction_time][key]
                     these_plates = self.plates[reconstruction_time][key]
-                    these_slabs = functions_main.compute_slab_pull_force(these_slabs, self.options[key], self.mech, self.constants)
+                    these_slabs = functions_main.compute_slab_pull_force(these_slabs, self.options[key], self.mech)
 
                     these_plates = functions_main.compute_torque_on_plates(
                         these_plates, 
@@ -371,9 +370,7 @@ class PlateForces():
                     these_plates = self.plates[reconstruction_time][key]
                     
                     # Select dictionaries
-                    self.seafloor.load()
-                    this_seafloor = self.seafloor.sel(age=reconstruction_time, method="nearest").drop("age")
-                    self.seafloor.close()
+                    this_seafloor = self.seafloor[reconstruction_time][key]
                     these_points = functions_main.compute_GPE_force(these_points, this_seafloor, self.options[key], self.mech)
                     these_plates = functions_main.compute_torque_on_plates(
                         these_plates, 
@@ -597,8 +594,11 @@ class PlateForces():
                             )
 
                             # Calculate convergence rates
-                            v_convergence_lat = new_slabs["v_lower_plate_lat"].values - new_slabs["v_upper_plate_lat"].values
-                            v_convergence_lon = new_slabs["v_lower_plate_lon"].values - new_slabs["v_upper_plate_lon"].values
+                            v_convergence_lat = new_slabs["v_lower_plate_lat"].values; v_convergence_lon = new_slabs["v_lower_plate_lon"].values
+
+                            if not self.options[case]["Mantle stationary trenches"]:
+                                v_convergence_lat -= new_slabs["v_upper_plate_lat"].values; v_convergence_lon -= new_slabs["v_upper_plate_lon"].values
+
                             v_convergence_mag = _numpy.sqrt(v_convergence_lat**2 + v_convergence_lon**2)
 
                             # Check convergence rates
@@ -1303,8 +1303,7 @@ class PlateForces():
                 setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path)
                 setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path)
                 setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path)
-        
-        setup.DataSet_to_netCDF(self.seafloor, "Seafloor_grid", self.name, self.times, self.dir_path)
+                setup.DataSet_to_netCDF(self.seafloor[reconstruction_time][case], "Seafloor_grid", self.name, reconstruction_time, case, self.dir_path)
 
         print(f"All data saved to {self.dir_path}!")
 
