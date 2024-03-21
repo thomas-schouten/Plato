@@ -639,7 +639,7 @@ def get_seafloor_grid(
     :rtype:                        xarray.Dataset
     """
     # Check if the reconstruction is supported by _gplately
-    supported_models = ["Seton2012", "Muller2016", "Muller2019", "Torsvik2019", "Clennet2020"]
+    supported_models = ["Seton2012", "Muller2016", "Muller2019", "Clennet2020"]
     if reconstruction_name not in supported_models:
         print(f"Plate topology for the {reconstruction_name} reconstruction not available. Exiting now")
         sys.exit()
