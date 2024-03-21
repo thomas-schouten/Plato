@@ -421,7 +421,7 @@ def get_velocities(
     return velocities_lat, velocities_lon, velocities_mag, velocities_azi
 
 def get_topology_geometries(
-        reconstruction,
+        reconstruction: _gplately.PlateReconstruction,
         reconstruction_time: int,
         anchor_plateID: int
     ):
@@ -536,6 +536,7 @@ def get_options(
                    "Slab bend mechanism",
                    "Interface shear torque",
                    "Reconstructed motions",
+                   "Mantle stationary trenches",
                    "Continental crust",
                    "Seafloor age variable",
                    "Seafloor age profile",
@@ -561,6 +562,7 @@ def get_options(
                       True,
                       False,
                       "viscous",
+                      True,
                       True,
                       True,
                       False,
@@ -611,7 +613,7 @@ def get_options(
 
 def get_seafloor_grid(
         reconstruction_name: str,
-        reconstruction_times: list,
+        reconstruction_time: int,
         age_grid_file: Optional[str] = None, 
         grid_files: Optional[str] = None, 
         variable_names: Optional[list] = None,
@@ -636,76 +638,40 @@ def get_seafloor_grid(
     :return:                       seafloor_grids
     :rtype:                        xarray.Dataset
     """
-    # Get age grids
-    age_grids = {}
+    # Check if the reconstruction is supported by _gplately
+    supported_models = ["Seton2012", "Muller2016", "Muller2019", "Torsvik2019", "Clennet2020"]
+    if reconstruction_name not in supported_models:
+        print(f"Plate topology for the {reconstruction_name} reconstruction not available. Exiting now")
+        sys.exit()
 
-    # Download age grid if unavailable
-    if not age_grid_file:
-        # Check if the reconstruction is supported by _gplately
-        supported_models = ["Seton2012", "Muller2016", "Muller2019", "Torsvik2019", "Clennet2020"]
-        if reconstruction_name not in supported_models:
-            print(f"Plate topology for the {reconstruction_name} reconstruction not available. Exiting now")
-            sys.exit()
+    # Call _gplately"s DataServer from the download.py module
+    gdownload = _gplately.download.DataServer(reconstruction_name)
 
-        # Call _gplately"s DataServer from the download.py module
-        gdownload = _gplately.download.DataServer(reconstruction_name)
+    # Make temporary directory to store files
+    temp_dir = tempfile.mkdtemp()
 
-        # Make temporary directory to store files
-        temp_dir = tempfile.mkdtemp()
+    # Download relevant age grids
+    # Let the user know what is happening
+    print(f"Downloading age grid for {reconstruction_name} at {reconstruction_time} Ma")
 
-        # Download all relevant age grids
-        for reconstruction_time in reconstruction_times:
-            # Let the user know what is happening
-            print(f"Downloading age grid for {reconstruction_name} at {reconstruction_time} Ma")
+    # Download the age grid
+    age_grid_temp = gdownload.get_age_grid(time=reconstruction_time)
 
-            # Download the age grid
-            age_grid_temp = gdownload.get_age_grid(time=reconstruction_time)
+    # Save it with a different format in the temporary directory
+    temp_file_path = os.path.join(temp_dir, "temp_file.nc")
+    age_grid_temp.save_to_netcdf4(temp_file_path)
 
-            # Save it with a different format in the temporary directory
-            temp_file_path = os.path.join(temp_dir, "temp_file.nc")
-            age_grid_temp.save_to_netcdf4(temp_file_path)
-
-            # Load the temporary file as an _xarray.dataset
-            age_grids[reconstruction_time] = _xarray.open_dataset(temp_file_path)
-
-            # Step 4: Delete the temporary file and directory
-            os.remove(temp_file_path)
-        
-        os.rmdir(temp_dir)
-        
-    # Load age grid if available
-    elif age_grid_file:
-        for reconstruction_time in reconstruction_times:
-            age_grids[reconstruction_time] = _xarray.open_dataset(age_grid_file)
-
-    # Initialise _xarray.DataSet
-    # Create coordinate arrays
-    coords = {
-        "latitude": age_grids[reconstruction_times[0]].lat.values,
-        "longitude": age_grids[reconstruction_times[0]].lon.values,
-        "age": reconstruction_times,
-    }
-    seafloor_grids = _xarray.Dataset(coords=coords)
-
-    empty_data = _numpy.repeat(_numpy.zeros_like(age_grids[reconstruction_times[0]].z.values)[:, :, _numpy.newaxis], len(reconstruction_times), axis=2)
-
-    seafloor_grids["seafloor_age"] = (["latitude", "longitude", "age"], empty_data.copy())
-    for reconstruction_time in reconstruction_times:
-        seafloor_grids["seafloor_age"].loc[dict(age=reconstruction_time)] = age_grids[reconstruction_time].z.values
-
-    # Load other grids and add to the _xarray.DataSet
-    if grid_files and variable_names:
-        for grid_file, variable_name in zip(grid_files, variable_names):
-            # Initialise variable in seafloor grid file
-            seafloor_grids[variable_name] = (["latitude", "longitude", "age"], empty_data.copy())
-
-            # Loop through times to load, interpolate and store variables in seafloor grid
-            for reconstruction_time in reconstruction_times:
-                grid = _xarray.open_dataset(grid_file)
-                grid = grid.interp_like(age_grids[reconstruction_times[0]])
-                seafloor_grids[variable_name].loc[dict(age=reconstruction_time)] = grid.z.values
+    # Load the temporary file as an _xarray.dataset
+    age_grid = _xarray.open_dataset(temp_file_path)
     
-    return seafloor_grids
+    # Rename coordinates and variables
+    age_grid = age_grid.rename({"lat": "latitude"}); age_grid = age_grid.rename({"lon": "longitude"}); age_grid = age_grid.rename({"z": "seafloor_age"})
+
+    # Step 4: Delete the temporary file and directory
+    os.remove(temp_file_path)
+    os.rmdir(temp_dir)
+    
+    return age_grid
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PROCESS CASES 
@@ -791,9 +757,9 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     filename = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
     data.to_csv(os.path.join(target_dir, filename), index=False)
 
-def DataSet_to_netCDF(data, data_name, reconstruction_name, times, folder):
+def DataSet_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, case, folder):
     """
-    Function to save Xarray Dataset to a folder
+    Function to save xarray Dataset to a folder
 
     :param data:                  data
     :type data:                   _xarray.Dataset
@@ -801,8 +767,8 @@ def DataSet_to_netCDF(data, data_name, reconstruction_name, times, folder):
     :type data_name:              string
     :param reconstruction_name:   name of reconstruction
     :type reconstruction_name:    string
-    :param times:                 times
-    :type times:                  list or _numpy.array
+    :param reconstruction_time:   age of reconstruction in Ma
+    :type reconstruction_time:    int
     :param folder:                folder
     :type folder:                 string
     """
@@ -823,10 +789,13 @@ def DataSet_to_netCDF(data, data_name, reconstruction_name, times, folder):
     check_dir(target_dir)
 
     # Save data
-    data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{times.min()}-{times.max()}Ma.nc"))
+    data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.nc"))
 
 def check_dir(target_dir):
-    # Check if a directory exists, and create it if it doesn"t
+    """
+    Function to check if a directory exists, and create it if it doesn't
+    """
+    # Check if a directory exists, and create it if it doesn't
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
@@ -835,11 +804,11 @@ def check_dir(target_dir):
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def load_data(
-        data,
-        reconstruction,
-        reconstruction_name,
-        reconstruction_times,
-        type,
+        data: dict,
+        reconstruction: _gplately.PlateReconstruction,
+        reconstruction_name: str,
+        reconstruction_times: list,
+        type: str,
         all_cases: list,
         all_options: dict,
         matching_case_dict: dict,
@@ -854,7 +823,7 @@ def load_data(
     :param data:                  data
     :type data:                   dict
     :param reconstruction:        reconstruction
-    :type reconstruction:         _gplately.PlateReconstruction
+    :type reconstruction:         gplately.PlateReconstruction
     :param reconstruction_name:   name of reconstruction
     :type reconstruction_name:    string
     :param reconstruction_times:  reconstruction times
@@ -873,7 +842,11 @@ def load_data(
         # If a file directory is provided, check for the existence of files
         if files_dir:
             for case in all_cases:
-                data[reconstruction_time][case] = DataFrame_from_csv(files_dir, type, reconstruction_name, case, reconstruction_time)
+                if type == "Seafloor":
+                    data[reconstruction_time][case] = Dataset_from_netCDF(files_dir, reconstruction_time, reconstruction_name, type)
+                else:
+                    data[reconstruction_time][case] = DataFrame_from_csv(files_dir, type, reconstruction_name, case, reconstruction_time)
+
                 if data[reconstruction_time][case] is not None:
                     unavailable_cases.remove(case)
                     available_cases.append(case)
@@ -903,18 +876,33 @@ def load_data(
                 
                 # Initialise new DataFrame if not found
                 if data[reconstruction_time][unavailable_case] is None:
-                    print(f"Initialising new DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {unavailable_case}...")
+                    # Let the user know you're busy
+                    if type == "Seafloor":
+                        data_type = "Dataset"
+                    else:
+                        data_type = "DataFrame"
+                    print(f"Initialising new {data_type} for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {unavailable_case}...")
                     if type == "Plates":
                         data[reconstruction_time][unavailable_case] = get_plates(reconstruction.rotation_model, reconstruction_time, resolved_topologies[reconstruction_time], all_options[unavailable_case])
                     if type == "Slabs":
                         data[reconstruction_time][unavailable_case] = get_slabs(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
                     if type == "Points":
                         data[reconstruction_time][unavailable_case] = get_points(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
+                    if type == "Seafloor":
+                        data[reconstruction_time][unavailable_case] = get_seafloor_grid(reconstruction_name, reconstruction_time, files_dir)
+
+                    # Append case to available cases
                     available_cases.append(unavailable_case)
 
     return data
 
-def DataFrame_from_csv(folder, type, reconstruction_name, case, reconstruction_time):
+def DataFrame_from_csv(
+        folder: str,
+        type: str,
+        reconstruction_name: str,
+        case: str,
+        reconstruction_time: int,
+    ):
     """
     Function to load DataFrames from a folder
 
@@ -930,7 +918,7 @@ def DataFrame_from_csv(folder, type, reconstruction_name, case, reconstruction_t
     :type reconstruction_time:   integer
     
     :return:                     data
-    :rtype:                      _pandas.DataFrame
+    :rtype:                      pandas.DataFrame
     """
     # Get target folder
     if folder:
@@ -947,27 +935,32 @@ def DataFrame_from_csv(folder, type, reconstruction_name, case, reconstruction_t
     else:
         return None
 
-def Dataset_from_netCDF(folder, reconstruction_times, reconstruction_name, data_name):
+def Dataset_from_netCDF(
+        folder: str,
+        reconstruction_time: int,
+        reconstruction_name: str,
+        data_name: str,
+    ):
     """
-    Function to load Xarray Dataset from a folder
+    Function to load xarray Dataset from a folder
 
     :param folder:               folder
     :type folder:                string
     :param reconstruction_times: reconstruction times
-    :type reconstruction_times:  list or _numpy.array
+    :type reconstruction_times:  list or numpy.array
     :param reconstruction_name:  name of reconstruction
     :type reconstruction_name:   string
     :param data_name:            name of dataset
     :type data_name:             string
 
     :return:                     data
-    :rtype:                      _xarray.Dataset
+    :rtype:                      xarray.Dataset
     """
     # Get target folder
     if folder:
-        target_file = os.path.join(folder, data_name, f"{data_name}_{reconstruction_name}_{reconstruction_times.min()}-{reconstruction_times.max()}Ma.nc")
+        target_file = os.path.join(folder, data_name, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")
     else:
-        target_file = os.getcwd(data_name, f"{data_name}_{reconstruction_name}_{reconstruction_times.min()}-{reconstruction_times.max()}Ma.nc")  # Use the current working directory
+        target_file = os.getcwd(data_name, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")  # Use the current working directory
 
     # Check if target folder exists
     if os.path.exists(target_file):
