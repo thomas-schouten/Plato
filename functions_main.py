@@ -183,7 +183,19 @@ def compute_slab_bending_force(slabs, options, mech, constants):
     
     return slabs
 
-def sample_slabs_from_seafloor(lat, lon, trench_normal_azimuth, seafloor, options, plate, age_variable="seafloor_age", coords=["latitude", "longitude"], continental_arc=None, sediment_thickness=None):
+def sample_slabs_from_seafloor(
+        lat,
+        lon,
+        trench_normal_azimuth, 
+        seafloor, 
+        options, 
+        plate, 
+        age_variable="seafloor_age", 
+        coords=["latitude", "longitude"], 
+        continental_arc=None, 
+        sediment_thickness=None, 
+        topography=None
+    ):
     """
     Function to obtain relevant upper or lower plate data from tesselated subduction zones.
 
@@ -220,7 +232,7 @@ def sample_slabs_from_seafloor(lat, lon, trench_normal_azimuth, seafloor, option
     if plate == "upper plate":
         initial_sampling_distance = 200
 
-    # Sample lower plate
+    # Sample plate
     sampling_lat, sampling_lon = project_points(lat, lon, trench_normal_azimuth, initial_sampling_distance)
 
     # Extract latitude and longitude values from slabs and convert to xarray DataArrays
@@ -261,10 +273,50 @@ def sample_slabs_from_seafloor(lat, lon, trench_normal_azimuth, seafloor, option
 
     # Check whether arc is continental or not
     if plate == "upper plate":
+        # Set continental arc to True where there is no age
         continental_arc = _numpy.isnan(ages)
 
         # Close the seafloor to free memory space
         seafloor.close()
+
+        # Sample erosion rate, if applicable
+        if options["Sediment subduction"] and options["Erosion"] and topography is not None:
+            # Set new sampling points 100 km inboard of the trench
+            sampling_lat, sampling_lon = project_points(lat, lon, trench_normal_azimuth, 300)
+
+            # Convert to xarray DataArrays
+            sampling_lat_da = _xarray.DataArray(sampling_lat, dims="point")
+            sampling_lon_da = _xarray.DataArray(sampling_lon, dims="point")
+
+            # Interpolate elevation change at sampling points
+            sediment_flux_1d = topography["elevation_change"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist()
+
+            # For 
+
+            # For NaN values, sample 100 km further inboard
+            current_sampling_distance = 250
+            for i in range(3):
+                # Find problematic indices to iteratively find erosion/deposition rate of upper plate
+                mask = _numpy.isnan(sediment_flux_1d)
+
+                # Define new sampling points
+                sampling_lat[mask], sampling_lon[mask] = project_points(lat[mask], lon[mask], trench_normal_azimuth[mask], current_sampling_distance)
+
+                # Convert to xarray DataArrays
+                sampling_lat_da = _xarray.DataArray(sampling_lat, dims="point")
+                sampling_lon_da = _xarray.DataArray(sampling_lon, dims="point")
+
+                # Interpolate elevation change at sampling points
+                sediment_flux_1d = _numpy.where(mask, topography["elevation_change"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist(), sediment_flux_1d)
+
+                # Define new sampling distance
+                current_sampling_distance += 50
+            
+            # Drop non-negative values; convert to positive values
+            sediment_flux_1d = _numpy.abs(_numpy.where(sediment_flux_1d < 0, sediment_flux_1d, 0))
+
+            # Calculate two-dimensional sediment flux
+            sediment_flux_2d = sediment_flux_1d * 200e3
 
         return ages, continental_arc
     
@@ -273,11 +325,11 @@ def sample_slabs_from_seafloor(lat, lon, trench_normal_azimuth, seafloor, option
         sediment_thickness = _numpy.zeros(len(ages))
 
         # Add active margin sediments
-        if options["Active margin sediments"] != 0:
+        if options["Sediment subduction"] and options["Active margin sediments"] != 0 and not options["Erosion"]:
             sediment_thickness = _numpy.where(continental_arc == True, sediment_thickness+options["Active margin sediments"], sediment_thickness)
 
         # Sample sediment grid
-        if options["Sample sediment grid"] != 0:
+        if options["Sediment subduction"] and options["Sample sediment grid"] != 0:
             # Extract latitude and longitude values from slabs and convert to xarray DataArrays
             sampling_lat_da = _xarray.DataArray(sampling_lat, dims="point")
             sampling_lon_da = _xarray.DataArray(sampling_lon, dims="point")

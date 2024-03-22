@@ -757,12 +757,12 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     filename = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
     data.to_csv(os.path.join(target_dir, filename), index=False)
 
-def DataSet_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, case, folder):
+def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, case, folder):
     """
     Function to save xarray Dataset to a folder
 
     :param data:                  data
-    :type data:                   _xarray.Dataset
+    :type data:                   xarray.Dataset
     :param data_name:             name of dataset
     :type data_name:              string
     :param reconstruction_name:   name of reconstruction
@@ -839,11 +839,17 @@ def load_data(
         unavailable_cases = all_cases.copy()
         available_cases = []
 
+        # For printing updates
+        if type == "Seafloor":
+            data_type = "Dataset"
+        else:
+            data_type = "DataFrame"
+
         # If a file directory is provided, check for the existence of files
         if files_dir:
             for case in all_cases:
                 if type == "Seafloor":
-                    data[reconstruction_time][case] = Dataset_from_netCDF(files_dir, reconstruction_time, reconstruction_name, type)
+                    data[reconstruction_time][case] = Dataset_from_netCDF(files_dir, reconstruction_time, reconstruction_name, type, case)
                 else:
                     data[reconstruction_time][case] = DataFrame_from_csv(files_dir, type, reconstruction_name, case, reconstruction_time)
 
@@ -851,7 +857,7 @@ def load_data(
                     unavailable_cases.remove(case)
                     available_cases.append(case)
                 else:
-                    print(f"DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {case} not found, checking for similar cases...")
+                    print(f"{data_type} for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {case} not found, checking for similar cases...")
 
         # Copy dataframes for unavailable cases
         for unavailable_case in unavailable_cases:
@@ -876,11 +882,8 @@ def load_data(
                 
                 # Initialise new DataFrame if not found
                 if data[reconstruction_time][unavailable_case] is None:
+                    print(type)
                     # Let the user know you're busy
-                    if type == "Seafloor":
-                        data_type = "Dataset"
-                    else:
-                        data_type = "DataFrame"
                     print(f"Initialising new {data_type} for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {unavailable_case}...")
                     if type == "Plates":
                         data[reconstruction_time][unavailable_case] = get_plates(reconstruction.rotation_model, reconstruction_time, resolved_topologies[reconstruction_time], all_options[unavailable_case])
@@ -889,6 +892,7 @@ def load_data(
                     if type == "Points":
                         data[reconstruction_time][unavailable_case] = get_points(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
                     if type == "Seafloor":
+                        "hello"
                         data[reconstruction_time][unavailable_case] = get_seafloor_grid(reconstruction_name, reconstruction_time, files_dir)
 
                     # Append case to available cases
@@ -940,6 +944,7 @@ def Dataset_from_netCDF(
         reconstruction_time: int,
         reconstruction_name: str,
         data_name: str,
+        case: str,
     ):
     """
     Function to load xarray Dataset from a folder
@@ -952,15 +957,17 @@ def Dataset_from_netCDF(
     :type reconstruction_name:   string
     :param data_name:            name of dataset
     :type data_name:             string
+    :param case:                 case
+    :type case:                  string
 
     :return:                     data
     :rtype:                      xarray.Dataset
     """
     # Get target folder
     if folder:
-        target_file = os.path.join(folder, data_name, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")
+        target_file = os.path.join(folder, f"{data_name}", f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.nc")
     else:
-        target_file = os.getcwd(data_name, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")  # Use the current working directory
+        target_file = os.getcwd(f"{data_name}", f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.nc")  # Use the current working directory
 
     # Check if target folder exists
     if os.path.exists(target_file):
