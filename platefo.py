@@ -20,6 +20,7 @@ import gplately
 from gplately import pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
+import xarray as _xarray
 
 # Local libraries
 import setup
@@ -36,7 +37,8 @@ class PlateForces():
             reconstruction_times: List[int] or _numpy.array, 
             cases_file: str, 
             cases_sheet: str = "Sheet1", 
-            files_dir: str = None, 
+            files_dir: str = None,
+            topography: Optional[dict] = None,
         ):
         """
         PlateForces object.
@@ -44,10 +46,17 @@ class PlateForces():
         This object can be instantiated in two ways: either by loading previously stored files, or by generating new files.
 
         :param reconstruction_name:     Name of the plate reconstruction.
+        :type reconstruction_name:      str
         :param reconstruction_times:    List or array of reconstruction times.
+        :type reconstruction_times:     list or numpy.array
         :param cases_file:              Path to the file containing cases data.
+        :type cases_file:               str
         :param cases_sheet:             Sheet name in the cases file (default is "Sheet1").
+        :type cases_sheet:              str
         :param files_dir:               Directory for storing/loading files (default is None).
+        :type files_dir:                str
+        :param topography:              Dictionary containing topography data (default is None).
+        :type topography:               dict
         """
         # Let the user know you're busy
         print("Setting up PlateForces object...")
@@ -116,6 +125,7 @@ class PlateForces():
         self.slabs = {}
         self.points = {}
         self.seafloor = {}
+        self.topography = {reconstruction_time: {case: None for case in self.cases} for reconstruction_time in self.times}
 
         # Load or initialise plates
         self.plates = setup.load_data(
@@ -175,6 +185,9 @@ class PlateForces():
             files_dir,
         )
 
+        # Set topography grid to None
+        self.topography_grid = {reconstruction_time: None for reconstruction_time in self.times}
+
         # Set sampling flags to False:
         self.sampled_points = False
         self.sampled_upper_plates = False
@@ -191,6 +204,47 @@ class PlateForces():
         self.misfit = {case: {reconstruction_time: {} for reconstruction_time in self.times} for case in self.cases}
 
         print("PlateForces object successfully instantiated!")
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ADDING GRIDS 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def add_grid_to_seafloor(self, input_grids, variable_name, target_variable="z"):
+        """
+        Function to add another grid of a variable to the seafloor grid.
+        The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction time.
+
+        :param target_grid:             target grid to add the variable to
+        :type target_grid:              xarray.DataArray
+        :param input_grids:             dictionary of input grids
+        :type input_grids:              dict
+        :param variable_name:           name of the variable to add
+        :type variable_name:            str
+        :param reconstruction_times:    list of reconstruction times
+        :type reconstruction_times:     list
+        :param target_variable:         name of the variable to add
+        :type target_variable:          str
+        """
+        # Loop through times to load, interpolate, and store variables in seafloor grid
+        for reconstruction_time in self.times:
+            input_grids[reconstruction_time] = input_grids[reconstruction_time].interp_like(self.seafloor[reconstruction_time]["seafloor_age"], method="nearest")
+            self.seafloor[variable_name] = input_grids[reconstruction_time][target_variable]
+    
+    def add_topography_grid(self, topography_grid, target_case=None):
+        """
+        Function to add a topography grid to the PlateForces object.
+        The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction time.
+
+        :param topography_grid:         dictionary of topography grids
+        :type topography_grid:          dict
+        """
+        # Loop through times to load, interpolate to the same resolution as the seafloor age grid, and store topography as topography grid.
+        for reconstruction_time in self.times:
+            if target_case in self.cases:
+                self.topography_grid[reconstruction_time][case] = topography_grid[reconstruction_time].interp_like(self.seafloor[reconstruction_time][target_case]["seafloor_age"], method="nearest")
+            else:
+                for case in self.cases:
+                    self.topography[reconstruction_time][case] = topography_grid[reconstruction_time].interp_like(self.seafloor[reconstruction_time][case]["seafloor_age"], method="nearest")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SAMPLING GRIDS 
@@ -235,8 +289,6 @@ class PlateForces():
                         self.slabs[reconstruction_time][entry]["sediment_thickness"] = self.slabs[reconstruction_time][key]["sediment_thickness"]
                         self.slabs[reconstruction_time][entry]["lower_plate_thickness"] = self.slabs[reconstruction_time][key]["lower_plate_thickness"]
 
-                    # these_slabs["left_index"], these_slabs["right_index"] = functions_main.find_nearest_points(these_slabs["lat"], these_slabs["lon"], self.constants, max_distance_km=250)
-
         self.sampled_slabs = True
 
     def sample_upper_plate(self):
@@ -253,7 +305,7 @@ class PlateForces():
                 this_seafloor = self.seafloor[reconstruction_time][key]
 
                 # Sample age and arc type of upper plate from seafloor
-                self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"] = functions_main.sample_slabs_from_seafloor(
+                self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time]["erosion_rate"] = functions_main.sample_slabs_from_seafloor(
                     self.slabs[reconstruction_time][key].lat, 
                     self.slabs[reconstruction_time][key].lon,
                     self.slabs[reconstruction_time][key].trench_normal_azimuth,  

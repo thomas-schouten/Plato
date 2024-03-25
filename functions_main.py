@@ -276,6 +276,9 @@ def sample_slabs_from_seafloor(
         # Set continental arc to True where there is no age
         continental_arc = _numpy.isnan(ages)
 
+        # Manual overrides for island arcs that do not appear in the seafloor age grid. Hardcoded by lack of a better method for now.
+        # island_arc_plateIDs = []
+
         # Close the seafloor to free memory space
         seafloor.close()
 
@@ -289,9 +292,7 @@ def sample_slabs_from_seafloor(
             sampling_lon_da = _xarray.DataArray(sampling_lon, dims="point")
 
             # Interpolate elevation change at sampling points
-            sediment_flux_1d = topography["elevation_change"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist()
-
-            # For 
+            sediment_flux_1d = topography["erosion"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist()
 
             # For NaN values, sample 100 km further inboard
             current_sampling_distance = 250
@@ -307,18 +308,20 @@ def sample_slabs_from_seafloor(
                 sampling_lon_da = _xarray.DataArray(sampling_lon, dims="point")
 
                 # Interpolate elevation change at sampling points
-                sediment_flux_1d = _numpy.where(mask, topography["elevation_change"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist(), sediment_flux_1d)
+                erosion_rate = _numpy.where(mask, topography["erosion"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist(), sediment_flux_1d)
 
                 # Define new sampling distance
                 current_sampling_distance += 50
             
             # Drop non-negative values; convert to positive values
-            sediment_flux_1d = _numpy.abs(_numpy.where(sediment_flux_1d < 0, sediment_flux_1d, 0))
+            # sediment_flux_1d = _numpy.abs(_numpy.where(sediment_flux_1d < 0, sediment_flux_1d, 0))
 
-            # Calculate two-dimensional sediment flux
-            sediment_flux_2d = sediment_flux_1d * 200e3
+            # Calculate two-dimensional sediment flux per Ma
+            # sediment_flux_2d = sediment_flux_1d * 200e3 / 1e6
+        else:
+            erosion_rate = 0.
 
-        return ages, continental_arc
+        return ages, continental_arc, erosion_rate
     
     if plate == "lower plate":
         # Reset sediment thickness to avoid adding double the sediment
