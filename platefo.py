@@ -20,6 +20,7 @@ import gplately
 from gplately import pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
+from tqdm import tqdm
 import xarray as _xarray
 
 # Local libraries
@@ -300,7 +301,7 @@ class PlateForces():
                 this_seafloor = self.seafloor[reconstruction_time]
 
                 # Sample age and arc type of upper plate from seafloor
-                self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time]["erosion_rate"] = functions_main.sample_slabs_from_seafloor(
+                self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time][key]["erosion_rate"] = functions_main.sample_slabs_from_seafloor(
                     self.slabs[reconstruction_time][key].lat, 
                     self.slabs[reconstruction_time][key].lon,
                     self.slabs[reconstruction_time][key].trench_normal_azimuth,  
@@ -312,6 +313,7 @@ class PlateForces():
                 for entry in entries[1:]:
                     self.slabs[reconstruction_time][entry]["upper_plate_age"] = self.slabs[reconstruction_time][key]["upper_plate_age"]
                     self.slabs[reconstruction_time][entry]["continental_arc"] = self.slabs[reconstruction_time][key]["continental_arc"]
+                    self.slabs[reconstruction_time][entry]["erosion_rate"] = self.slabs[reconstruction_time][key]["erosion_rate"]
         
         self.sampled_upper_plates = True
 

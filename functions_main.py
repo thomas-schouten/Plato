@@ -311,12 +311,7 @@ def sample_slabs_from_seafloor(
 
                 # Define new sampling distance
                 current_sampling_distance += 50
-            
-            # Drop non-negative values; convert to positive values
-            # sediment_flux_1d = _numpy.abs(_numpy.where(sediment_flux_1d < 0, sediment_flux_1d, 0))
-
-            # Calculate two-dimensional sediment flux per Ma
-            # sediment_flux_2d = sediment_flux_1d * 200e3 / 1e6
+        
         else:
             erosion_rate = 0.
 
