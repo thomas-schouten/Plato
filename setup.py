@@ -544,7 +544,8 @@ def get_options(
                    "Strain rate",
                    "Interface mixing",
                    "Sample sediment grid", 
-                   "Active margin sediments", 
+                   "Active margin sediments",
+                   "Sample erosion grid", 
                    "Sediment subduction",
                    "Randomise trench orientation",
                    "Randomise slab age",
@@ -573,6 +574,7 @@ def get_options(
                       "linear",
                       False,
                       0,
+                      False,
                       False,
                       False,
                       False,
@@ -615,14 +617,10 @@ def get_options(
 def get_seafloor_grid(
         reconstruction_name: str,
         reconstruction_time: int,
-        age_grid_file: Optional[str] = None, 
-        grid_files: Optional[str] = None, 
-        variable_names: Optional[list] = None,
-        output_dir: Optional[str] = None,
     ):
     """
-    Function to obtain seafloor grid from GPlately DataServer or local directory
-
+    Function to obtain seafloor grid from GPlately DataServer
+    
     :param reconstruction_name:    name of reconstruction
     :type reconstruction_name:     string
     :param reconstruction_times:   reconstruction times
@@ -758,12 +756,12 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     filename = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
     data.to_csv(os.path.join(target_dir, filename), index=False)
 
-def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, case, folder):
+def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, folder):
     """
     Function to save xarray Dataset to a folder
 
     :param data:                  data
-    :type data:                   _xarray.Dataset
+    :type data:                   xarray.Dataset
     :param data_name:             name of dataset
     :type data_name:              string
     :param reconstruction_name:   name of reconstruction
@@ -790,7 +788,7 @@ def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time,
     check_dir(target_dir)
 
     # Save data
-    data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.nc"))
+    data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"))
 
 def check_dir(target_dir):
     """
@@ -835,7 +833,10 @@ def load_data(
     """
     # Loop through times
     for reconstruction_time in reconstruction_times:
+        
+        # Initialise dictionary to store data for reconstruction time
         data[reconstruction_time] = {}
+
         # Initialise list to store available and unavailable cases
         unavailable_cases = all_cases.copy()
         available_cases = []
@@ -843,10 +844,8 @@ def load_data(
         # If a file directory is provided, check for the existence of files
         if files_dir:
             for case in all_cases:
-                if type == "Seafloor":
-                    data[reconstruction_time][case] = Dataset_from_netCDF(files_dir, reconstruction_time, reconstruction_name, type)
-                else:
-                    data[reconstruction_time][case] = DataFrame_from_csv(files_dir, type, reconstruction_name, case, reconstruction_time)
+                # Load DataFrame if found
+                data[reconstruction_time][case] = DataFrame_from_csv(files_dir, type, reconstruction_name, case, reconstruction_time)
 
                 if data[reconstruction_time][case] is not None:
                     unavailable_cases.remove(case)
@@ -878,24 +877,52 @@ def load_data(
                 # Initialise new DataFrame if not found
                 if data[reconstruction_time][unavailable_case] is None:
                     # Let the user know you're busy
-                    if type == "Seafloor":
-                        data_type = "Dataset"
-                    else:
-                        data_type = "DataFrame"
-                    print(f"Initialising new {data_type} for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {unavailable_case}...")
+                    print(f"Initialising new DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {unavailable_case}...")
+
                     if type == "Plates":
                         data[reconstruction_time][unavailable_case] = get_plates(reconstruction.rotation_model, reconstruction_time, resolved_topologies[reconstruction_time], all_options[unavailable_case])
                     if type == "Slabs":
                         data[reconstruction_time][unavailable_case] = get_slabs(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
                     if type == "Points":
                         data[reconstruction_time][unavailable_case] = get_points(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
-                    if type == "Seafloor":
-                        data[reconstruction_time][unavailable_case] = get_seafloor_grid(reconstruction_name, reconstruction_time, files_dir)
 
                     # Append case to available cases
                     available_cases.append(unavailable_case)
 
     return data
+
+def load_grid(
+        grids: dict,
+        reconstruction_name: str,
+        reconstruction_times: list,
+        files_dir: str,
+    ):
+    """
+    Function to load grid from a folder.
+
+    :param grids:                  grids
+    :type grids:                   dict
+    :param reconstruction_name:    name of reconstruction
+    :type reconstruction_name:     string
+    :param reconstruction_times:   reconstruction times
+    :type reconstruction_times:    list or numpy.array
+    :param files_dir:              files directory
+    :type files_dir:               string
+
+    :return:                       grids
+    :rtype:                        xarray.Dataset
+    """
+    # Loop through times
+    for reconstruction_time in reconstruction_times:
+        # Load grid if found
+        grids[reconstruction_time] = Dataset_from_netCDF(files_dir, reconstruction_time, reconstruction_name)
+
+        # If not found, download from GPlately DataServer
+        if grids[reconstruction_time] is None:
+            print(f"Seafloor grid for {reconstruction_name} at {reconstruction_time} Ma not found, downloading from GPlately DataServer...")
+            grids[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
+
+    return grids
 
 def DataFrame_from_csv(
         folder: str,
@@ -940,7 +967,6 @@ def Dataset_from_netCDF(
         folder: str,
         reconstruction_time: int,
         reconstruction_name: str,
-        data_name: str,
     ):
     """
     Function to load xarray Dataset from a folder
@@ -951,17 +977,15 @@ def Dataset_from_netCDF(
     :type reconstruction_times:  list or numpy.array
     :param reconstruction_name:  name of reconstruction
     :type reconstruction_name:   string
-    :param data_name:            name of dataset
-    :type data_name:             string
 
     :return:                     data
     :rtype:                      xarray.Dataset
     """
     # Get target folder
     if folder:
-        target_file = os.path.join(folder, data_name, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")
+        target_file = os.path.join(folder, "Seafloor", f"Seafloor_{reconstruction_name}_{reconstruction_time}Ma.nc")
     else:
-        target_file = os.getcwd(data_name, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")  # Use the current working directory
+        target_file = os.getcwd("Seafloor", f"Seafloor_{reconstruction_name}_{reconstruction_time}Ma.nc")  # Use the current working directory
 
     # Check if target folder exists
     if os.path.exists(target_file):

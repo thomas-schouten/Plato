@@ -38,7 +38,6 @@ class PlateForces():
             cases_file: str, 
             cases_sheet: str = "Sheet1", 
             files_dir: str = None,
-            topography: Optional[dict] = None,
         ):
         """
         PlateForces object.
@@ -173,20 +172,12 @@ class PlateForces():
         )
 
         # Load or initialise seafloor
-        self.seafloor = setup.load_data(
+        self.seafloor = setup.load_grid(
             self.seafloor,
-            self.reconstruction,
             self.name,
             self.times,
-            "Seafloor",
-            self.cases,
-            self.options,
-            self.point_cases,
             files_dir,
         )
-
-        # Set topography grid to None
-        self.topography_grid = {reconstruction_time: None for reconstruction_time in self.times}
 
         # Set sampling flags to False:
         self.sampled_points = False
@@ -209,10 +200,11 @@ class PlateForces():
 # ADDING GRIDS 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def add_grid_to_seafloor(self, input_grids, variable_name, target_variable="z"):
+    def add_grid(self, input_grids, variable_name, target_variable="z", cut_to_seafloor=True):
         """
         Function to add another grid of a variable to the seafloor grid.
         The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction time.
+        Cut_to_seafloor is a boolean that determines whether or not to cut the grids to the seafloor. It should not be used for continental erosion rate grids.
 
         :param target_grid:             target grid to add the variable to
         :type target_grid:              xarray.DataArray
@@ -220,31 +212,34 @@ class PlateForces():
         :type input_grids:              dict
         :param variable_name:           name of the variable to add
         :type variable_name:            str
-        :param reconstruction_times:    list of reconstruction times
-        :type reconstruction_times:     list
         :param target_variable:         name of the variable to add
         :type target_variable:          str
+        :param cut_to_seafloor:         whether or not to cut the grids to the seafloor
+        :type cut_to_seafloor:          bool
         """
+        
         # Loop through times to load, interpolate, and store variables in seafloor grid
         for reconstruction_time in self.times:
+            # Rename latitude and longitude if necessary
+            if "lat" in list(input_grids[reconstruction_time].coords.keys()):
+                input_grids[reconstruction_time] = input_grids[reconstruction_time].rename({"lat": "latitude"})
+            if "lon" in list(input_grids[reconstruction_time].coords.keys()):
+                input_grids[reconstruction_time] = input_grids[reconstruction_time].rename({"lon": "longitude"})
+            
+            # Interpolate input grids to seafloor grid
             input_grids[reconstruction_time] = input_grids[reconstruction_time].interp_like(self.seafloor[reconstruction_time]["seafloor_age"], method="nearest")
-            self.seafloor[variable_name] = input_grids[reconstruction_time][target_variable]
-    
-    def add_topography_grid(self, topography_grid, target_case=None):
-        """
-        Function to add a topography grid to the PlateForces object.
-        The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction time.
+            self.seafloor[reconstruction_time][variable_name] = input_grids[reconstruction_time][target_variable]
 
-        :param topography_grid:         dictionary of topography grids
-        :type topography_grid:          dict
-        """
-        # Loop through times to load, interpolate to the same resolution as the seafloor age grid, and store topography as topography grid.
-        for reconstruction_time in self.times:
-            if target_case in self.cases:
-                self.topography_grid[reconstruction_time][case] = topography_grid[reconstruction_time].interp_like(self.seafloor[reconstruction_time][target_case]["seafloor_age"], method="nearest")
-            else:
-                for case in self.cases:
-                    self.topography[reconstruction_time][case] = topography_grid[reconstruction_time].interp_like(self.seafloor[reconstruction_time][case]["seafloor_age"], method="nearest")
+            # Align grids in seafloor
+            if cut_to_seafloor:
+                mask = {}
+                for variable_1 in self.seafloor[reconstruction_time].data_vars:
+                    # Get masks for NaN values
+                    mask[variable_1] = _numpy.isnan(self.seafloor[reconstruction_time][variable_1].values)
+
+                    # Apply masks to all grids
+                    for variable_2 in self.seafloor[reconstruction_time].data_vars:
+                        self.seafloor[reconstruction_time][variable_2] = self.seafloor[reconstruction_time][variable_2].where(~mask[variable_1])
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SAMPLING GRIDS 
@@ -261,7 +256,7 @@ class PlateForces():
             # Select cases
             for key, entries in self.slab_pull_cases.items():
                 # Select dictionaries
-                this_seafloor = self.seafloor[reconstruction_time][key]
+                this_seafloor = self.seafloor[reconstruction_time]
 
                 if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
                     # Sample age and sediment thickness of lower plate from seafloor
@@ -302,7 +297,7 @@ class PlateForces():
             # Select cases
             for key, entries in self.slab_pull_cases.items():
                 # Select dictionaries
-                this_seafloor = self.seafloor[reconstruction_time][key]
+                this_seafloor = self.seafloor[reconstruction_time]
 
                 # Sample age and arc type of upper plate from seafloor
                 self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time]["erosion_rate"] = functions_main.sample_slabs_from_seafloor(
@@ -330,7 +325,7 @@ class PlateForces():
             print(f"Sampling points at {reconstruction_time} Ma")
             for key, entries in self.gpe_cases.items():
                 # Select dictionaries
-                this_seafloor = self.seafloor[reconstruction_time][key]
+                this_seafloor = self.seafloor[reconstruction_time]
                 
                 self.points[reconstruction_time][key]["seafloor_age"] = functions_main.sample_ages(self.points[reconstruction_time][key].lat, self.points[reconstruction_time][key].lon, this_seafloor["seafloor_age"])
                 for entry in entries[1:]:
@@ -422,7 +417,7 @@ class PlateForces():
                     these_plates = self.plates[reconstruction_time][key]
                     
                     # Select dictionaries
-                    this_seafloor = self.seafloor[reconstruction_time][key]
+                    this_seafloor = self.seafloor[reconstruction_time] 
                     these_points = functions_main.compute_GPE_force(these_points, this_seafloor, self.options[key], self.mech)
                     these_plates = functions_main.compute_torque_on_plates(
                         these_plates, 
@@ -1359,7 +1354,7 @@ class PlateForces():
                 setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path)
                 setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path)
                 setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path)
-                setup.Dataset_to_netCDF(self.seafloor[reconstruction_time][case], "Seafloor", self.name, reconstruction_time, case, self.dir_path)
+            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path)
 
         print(f"All data saved to {self.dir_path}!")
 
@@ -1381,7 +1376,7 @@ class PlateForces():
 
         # Plot age
         ages = ax.imshow(
-            self.seafloor.sel(age=reconstruction_time).seafloor_age.values,
+            self.seafloor[reconstruction_time].seafloor_age.values,
             cmap = plotting_options["age cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
@@ -1413,9 +1408,9 @@ class PlateForces():
         ax, gl = self.plot_basemap(ax)
 
         if self.options[case]["Sample sediment grid"] !=0:
-            raster = self.seafloor.sel(age=reconstruction_time)[self.options[case]["Sample sediment grid"]]
+            raster = self.seafloor[reconstruction_time][self.options[case]["Sample sediment grid"]].values
         else:
-            raster = _numpy.where(_numpy.isnan(self.seafloor.sel(age=reconstruction_time).seafloor_age), _numpy.nan, 0)
+            raster = _numpy.where(_numpy.isnan(self.seafloor[reconstruction_time].seafloor_age.values), _numpy.nan, 0)
 
         # Plot sediment
         seds = ax.imshow(

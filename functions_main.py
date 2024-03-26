@@ -194,7 +194,6 @@ def sample_slabs_from_seafloor(
         coords=["latitude", "longitude"], 
         continental_arc=None, 
         sediment_thickness=None, 
-        topography=None
     ):
     """
     Function to obtain relevant upper or lower plate data from tesselated subduction zones.
@@ -283,7 +282,7 @@ def sample_slabs_from_seafloor(
         seafloor.close()
 
         # Sample erosion rate, if applicable
-        if options["Sediment subduction"] and options["Erosion"] and topography is not None:
+        if options["Sediment subduction"] and options["Sample erosion grid"] in seafloor.data_vars:
             # Set new sampling points 100 km inboard of the trench
             sampling_lat, sampling_lon = project_points(lat, lon, trench_normal_azimuth, 300)
 
@@ -292,13 +291,13 @@ def sample_slabs_from_seafloor(
             sampling_lon_da = _xarray.DataArray(sampling_lon, dims="point")
 
             # Interpolate elevation change at sampling points
-            sediment_flux_1d = topography["erosion"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist()
+            erosion_rate = seafloor[options["Sample erosion grid"]].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist()
 
             # For NaN values, sample 100 km further inboard
             current_sampling_distance = 250
             for i in range(3):
                 # Find problematic indices to iteratively find erosion/deposition rate of upper plate
-                mask = _numpy.isnan(sediment_flux_1d)
+                mask = _numpy.isnan(erosion_rate)
 
                 # Define new sampling points
                 sampling_lat[mask], sampling_lon[mask] = project_points(lat[mask], lon[mask], trench_normal_azimuth[mask], current_sampling_distance)
@@ -308,7 +307,7 @@ def sample_slabs_from_seafloor(
                 sampling_lon_da = _xarray.DataArray(sampling_lon, dims="point")
 
                 # Interpolate elevation change at sampling points
-                erosion_rate = _numpy.where(mask, topography["erosion"].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist(), sediment_flux_1d)
+                erosion_rate = _numpy.where(mask, seafloor[options["Sample erosion grid"]].interp({coords[0]: sampling_lat_da, coords[1]: sampling_lon_da}).values.tolist(), erosion_rate)
 
                 # Define new sampling distance
                 current_sampling_distance += 50
@@ -328,7 +327,7 @@ def sample_slabs_from_seafloor(
         sediment_thickness = _numpy.zeros(len(ages))
 
         # Add active margin sediments
-        if options["Sediment subduction"] and options["Active margin sediments"] != 0 and not options["Erosion"]:
+        if options["Sediment subduction"] and options["Active margin sediments"] != 0 and not options["Sample erosion grid"]:
             sediment_thickness = _numpy.where(continental_arc == True, sediment_thickness+options["Active margin sediments"], sediment_thickness)
 
         # Sample sediment grid
