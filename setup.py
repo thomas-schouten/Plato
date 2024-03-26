@@ -205,7 +205,7 @@ def get_slabs(
     slabs["upper_plate_thickness"] = 0.
     slabs["upper_plate_age"] = _numpy.nan   
     slabs["continental_arc"] = False
-    slabs["erosion_rate"] = 0.
+    slabs["erosion_rate"] = _numpy.nan
 
     # Lower plate
     slabs["lower_plate_age"] = _numpy.nan
