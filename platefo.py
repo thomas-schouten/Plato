@@ -21,7 +21,6 @@ from gplately import pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
 from tqdm import tqdm
-import xarray as _xarray
 
 # Local libraries
 import setup
@@ -201,7 +200,7 @@ class PlateForces():
 # ADDING GRIDS 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def add_grid(self, input_grids, variable_name, target_variable="z", cut_to_seafloor=True):
+    def add_grid(self, input_grids, variable_name, target_variable="z", cut_to_seafloor=True, prefactor=1):
         """
         Function to add another grid of a variable to the seafloor grid.
         The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction time.
@@ -229,7 +228,7 @@ class PlateForces():
             
             # Interpolate input grids to seafloor grid
             input_grids[reconstruction_time] = input_grids[reconstruction_time].interp_like(self.seafloor[reconstruction_time]["seafloor_age"], method="nearest")
-            self.seafloor[reconstruction_time][variable_name] = input_grids[reconstruction_time][target_variable]
+            self.seafloor[reconstruction_time][variable_name] = input_grids[reconstruction_time][target_variable] * prefactor
 
             # Align grids in seafloor
             if cut_to_seafloor:
@@ -256,16 +255,13 @@ class PlateForces():
             print(f"Sampling slabs at {reconstruction_time} Ma")
             # Select cases
             for key, entries in self.slab_pull_cases.items():
-                # Select dictionaries
-                this_seafloor = self.seafloor[reconstruction_time]
-
                 if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
                     # Sample age and sediment thickness of lower plate from seafloor
                     self.slabs[reconstruction_time][key]["lower_plate_age"], self.slabs[reconstruction_time][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
                         self.slabs[reconstruction_time][key].lat, 
                         self.slabs[reconstruction_time][key].lon,
                         self.slabs[reconstruction_time][key].trench_normal_azimuth,
-                        this_seafloor, 
+                        self.seafloor[reconstruction_time], 
                         self.options[key],
                         "lower plate",
                         sediment_thickness=self.slabs[reconstruction_time][key].sediment_thickness,
@@ -297,19 +293,28 @@ class PlateForces():
             print(f"Sampling overriding plate at {reconstruction_time} Ma")
             # Select cases
             for key, entries in self.slab_pull_cases.items():
-                # Select dictionaries
-                this_seafloor = self.seafloor[reconstruction_time]
-
-                # Sample age and arc type of upper plate from seafloor
-                self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time][key]["erosion_rate"] = functions_main.sample_slabs_from_seafloor(
-                    self.slabs[reconstruction_time][key].lat, 
-                    self.slabs[reconstruction_time][key].lon,
-                    self.slabs[reconstruction_time][key].trench_normal_azimuth,  
-                    this_seafloor,
-                    self.options[key],
-                    "upper plate"
-                )
-
+                # Check whether to output erosion rate and sediment thickness
+                if self.options[key]["Sample erosion grid"] in self.seafloor[reconstruction_time].data_vars:
+                    # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
+                    self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time][key]["erosion_rate"], self.slabs[reconstruction_time][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
+                        self.slabs[reconstruction_time][key].lat, 
+                        self.slabs[reconstruction_time][key].lon,
+                        self.slabs[reconstruction_time][key].trench_normal_azimuth,  
+                        self.seafloor[reconstruction_time],
+                        self.options[key],
+                        "upper plate",
+                        sediment_thickness=self.slabs[reconstruction_time][key].sediment_thickness,
+                    )
+                else:
+                    # Sample age and arc type of upper plate from seafloor
+                    self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"] = functions_main.sample_slabs_from_seafloor(
+                        self.slabs[reconstruction_time][key].lat, 
+                        self.slabs[reconstruction_time][key].lon,
+                        self.slabs[reconstruction_time][key].trench_normal_azimuth,  
+                        self.seafloor[reconstruction_time],
+                        self.options[key],
+                        "upper plate"
+                    )
                 for entry in entries[1:]:
                     self.slabs[reconstruction_time][entry]["upper_plate_age"] = self.slabs[reconstruction_time][key]["upper_plate_age"]
                     self.slabs[reconstruction_time][entry]["continental_arc"] = self.slabs[reconstruction_time][key]["continental_arc"]
@@ -327,9 +332,9 @@ class PlateForces():
             print(f"Sampling points at {reconstruction_time} Ma")
             for key, entries in self.gpe_cases.items():
                 # Select dictionaries
-                this_seafloor = self.seafloor[reconstruction_time]
+                self.seafloor[reconstruction_time] = self.seafloor[reconstruction_time]
                 
-                self.points[reconstruction_time][key]["seafloor_age"] = functions_main.sample_ages(self.points[reconstruction_time][key].lat, self.points[reconstruction_time][key].lon, this_seafloor["seafloor_age"])
+                self.points[reconstruction_time][key]["seafloor_age"] = functions_main.sample_ages(self.points[reconstruction_time][key].lat, self.points[reconstruction_time][key].lon, self.seafloor[reconstruction_time]["seafloor_age"])
                 for entry in entries[1:]:
                     self.points[reconstruction_time][entry]["seafloor_age"] = self.points[reconstruction_time][key]["seafloor_age"]
 
@@ -376,29 +381,19 @@ class PlateForces():
 
                 # Calculate slab pull torque
                 if self.options[key]["Slab pull torque"]:
-                    these_slabs = self.slabs[reconstruction_time][key]
-                    these_plates = self.plates[reconstruction_time][key]
-                    these_slabs = functions_main.compute_slab_pull_force(these_slabs, self.options[key], self.mech)
-
-                    these_plates = functions_main.compute_torque_on_plates(
-                        these_plates, 
-                        these_slabs.lat, 
-                        these_slabs.lon, 
-                        these_slabs.lower_plateID, 
-                        these_slabs.slab_pull_force_lat, 
-                        these_slabs.slab_pull_force_lon,
-                        these_slabs.trench_segment_length,
+                    self.slabs[reconstruction_time][key] = functions_main.compute_slab_pull_force(self.slabs[reconstruction_time][key], self.options[key], self.mech)
+                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                        self.plates[reconstruction_time][key], 
+                        self.slabs[reconstruction_time][key].lat, 
+                        self.slabs[reconstruction_time][key].lon, 
+                        self.slabs[reconstruction_time][key].lower_plateID, 
+                        self.slabs[reconstruction_time][key].slab_pull_force_lat, 
+                        self.slabs[reconstruction_time][key].slab_pull_force_lon,
+                        self.slabs[reconstruction_time][key].trench_segment_length,
                         1,
                         self.constants,
                         torque_variable="slab_pull_torque"
                     )
-
-                    # Overwrite DataFrames
-                    self.plates[reconstruction_time][key] = these_plates
-                    self.slabs[reconstruction_time][key] = these_slabs
-
-                    # Delete temporary DataFrames
-                    del these_slabs, these_plates
 
                     # Copy DataFrames
                     [[self.slabs[reconstruction_time][entry].update(
@@ -414,32 +409,20 @@ class PlateForces():
             # Loop through gpe cases
             for key, entries in self.gpe_cases.items():
                 # Calculate GPE torque
-                if self.options[key]["GPE torque"]:
-                    these_points = self.points[reconstruction_time][key]
-                    these_plates = self.plates[reconstruction_time][key]
-                    
-                    # Select dictionaries
-                    this_seafloor = self.seafloor[reconstruction_time] 
-                    these_points = functions_main.compute_GPE_force(these_points, this_seafloor, self.options[key], self.mech)
-                    these_plates = functions_main.compute_torque_on_plates(
-                        these_plates, 
-                        these_points.lat, 
-                        these_points.lon, 
-                        these_points.plateID, 
-                        these_points.GPE_force_lat, 
-                        these_points.GPE_force_lon,
-                        these_points.segment_length_lat, 
-                        these_points.segment_length_lon,
+                if self.options[key]["GPE torque"]: 
+                    self.points[reconstruction_time][key] = functions_main.compute_GPE_force(self.points[reconstruction_time][key], self.seafloor[reconstruction_time], self.options[key], self.mech)
+                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                        self.plates[reconstruction_time][key], 
+                        self.points[reconstruction_time][key].lat, 
+                        self.points[reconstruction_time][key].lon, 
+                        self.points[reconstruction_time][key].plateID, 
+                        self.points[reconstruction_time][key].GPE_force_lat, 
+                        self.points[reconstruction_time][key].GPE_force_lon,
+                        self.points[reconstruction_time][key].segment_length_lat, 
+                        self.points[reconstruction_time][key].segment_length_lon,
                         self.constants,
                         torque_variable="GPE_torque"
                     )
-
-                    # Overwrite DataFrames
-                    self.plates[reconstruction_time][key] = these_plates
-                    self.points[reconstruction_time][key] = these_points
-
-                    # Delete temporary DataFrames
-                    del these_points, these_plates
 
                 # Copy DataFrames
                 [[self.points[reconstruction_time][entry].update(
@@ -460,28 +443,19 @@ class PlateForces():
             for key, entries in self.interface_shear_cases.items():
                 # Calculate interface shear torque
                 if self.options[key]["Interface shear torque"]:
-                    these_slabs = self.slabs[reconstruction_time][key]
-                    these_plates = self.plates[reconstruction_time][key]
-                    these_slabs = functions_main.compute_interface_shear_force(these_slabs, self.options[key], self.mech, self.constants)
-                    these_plates = functions_main.compute_torque_on_plates(
-                        these_plates, 
-                        these_slabs.lat, 
-                        these_slabs.lon, 
-                        these_slabs.lower_plateID, 
-                        these_slabs.interface_shear_force_lat, 
-                        these_slabs.interface_shear_force_lon,
-                        these_slabs.trench_segment_length,
+                    self.slabs[reconstruction_time][key] = functions_main.compute_interface_shear_force(self.slabs[reconstruction_time][key], self.options[key], self.mech, self.constants)
+                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                        self.plates[reconstruction_time][key], 
+                        self.slabs[reconstruction_time][key].lat, 
+                        self.slabs[reconstruction_time][key].lon, 
+                        self.slabs[reconstruction_time][key].lower_plateID, 
+                        self.slabs[reconstruction_time][key].interface_shear_force_lat, 
+                        self.slabs[reconstruction_time][key].interface_shear_force_lon,
+                        self.slabs[reconstruction_time][key].trench_segment_length,
                         1,
                         self.constants,
                         torque_variable="interface_shear_torque"
                     )
-
-                    # Overwrite DataFrames
-                    self.plates[reconstruction_time][key] = these_plates
-                    self.slabs[reconstruction_time][key] = these_slabs
-
-                    # Delete temporary DataFrames
-                    del these_slabs, these_plates
                 
                 # Copy DataFrames
                 [[self.slabs[reconstruction_time][entry].update(
@@ -498,28 +472,19 @@ class PlateForces():
             for key, entries in self.slab_bend_cases.items():
                 # Calculate slab bending torque
                 if self.options[key]["Slab bend torque"]:
-                    these_slabs = self.slabs[reconstruction_time][key].copy()
-                    these_plates = self.plates[reconstruction_time][key].copy()
-                    these_slabs = functions_main.compute_slab_bend_force(these_slabs, self.options[key], self.mech, self.constants)
-                    these_plates = functions_main.compute_torque_on_plates(
-                        these_plates, 
-                        these_slabs.lat, 
-                        these_slabs.lon, 
-                        these_slabs.lower_plateID, 
-                        these_slabs.slab_bend_force_lat, 
-                        these_slabs.slab_bend_force_lon,
-                        these_slabs.trench_segment_length,
+                    self.slabs[reconstruction_time][key] = functions_main.compute_slab_bend_force(self.slabs[reconstruction_time][key], self.options[key], self.mech, self.constants)
+                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                        self.plates[reconstruction_time][key], 
+                        self.slabs[reconstruction_time][key].lat, 
+                        self.slabs[reconstruction_time][key].lon, 
+                        self.slabs[reconstruction_time][key].lower_plateID, 
+                        self.slabs[reconstruction_time][key].slab_bend_force_lat, 
+                        self.slabs[reconstruction_time][key].slab_bend_force_lon,
+                        self.slabs[reconstruction_time][key].trench_segment_length,
                         1,
                         self.constants,
                         torque_variable="slab_bend_torque"
                     )
-
-                    # Overwrite DataFrames
-                    self.plates[reconstruction_time][key] = these_plates
-                    self.slabs[reconstruction_time][key] = these_slabs
-
-                    # Delete temporary DataFrames
-                    del these_slabs, these_points, these_plates
                     
                 # Copy DataFrames
                 [self.slabs[reconstruction_time][entry].update(
@@ -537,35 +502,22 @@ class PlateForces():
                 if self.options[key]["Reconstructed motions"]:
                     # Calculate Mantle drag torque
                     if self.options[key]["Mantle drag torque"]:
-                        # Copy slabs, points and plates
-                        these_slabs = self.slabs[reconstruction_time][key].copy()
-                        these_points = self.points[reconstruction_time][key].copy()
-                        these_plates = self.plates[reconstruction_time][key].copy()
-
                         # Calculate mantle drag force
-                        these_plates, these_points, these_slabs = functions_main.compute_mantle_drag_force(these_plates, these_points, these_slabs, self.options[key], self.mech, self.constants)
+                        self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key] = functions_main.compute_mantle_drag_force(self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key], self.options[key], self.mech, self.constants)
                         
                         # Calculate mantle drag torque
-                        these_plates = functions_main.compute_torque_on_plates(
-                            these_plates, 
-                            these_points.lat, 
-                            these_points.lon, 
-                            these_points.plateID, 
-                            these_points.mantle_drag_force_lat, 
-                            these_points.mantle_drag_force_lon,
-                            these_points.segment_length_lat,
-                            these_points.segment_length_lon,
+                        self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                            self.plates[reconstruction_time][key], 
+                            self.points[reconstruction_time][key].lat, 
+                            self.points[reconstruction_time][key].lon, 
+                            self.points[reconstruction_time][key].plateID, 
+                            self.points[reconstruction_time][key].mantle_drag_force_lat, 
+                            self.points[reconstruction_time][key].mantle_drag_force_lon,
+                            self.points[reconstruction_time][key].segment_length_lat,
+                            self.points[reconstruction_time][key].segment_length_lon,
                             self.constants,
                             torque_variable="mantle_drag_torque"
                         )
-
-                    # Overwrite DataFrames
-                    self.plates[reconstruction_time][key] = these_plates
-                    self.points[reconstruction_time][key] = these_points
-                    self.slabs[reconstruction_time][key] = these_slabs
-
-                    # Delete temporary DataFrames
-                    del these_slabs, these_points, these_plates
 
                 # Enter mantle drag torque in other cases
                 [self.points[reconstruction_time][entry].update(
@@ -584,18 +536,18 @@ class PlateForces():
                     print(case)
                     if self.options[case]["Mantle drag torque"]:
                         # Select slabs, points and plates
-                        these_slabs = self.slabs[reconstruction_time][case].copy()
-                        these_points = self.points[reconstruction_time][case].copy()
-                        these_plates = self.plates[reconstruction_time][case].copy()
+                        these_slabs = deepcopy(self.slabs[reconstruction_time][case])
+                        these_points = deepcopy(self.points[reconstruction_time][case])
+                        these_plates = deepcopy(self.plates[reconstruction_time][case])
 
                         # Optimise slab pull force
                         [these_plates.update({"slab_pull_torque_opt_" + axis: these_plates["slab_pull_torque_" + axis] * self.options[case]["Slab pull constant"]}) for axis in ["x", "y", "z"]]
 
                         # Initialise starting old_plates, old_points, old_slabs by copying these_plates, these_points, these_slabs
-                        old_plates = these_plates.copy(); old_points = these_points.copy(); old_slabs = these_slabs.copy()
+                        old_plates = deepcopy(these_plates); old_points = deepcopy(these_points); old_slabs = deepcopy(these_slabs)
 
-                        # Delete these_slabs, these_points, these_plates
-                        del these_slabs, these_points, these_plates
+                        # Delete these_plates, these_points, these_slabs
+                        del these_plates, these_points, these_slabs
 
                         for i in range(100):
                             # Delete new DataFrames
@@ -609,7 +561,7 @@ class PlateForces():
                             if self.options[case]["Interface shear torque"]:
                                 new_slabs = functions_main.compute_interface_shear_force(old_slabs, self.options[case], self.mech, self.constants)
                             else:
-                                new_slabs = old_slabs.copy()
+                                new_slabs = deepcopy(old_slabs)
 
                             # Compute interface shear torque
                             new_plates = functions_main.compute_torque_on_plates(
@@ -662,12 +614,12 @@ class PlateForces():
                                 del old_plates, old_points, old_slabs
                                 
                                 # Overwrite DataFrames
-                                old_plates = new_plates.copy(); old_points = new_points.copy(); old_slabs = new_slabs.copy()
+                                old_plates = deepcopy(new_plates); old_points = deepcopy(new_points); old_slabs = deepcopy(new_slabs)
 
                         # Overwrite DataFrames
-                        self.plates[reconstruction_time][case] = new_plates.copy()
-                        self.points[reconstruction_time][case] = new_points.copy()
-                        self.slabs[reconstruction_time][case] = new_slabs.copy()
+                        self.plates[reconstruction_time][case] = deepcopy(new_plates)
+                        self.points[reconstruction_time][case] = deepcopy(new_points)
+                        self.slabs[reconstruction_time][case] = deepcopy(new_slabs)
 
                         # Delete temporary DataFrames
                         del new_plates, new_points, new_slabs
@@ -1032,35 +984,35 @@ class PlateForces():
             for j, sp_const in enumerate(sp_consts):
                 selected_options["Slab pull constant"] = sp_const
                 # Calculate mantle drag force
-                these_plates = selected_plates.copy()
-                these_slabs = selected_slabs.copy()
-                these_points = selected_points.copy()
-                these_plates, these_points = functions_main.mantle_drag_force(these_plates, these_points, these_slabs, selected_options, self.mech, self.constants)
-                these_plates = functions_main.torque_on_plates(
-                    these_plates, 
-                    these_points.lat, 
-                    these_points.lon, 
-                    these_points.plateID, 
-                    these_points.mantle_drag_force_lat, 
-                    these_points.mantle_drag_force_lon,
-                    these_points.segment_length_lat,
-                    these_points.segment_length_lon,
+                self.plates[reconstruction_time][key] = selected_plates.copy()
+                self.slabs[reconstruction_time][key] = selected_slabs.copy()
+                self.points[reconstruction_time][key] = selected_points.copy()
+                self.plates[reconstruction_time][key], self.points[reconstruction_time][key] = functions_main.mantle_drag_force(self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key], selected_options, self.mech, self.constants)
+                self.plates[reconstruction_time][key] = functions_main.torque_on_plates(
+                    self.plates[reconstruction_time][key], 
+                    self.points[reconstruction_time][key].lat, 
+                    self.points[reconstruction_time][key].lon, 
+                    self.points[reconstruction_time][key].plateID, 
+                    self.points[reconstruction_time][key].mantle_drag_force_lat, 
+                    self.points[reconstruction_time][key].mantle_drag_force_lon,
+                    self.points[reconstruction_time][key].segment_length_lat,
+                    self.points[reconstruction_time][key].segment_length_lon,
                     self.constants,
                     torque_variable="mantle_drag_torque"
                 )
 
                 # Calculate residual of plate velocities
                 if weight_by_area:
-                    v_plate_residual_lon = ((these_plates.v_synthetic_lon-these_plates.v_absolute_lon) * these_plates.area).sum() / these_plates.area.sum()
-                    v_plate_residual_lat = ((these_plates.v_synthetic_lat-these_plates.v_absolute_lat) * these_plates.area).sum() / these_plates.area.sum()
+                    v_plate_residual_lon = ((self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_absolute_lon) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
+                    v_plate_residual_lat = ((self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_absolute_lat) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
                 else:
-                    v_plate_residual_lon = _numpy.mean(these_plates.v_synthetic_lon-these_plates.v_absolute_lon)
-                    v_plate_residual_lat = _numpy.mean(these_plates.v_synthetic_lat-these_plates.v_absolute_lat)
+                    v_plate_residual_lon = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_absolute_lon)
+                    v_plate_residual_lat = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_absolute_lat)
                 v_plate_residual[i,j] = _numpy.sqrt(v_plate_residual_lon**2 + v_plate_residual_lat**2)
 
                 # Calculate residual of slab velocities
-                v_slab_residual_lon = ((these_slabs.v_synthetic_lon-these_slabs.v_absolute_lon) * these_slabs.trench_segment_length).sum()  / these_slabs.trench_segment_length.sum()
-                v_slab_residual_lat = ((these_slabs.v_synthetic_lat-these_slabs.v_absolute_lat) * these_slabs.trench_segment_length).sum() / these_slabs.trench_segment_length.sum()
+                v_slab_residual_lon = ((self.slabs[reconstruction_time][key].v_synthetic_lon-self.slabs[reconstruction_time][key].v_absolute_lon) * self.slabs[reconstruction_time][key].trench_segment_length).sum()  / self.slabs[reconstruction_time][key].trench_segment_length.sum()
+                v_slab_residual_lat = ((self.slabs[reconstruction_time][key].v_synthetic_lat-self.slabs[reconstruction_time][key].v_absolute_lat) * self.slabs[reconstruction_time][key].trench_segment_length).sum() / self.slabs[reconstruction_time][key].trench_segment_length.sum()
                 v_slab_residual[i,j] = _numpy.sqrt(v_slab_residual_lon**2 + v_slab_residual_lat**2)
 
         # Find the indices of the minimum value directly using _numpy.argmin
@@ -1155,10 +1107,10 @@ class PlateForces():
         else:
             plates_of_interest = selected_plates["plateID"]
 
-        # Initialise starting old_plates, old_points, old_slabs by copying these_plates, these_points, these_slabs
+        # Initialise starting old_plates, old_points, old_slabs by copying self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key]
         old_plates = selected_plates.copy(); old_points = selected_points.copy(); old_slabs = selected_slabs.copy()
 
-        # Delete these_slabs, these_points, these_plates
+        # Delete self.slabs[reconstruction_time][key], self.points[reconstruction_time][key], self.plates[reconstruction_time][key]
         del selected_plates, selected_points, selected_slabs
         
         # Loop through plates and slabs and calculate residual velocity
@@ -1472,10 +1424,10 @@ class PlateForces():
         slab_vectors = slab_data.iloc[::5]
 
         # Plot velocity magnitude at trenches
-        if self.options[case]["Reconstructed motions"]:
-            variable = "v_absolute_mag"
-        else:
-            variable = "v_synthetic_mag"
+        # if self.options[case]["Reconstructed motions"]:
+        variable = "v_absolute_mag"
+        # else:
+            # variable = "v_synthetic_mag"
         vels = ax.scatter(
             slab_data.lon,
             slab_data.lat,
@@ -1488,10 +1440,10 @@ class PlateForces():
         )
 
         # Plot velocity at subduction zones
-        if self.options[case]["Reconstructed motions"]:
-            variable = "v_absolute"
-        else:
-            variable = "v_synthetic"
+        # if self.options[case]["Reconstructed motions"]:
+        variable = "v_absolute"
+        # else:
+            # variable = "v_synthetic"
         slab_vectors = ax.quiver(
             x=slab_vectors.lon,
             y=slab_vectors.lat,
@@ -1506,10 +1458,10 @@ class PlateForces():
         )
 
         # Plot velocity at centroid
-        if self.options[case]["Reconstructed motions"]:
-            variable = "v_absolute"
-        else:
-            variable = "v_synthetic"
+        # if self.options[case]["Reconstructed motions"]:
+        variable = "v_absolute"
+        # else:
+            # variable = "v_synthetic"
         centroid_vectors = ax.quiver(
             x=plate_vectors.centroid_lon,
             y=plate_vectors.centroid_lat,
@@ -1558,14 +1510,14 @@ class PlateForces():
             slab_vectors[case] = slab_data[case].iloc[::5]
         
         # Plot velocity magnitude at trenches
-        if self.options[case1]["Reconstructed motions"]:
-            var1 = "v_absolute_"
-        else:
-            var1 = "v_synthetic_"
-        if self.options[case2]["Reconstructed motions"]:
-            var2 = "v_absolute_"
-        else:
-            var2 = "v_synthetic_"
+        # if self.options[case1]["Reconstructed motions"]:
+        var1 = "v_absolute_"
+        # else:
+            # var1 = "v_synthetic_"
+        # if self.options[case2]["Reconstructed motions"]:
+        var2 = "v_absolute_"
+        # else:
+            # var2 = "v_synthetic_"
         vels = ax.scatter(
             slab_data[case1].lon,
             slab_data[case1].lat,
@@ -1592,14 +1544,14 @@ class PlateForces():
         )
 
         # Plot velocity at centroid
-        if self.options[case1]["Reconstructed motions"]:
-            variable1 = "v_absolute"
-        else:
-            variable1 = "v_synthetic"
-        if self.options[case2]["Reconstructed motions"]:
-            variable2 = "v_absolute"
-        else:
-            variable2 = "v_synthetic"
+        # if self.options[case1]["Reconstructed motions"]:
+        variable1 = "v_absolute"
+        # else:
+            # variable1 = "v_synthetic"
+        # if self.options[case2]["Reconstructed motions"]:
+        variable2 = "v_absolute"
+        # else:
+            # variable2 = "v_synthetic"
         centroid_vectors = ax.quiver(
             x=plate_vectors[case1].centroid_lon,
             y=plate_vectors[case1].centroid_lat,

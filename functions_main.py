@@ -311,12 +311,15 @@ def sample_slabs_from_seafloor(
 
                 # Define new sampling distance
                 current_sampling_distance += 50
+            
+            # Convert erosion rate to sediment thickness
+            sediment_thickness = erosion_rate * options["Erosion to sediment ratio"]
+            
+            return ages, continental_arc, erosion_rate, sediment_thickness
         
         else:
-            erosion_rate = 0.
-
-        return ages, continental_arc, erosion_rate
-    
+            return ages, continental_arc
+ 
     if plate == "lower plate":
         # Reset sediment thickness to avoid adding double the sediment
         sediment_thickness = _numpy.zeros(len(ages))
