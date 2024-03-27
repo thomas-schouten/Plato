@@ -116,45 +116,28 @@ def compute_slab_pull_force(slabs, options, mech):
 
     return slabs
 
-def compute_interface_shear_force(slabs, options, mech, constants):
+def compute_interface_term(slabs, options):
     """
-    Function to calculate interface shear force at subduction zones
+    Function to calculate the interface term that accounts for resisting forces at the subduction interface.
+    These forces are i) shearing along the plate interface, ii) bending of the slab, and iii) vertical resistance to slab sinking.
 
     :param slabs:       subduction zone data
     :type slabs:        pandas.DataFrame
     :param options:     options
     :type options:      dict
-    :param constants:   constants for conversions
-    :type constants:    class
 
     :return:            slabs
     :rtype:             pandas.DataFrame
     """
-    # Calculate shear zone width
-    slabs["shear_zone_width"] = slabs["v_convergence_mag"] * constants.cm_a2m_s / options["Strain rate"]
-
     # Calculate sediment fraction
-    slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / slabs["shear_zone_width"])
-    slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= slabs["shear_zone_width"], slabs["sediment_fraction"],  1)
+    slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / slabs["Shear zone width"])
+    slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= options["Shear zone width"], slabs["sediment_fraction"],  1)
     slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
-    # Calculate interface viscosity
-    slabs["interface_viscosity"] = 10 ** (21 - 2 * slabs["sediment_fraction"])
-
-    # Calculate upper plate thickness
-    slabs["upper_plate_thickness"] = _numpy.where(slabs["continental_arc"]==True, mech.cont_lith_thick, mech.island_arc_lith_thick)
-
-    # Calculate interface length
-    interface_length = mech.rad_curv * (_numpy.pi * 1/2 - _numpy.tan((mech.rad_curv - slabs["upper_plate_thickness"]) / mech.rad_curv))
-
-    # Calculate interface shear force
-    slabs["interface_shear_force_mag"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, 2 * slabs.interface_viscosity * options["Strain rate"] * interface_length)
-
-    # Decompose into latitudinal and longitudinal components
-    slabs["interface_shear_force_lat"], slabs["interface_shear_force_lon"] = mag_azi2lat_lon(slabs.interface_shear_force_mag, slabs.trench_normal_azimuth)
-
-    # Interface shear force works opposite to slab pull force, so it is negative
-    slabs["interface_shear_force_lat"] *= -1; slabs["interface_shear_force_lon"] *= -1
+    # Calculate interface term for all components of the slab pull force
+    slabs["slab_pull_force_mag"] *= options["Slab pull constant"] * 10 ** slabs["sediment_fraction"]
+    slabs["slab_pull_force_lat"] *= options["Slab pull constant"] * 10 ** slabs["sediment_fraction"]
+    slabs["slab_pull_force_lon"] *= options["Slab pull constant"] * 10 ** slabs["sediment_fraction"]
 
     return slabs
 

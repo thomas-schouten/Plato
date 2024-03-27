@@ -382,6 +382,8 @@ class PlateForces():
                 # Calculate slab pull torque
                 if self.options[key]["Slab pull torque"]:
                     self.slabs[reconstruction_time][key] = functions_main.compute_slab_pull_force(self.slabs[reconstruction_time][key], self.options[key], self.mech)
+                    if self.options[key]["Sediment subduction"]:
+                        self.slabs[reconstruction_time][key] = functions_main.compute_interface_term(self.slabs[reconstruction_time][key], self.options[key])
                     self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
                         self.plates[reconstruction_time][key], 
                         self.slabs[reconstruction_time][key].lat, 
@@ -438,35 +440,6 @@ class PlateForces():
             #-----------------------#
             #   RESISTIVE TORQUES   #
             #-----------------------#
-            
-            # Loop through interface shear cases
-            for key, entries in self.interface_shear_cases.items():
-                # Calculate interface shear torque
-                if self.options[key]["Interface shear torque"]:
-                    self.slabs[reconstruction_time][key] = functions_main.compute_interface_shear_force(self.slabs[reconstruction_time][key], self.options[key], self.mech, self.constants)
-                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
-                        self.plates[reconstruction_time][key], 
-                        self.slabs[reconstruction_time][key].lat, 
-                        self.slabs[reconstruction_time][key].lon, 
-                        self.slabs[reconstruction_time][key].lower_plateID, 
-                        self.slabs[reconstruction_time][key].interface_shear_force_lat, 
-                        self.slabs[reconstruction_time][key].interface_shear_force_lon,
-                        self.slabs[reconstruction_time][key].trench_segment_length,
-                        1,
-                        self.constants,
-                        torque_variable="interface_shear_torque"
-                    )
-                
-                # Copy DataFrames
-                [[self.slabs[reconstruction_time][entry].update(
-                    {"interface_shear_force_" + coord: self.slabs[reconstruction_time][key]["interface_shear_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                [[self.plates[reconstruction_time][entry].update(
-                    {"interface_shear_force_" + coord: self.plates[reconstruction_time][key]["interface_shear_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]] 
-                [[self.plates[reconstruction_time][entry].update(
-                    {"interface_shear_torque_" + axis: self.plates[reconstruction_time][key]["interface_shear_torque_" + axis]}
-                ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]] 
 
             # Loop through slab bend cases
             for key, entries in self.slab_bend_cases.items():
@@ -503,8 +476,15 @@ class PlateForces():
                     # Calculate Mantle drag torque
                     if self.options[key]["Mantle drag torque"]:
                         # Calculate mantle drag force
-                        self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key] = functions_main.compute_mantle_drag_force(self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key], self.options[key], self.mech, self.constants)
-                        
+                        self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key] = functions_main.compute_mantle_drag_force(
+                            self.plates[reconstruction_time][key],
+                            self.points[reconstruction_time][key],
+                            self.slabs[reconstruction_time][key],
+                            self.options[key],
+                            self.mech,
+                            self.constants
+                        )
+
                         # Calculate mantle drag torque
                         self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
                             self.plates[reconstruction_time][key], 
@@ -533,96 +513,30 @@ class PlateForces():
             # Loop through all cases
             for case in self.cases:
                 if not self.options[case]["Reconstructed motions"]:
-                    print(case)
                     if self.options[case]["Mantle drag torque"]:
-                        # Select slabs, points and plates
-                        these_slabs = deepcopy(self.slabs[reconstruction_time][case])
-                        these_points = deepcopy(self.points[reconstruction_time][case])
-                        these_plates = deepcopy(self.plates[reconstruction_time][case])
+                        # Calculate mantle drag force
+                        self.plates[reconstruction_time][case], self.points[reconstruction_time][case], self.slabs[reconstruction_time][case] = functions_main.compute_mantle_drag_force(
+                            self.plates[reconstruction_time][case],
+                            self.points[reconstruction_time][case],
+                            self.slabs[reconstruction_time][case],
+                            self.options[key],
+                            self.mech,
+                            self.constants
+                        )
 
-                        # Optimise slab pull force
-                        [these_plates.update({"slab_pull_torque_opt_" + axis: these_plates["slab_pull_torque_" + axis] * self.options[case]["Slab pull constant"]}) for axis in ["x", "y", "z"]]
-
-                        # Initialise starting old_plates, old_points, old_slabs by copying these_plates, these_points, these_slabs
-                        old_plates = deepcopy(these_plates); old_points = deepcopy(these_points); old_slabs = deepcopy(these_slabs)
-
-                        # Delete these_plates, these_points, these_slabs
-                        del these_plates, these_points, these_slabs
-
-                        for i in range(100):
-                            # Delete new DataFrames
-                            if i != 0:
-                                del new_slabs, new_points, new_plates
-                            else:
-                                old_slabs["v_convergence_mag"] = 0
-
-                            print(_numpy.mean(old_slabs["v_convergence_mag"].values))
-                            # Compute interface shear force
-                            if self.options[case]["Interface shear torque"]:
-                                new_slabs = functions_main.compute_interface_shear_force(old_slabs, self.options[case], self.mech, self.constants)
-                            else:
-                                new_slabs = deepcopy(old_slabs)
-
-                            # Compute interface shear torque
-                            new_plates = functions_main.compute_torque_on_plates(
-                                old_plates,
-                                new_slabs.lat,
-                                new_slabs.lon,
-                                new_slabs.lower_plateID,
-                                new_slabs.interface_shear_force_lat,
-                                new_slabs.interface_shear_force_lon,
-                                new_slabs.trench_segment_length,
-                                1,
-                                self.constants,
-                                torque_variable="interface_shear_torque"
-                            )
-
-                            # Compute mantle drag force
-                            new_plates, new_points, new_slabs = functions_main.compute_mantle_drag_force(old_plates, old_points, new_slabs, self.options[case], self.mech, self.constants)
-
-                            # Compute mantle drag torque
-                            new_plates = functions_main.compute_torque_on_plates(
-                                new_plates, 
-                                new_points.lat, 
-                                new_points.lon, 
-                                new_points.plateID, 
-                                new_points.mantle_drag_force_lat, 
-                                new_points.mantle_drag_force_lon,
-                                new_points.segment_length_lat,
-                                new_points.segment_length_lon,
-                                self.constants,
-                                torque_variable="mantle_drag_torque"
-                            )
-
-                            # Calculate convergence rates
-                            v_convergence_lat = new_slabs["v_lower_plate_lat"].values; v_convergence_lon = new_slabs["v_lower_plate_lon"].values
-
-                            if not self.options[case]["Mantle stationary trenches"]:
-                                v_convergence_lat -= new_slabs["v_upper_plate_lat"].values; v_convergence_lon -= new_slabs["v_upper_plate_lon"].values
-
-                            v_convergence_mag = _numpy.sqrt(v_convergence_lat**2 + v_convergence_lon**2)
-
-                            # Check convergence rates
-                            if _numpy.max(abs(v_convergence_mag - old_slabs["v_convergence_mag"].values)) < 1e-2: # and _numpy.max(v_convergence_mag) < 25:
-                                print(f"Convergence rates converged after {i} iterations")
-                                break
-                            else:
-                                # Assign new values to latest slabs DataFrame
-                                new_slabs["v_convergence_lat"], new_slabs["v_convergence_lon"] = functions_main.mag_azi2lat_lon(v_convergence_mag, new_slabs.trench_normal_azimuth); new_slabs["v_convergence_mag"] = v_convergence_mag
-                                
-                                # Delecte old DataFrames
-                                del old_plates, old_points, old_slabs
-                                
-                                # Overwrite DataFrames
-                                old_plates = deepcopy(new_plates); old_points = deepcopy(new_points); old_slabs = deepcopy(new_slabs)
-
-                        # Overwrite DataFrames
-                        self.plates[reconstruction_time][case] = deepcopy(new_plates)
-                        self.points[reconstruction_time][case] = deepcopy(new_points)
-                        self.slabs[reconstruction_time][case] = deepcopy(new_slabs)
-
-                        # Delete temporary DataFrames
-                        del new_plates, new_points, new_slabs
+                        # Calculate mantle drag torque
+                        self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                            self.plates[reconstruction_time][key], 
+                            self.points[reconstruction_time][key].lat, 
+                            self.points[reconstruction_time][key].lon, 
+                            self.points[reconstruction_time][key].plateID, 
+                            self.points[reconstruction_time][key].mantle_drag_force_lat, 
+                            self.points[reconstruction_time][key].mantle_drag_force_lon,
+                            self.points[reconstruction_time][key].segment_length_lat,
+                            self.points[reconstruction_time][key].segment_length_lon,
+                            self.constants,
+                            torque_variable="mantle_drag_torque"
+                        )
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OPTIMISATION 
