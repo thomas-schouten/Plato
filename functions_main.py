@@ -100,7 +100,7 @@ def compute_slab_pull_force(slabs, options, mech):
     slabs["slab_pull_force_mag"] = _numpy.where(
         _numpy.isnan(slabs.lower_plate_age),
         0,
-        slabs["lower_plate_thickness"] * mech.depth * mech.drho_slab * mech.g# * 1/_numpy.sqrt(_numpy.pi)
+        slabs["lower_plate_thickness"] * mech.depth * mech.drho_slab * mech.g * 1/_numpy.sqrt(_numpy.pi)
         )
 
     if options["Sediment subduction"]:
@@ -129,15 +129,22 @@ def compute_interface_term(slabs, options):
     :return:            slabs
     :rtype:             pandas.DataFrame
     """
-    # Calculate sediment fraction
-    slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / slabs["Shear zone width"])
-    slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= options["Shear zone width"], slabs["sediment_fraction"],  1)
-    slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
+    if options["Sediment subduction"]:
+        # Calculate sediment fraction
+        slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / options["Shear zone width"])
+        slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= options["Shear zone width"], slabs["sediment_fraction"],  1)
+        slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
-    # Calculate interface term for all components of the slab pull force
-    slabs["slab_pull_force_mag"] *= options["Slab pull constant"] * 10 ** slabs["sediment_fraction"]
-    slabs["slab_pull_force_lat"] *= options["Slab pull constant"] * 10 ** slabs["sediment_fraction"]
-    slabs["slab_pull_force_lon"] *= options["Slab pull constant"] * 10 ** slabs["sediment_fraction"]
+        # Calculate interface term for all components of the slab pull force
+        slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+        slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+        slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+
+    else:
+        # Calculate interface term for all components of the slab pull force
+        slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * options["Slab pull constant"]
+        slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * options["Slab pull constant"]
+        slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * options["Slab pull constant"]
 
     return slabs
 
@@ -266,6 +273,9 @@ def sample_slabs_from_seafloor(
 
         # Sample erosion rate, if applicable
         if options["Sediment subduction"] and options["Sample erosion grid"] in seafloor.data_vars:
+            # Reset sediment thickness to avoid adding double the sediment
+            sediment_thickness = _numpy.zeros(len(ages))
+
             # Set new sampling points 100 km inboard of the trench
             sampling_lat, sampling_lon = project_points(lat, lon, trench_normal_azimuth, 300)
 
@@ -296,7 +306,7 @@ def sample_slabs_from_seafloor(
                 current_sampling_distance += 50
             
             # Convert erosion rate to sediment thickness
-            sediment_thickness = erosion_rate * options["Erosion to sediment ratio"]
+            sediment_thickness += erosion_rate * options["Erosion to sediment ratio"]
             
             return ages, continental_arc, erosion_rate, sediment_thickness
         
@@ -545,11 +555,6 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
     :return:                        torques, points
     :rtype:                         pandas.DataFrame, pandas.DataFrame
     """
-    # Copy DataFrames to avoid Python issues
-    torques = torques.copy()
-    points = points.copy()
-    slabs = slabs.copy()
-
     # Get velocities at points
     if options["Reconstructed motions"]:
         # Calculate mantle drag force
@@ -559,7 +564,7 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
     else:
         # Calculate residual torque
         for axis in ["_x", "_y", "_z"]:
-            torques["mantle_drag_torque_opt" + axis] = (torques["slab_pull_torque_opt" + axis] + torques["GPE_torque" + axis] + torques["slab_bend_torque" + axis]) + torques["interface_shear_torque" + axis] * -1
+            torques["mantle_drag_torque_opt" + axis] = (torques["slab_pull_torque_opt" + axis] + torques["GPE_torque" + axis] + torques["slab_bend_torque" + axis]) * -1
         torques["mantle_drag_torque_opt_mag"] = xyz2mag(torques["mantle_drag_torque_opt_x"], torques["mantle_drag_torque_opt_y"], torques["mantle_drag_torque_opt_z"])
         
         # Convert to centroid
@@ -605,16 +610,26 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
                         constants
                     )
 
-                    # Assign the velocity to the respective columns in the slabs DataFrame
-                    slabs["v_lower_plate_lat"][j], slabs["v_lower_plate_lon"][j], slabs["v_lower_plate_mag"][j], slabs["v_lower_plate_azi"][j] = slab_velocity
+                    # print(slab_velocity[0] * constants.m_s2cm_a, slab_velocity[1] * constants.m_s2cm_a, slab_velocity[2] * constants.m_s2cm_a)
 
+                    # Assign the velocity to the respective columns in the slabs DataFrame
+                    slabs.loc[j, "v_lower_plate_lat"] = slab_velocity[0]
+                    slabs.loc[j, "v_lower_plate_lon"] = slab_velocity[1]
+                    slabs.loc[j, "v_lower_plate_mag"] = slab_velocity[2]
+                    slabs.loc[j, "v_lower_plate_azi"] = slab_velocity[3]
                 else:
                     # If the area condition is not satisfied, set the velocity to zero
-                    slabs["v_lower_plate_lat"][j], slabs["v_lower_plate_lon"][j], slabs["v_lower_plate_mag"][j], slabs["v_lower_plate_azi"][j] = 0, 0, 0, _numpy.nan
+                    slabs.loc[j, "v_lower_plate_lat"] = 0
+                    slabs.loc[j, "v_lower_plate_lon"] = 0
+                    slabs.loc[j, "v_lower_plate_mag"] = 0
+                    slabs.loc[j, "v_lower_plate_azi"] = _numpy.nan
 
             # If the torque balance is not known for the lower plate, set the velocity to zero
             else:
-                slabs["v_lower_plate_lat"][j], slabs["v_lower_plate_lon"][j], slabs["v_lower_plate_mag"][j], slabs["v_lower_plate_azi"][j] = 0, 0, 0, _numpy.nan
+                slabs.loc[j, "v_lower_plate_lat"] = 0
+                slabs.loc[j, "v_lower_plate_lon"] = 0
+                slabs.loc[j, "v_lower_plate_mag"] = 0
+                slabs.loc[j, "v_lower_plate_azi"] = _numpy.nan
 
             # Check if the torque balance is known for the upper plate
             if slabs.upper_plateID[j] in torques.plateID.values:
@@ -639,19 +654,30 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
                     )
                     
                     # Assign the velocity to the respective columns in the slabs DataFrame
-                    slabs["v_upper_plate_lat"][j], slabs["v_upper_plate_lon"][j], slabs["v_upper_plate_mag"][j], slabs["v_upper_plate_azi"][j] = trench_velocity
+                    slabs.loc[j, "v_upper_plate_lat"] = trench_velocity[0]
+                    slabs.loc[j, "v_upper_plate_lon"] = trench_velocity[1]
+                    slabs.loc[j, "v_upper_plate_mag"] = trench_velocity[2]
+                    slabs.loc[j, "v_upper_plate_azi"] = trench_velocity[3]
 
                 else:
                     # If the area condition is not satisfied, set the velocity to zero
-                    slabs["v_upper_plate_lat"][j], slabs["v_upper_plate_lon"][j], slabs["v_upper_plate_mag"][j], slabs["v_upper_plate_azi"][j] = 0, 0, 0, _numpy.nan
+                    slabs.loc[j, "v_upper_plate_lat"] = 0
+                    slabs.loc[j, "v_upper_plate_lon"] = 0
+                    slabs.loc[j, "v_upper_plate_mag"] = 0
+                    slabs.loc[j, "v_upper_plate_azi"] = _numpy.nan
 
             # If the torque balance is not known for the upper plate, set the velocity to zero
             else:
-                slabs["v_upper_plate_lat"][j], slabs["v_upper_plate_lon"][j], slabs["v_upper_plate_mag"][j], slabs["v_upper_plate_azi"][j] = 0, 0, 0, _numpy.nan
+                slabs.loc[j, "v_upper_plate_lat"] = 0
+                slabs.loc[j, "v_upper_plate_lon"] = 0
+                slabs.loc[j, "v_upper_plate_mag"] = 0
+                slabs.loc[j, "v_upper_plate_azi"] = _numpy.nan
 
         # Convert to cm/a
         slabs["v_lower_plate_lat"] *= constants.m_s2cm_a; slabs["v_lower_plate_lon"] *= constants.m_s2cm_a; slabs["v_lower_plate_mag"] *= constants.m_s2cm_a
         slabs["v_upper_plate_lat"] *= constants.m_s2cm_a; slabs["v_upper_plate_lon"] *= constants.m_s2cm_a; slabs["v_upper_plate_mag"] *= constants.m_s2cm_a
+
+        # print(slabs["v_lower_plate_lat"], slabs["v_lower_plate_lon"], slabs["v_lower_plate_mag"], slabs["v_lower_plate_azi"])
 
     return torques, points, slabs
 

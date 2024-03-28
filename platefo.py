@@ -108,12 +108,10 @@ class PlateForces():
         self.point_cases = setup.process_cases(self.cases, self.options, point_options)
 
         # For torque computation
-        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Strain rate", "Interface mixing", "Sample sediment grid", "Active margin sediments", "Randomise trench orientation", "Randomise slab age"]
+        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid"]
         self.slab_pull_cases = setup.process_cases(self.cases, self.options, slab_pull_options)
         slab_bend_options = ["Slab bend torque", "Seafloor age profile"]
         self.slab_bend_cases = setup.process_cases(self.cases, self.options, slab_bend_options)
-        interface_shear_options = ["Interface shear torque", "Sample sediment grid", "Active margin sediments", "Strain rate", "Interface mixing"]
-        self.interface_shear_cases = setup.process_cases(self.cases, self.options, interface_shear_options)
         gpe_options = ["Continental crust", "Seafloor age profile"]
         self.gpe_cases = setup.process_cases(self.cases, self.options, gpe_options)
         mantle_drag_options = ["Reconstructed motions"]
@@ -124,7 +122,6 @@ class PlateForces():
         self.slabs = {}
         self.points = {}
         self.seafloor = {}
-        self.topography = {reconstruction_time: {case: None for case in self.cases} for reconstruction_time in self.times}
 
         # Load or initialise plates
         self.plates = setup.load_data(
@@ -378,12 +375,9 @@ class PlateForces():
             
             # Loop through slab pull cases
             for key, entries in self.slab_pull_cases.items():
-
                 # Calculate slab pull torque
                 if self.options[key]["Slab pull torque"]:
                     self.slabs[reconstruction_time][key] = functions_main.compute_slab_pull_force(self.slabs[reconstruction_time][key], self.options[key], self.mech)
-                    if self.options[key]["Sediment subduction"]:
-                        self.slabs[reconstruction_time][key] = functions_main.compute_interface_term(self.slabs[reconstruction_time][key], self.options[key])
                     self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
                         self.plates[reconstruction_time][key], 
                         self.slabs[reconstruction_time][key].lat, 
@@ -395,6 +389,20 @@ class PlateForces():
                         1,
                         self.constants,
                         torque_variable="slab_pull_torque"
+                    )
+
+                    self.slabs[reconstruction_time][key] = functions_main.compute_interface_term(self.slabs[reconstruction_time][key], self.options[key])
+                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                        self.plates[reconstruction_time][key], 
+                        self.slabs[reconstruction_time][key].lat, 
+                        self.slabs[reconstruction_time][key].lon, 
+                        self.slabs[reconstruction_time][key].lower_plateID, 
+                        self.slabs[reconstruction_time][key].slab_pull_force_opt_lat, 
+                        self.slabs[reconstruction_time][key].slab_pull_force_opt_lon,
+                        self.slabs[reconstruction_time][key].trench_segment_length,
+                        1,
+                        self.constants,
+                        torque_variable="slab_pull_torque_opt"
                     )
 
                     # Copy DataFrames
@@ -525,15 +533,15 @@ class PlateForces():
                         )
 
                         # Calculate mantle drag torque
-                        self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
-                            self.plates[reconstruction_time][key], 
-                            self.points[reconstruction_time][key].lat, 
-                            self.points[reconstruction_time][key].lon, 
-                            self.points[reconstruction_time][key].plateID, 
-                            self.points[reconstruction_time][key].mantle_drag_force_lat, 
-                            self.points[reconstruction_time][key].mantle_drag_force_lon,
-                            self.points[reconstruction_time][key].segment_length_lat,
-                            self.points[reconstruction_time][key].segment_length_lon,
+                        self.plates[reconstruction_time][case] = functions_main.compute_torque_on_plates(
+                            self.plates[reconstruction_time][case], 
+                            self.points[reconstruction_time][case].lat, 
+                            self.points[reconstruction_time][case].lon, 
+                            self.points[reconstruction_time][case].plateID, 
+                            self.points[reconstruction_time][case].mantle_drag_force_lat, 
+                            self.points[reconstruction_time][case].mantle_drag_force_lon,
+                            self.points[reconstruction_time][case].segment_length_lat,
+                            self.points[reconstruction_time][case].segment_length_lon,
                             self.constants,
                             torque_variable="mantle_drag_torque"
                         )
@@ -573,7 +581,7 @@ class PlateForces():
         """
         # Generate grid of viscosities and slab pull coefficients
         viscs = _numpy.linspace(visc_range[0],visc_range[1],grid_size)
-        sp_consts = _numpy.linspace(1e-4,1,grid_size)
+        sp_consts = _numpy.linspace(1e-5,1,grid_size)
         visc_grid, sp_const_grid = _numpy.meshgrid(viscs, sp_consts)
         ones_grid = _numpy.ones_like(visc_grid)
 
@@ -620,9 +628,9 @@ class PlateForces():
         for k, _ in enumerate(plates_of_interest):
             residual_x = _numpy.zeros_like(sp_const_grid); residual_y = _numpy.zeros_like(sp_const_grid); residual_z = _numpy.zeros_like(sp_const_grid)
             if self.options[opt_case]["Slab pull torque"] and "slab_pull_torque_x" in selected_plates.columns:
-                residual_x -= selected_plates.slab_pull_torque_x.iloc[k] * sp_const_grid
-                residual_y -= selected_plates.slab_pull_torque_y.iloc[k] * sp_const_grid
-                residual_z -= selected_plates.slab_pull_torque_z.iloc[k] * sp_const_grid
+                residual_x -= selected_plates.slab_pull_torque_opt_x.iloc[k] * sp_const_grid / self.options[opt_case]["Slab pull constant"]
+                residual_y -= selected_plates.slab_pull_torque_opt_y.iloc[k] * sp_const_grid / self.options[opt_case]["Slab pull constant"]
+                residual_z -= selected_plates.slab_pull_torque_opt_z.iloc[k] * sp_const_grid / self.options[opt_case]["Slab pull constant"]
 
             # Add GPE torque
             if self.options[opt_case]["GPE torque"] and "GPE_torque_x" in selected_plates.columns:
@@ -635,12 +643,6 @@ class PlateForces():
                 self.driving_torque[opt_time][opt_case] += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) * selected_plates.area.iloc[k] / total_area
             else:
                 self.driving_torque[opt_time][opt_case] += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) / selected_plates.area.iloc[k]
-
-            # Add interface shear torque
-            if self.options[opt_case]["Interface shear torque"] and "interface_shear_torque_x" in selected_plates.columns:
-                residual_x -= selected_plates.interface_shear_torque_x.iloc[k] * ones_grid
-                residual_y -= selected_plates.interface_shear_torque_y.iloc[k] * ones_grid
-                residual_z -= selected_plates.interface_shear_torque_z.iloc[k] * ones_grid
 
             # Add slab bend torque
             if self.options[opt_case]["Slab bend torque"] and "slab_bend_torque_x" in selected_plates.columns:
@@ -917,16 +919,16 @@ class PlateForces():
 
                 # Calculate residual of plate velocities
                 if weight_by_area:
-                    v_plate_residual_lon = ((self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_absolute_lon) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
-                    v_plate_residual_lat = ((self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_absolute_lat) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
+                    v_plate_residual_lon = ((self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_lower_plate_lon) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
+                    v_plate_residual_lat = ((self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_lower_plate_lat) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
                 else:
-                    v_plate_residual_lon = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_absolute_lon)
-                    v_plate_residual_lat = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_absolute_lat)
+                    v_plate_residual_lon = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_lower_plate_lon)
+                    v_plate_residual_lat = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_lower_plate_lat)
                 v_plate_residual[i,j] = _numpy.sqrt(v_plate_residual_lon**2 + v_plate_residual_lat**2)
 
                 # Calculate residual of slab velocities
-                v_slab_residual_lon = ((self.slabs[reconstruction_time][key].v_synthetic_lon-self.slabs[reconstruction_time][key].v_absolute_lon) * self.slabs[reconstruction_time][key].trench_segment_length).sum()  / self.slabs[reconstruction_time][key].trench_segment_length.sum()
-                v_slab_residual_lat = ((self.slabs[reconstruction_time][key].v_synthetic_lat-self.slabs[reconstruction_time][key].v_absolute_lat) * self.slabs[reconstruction_time][key].trench_segment_length).sum() / self.slabs[reconstruction_time][key].trench_segment_length.sum()
+                v_slab_residual_lon = ((self.slabs[reconstruction_time][key].v_synthetic_lon-self.slabs[reconstruction_time][key].v_lower_plate_lon) * self.slabs[reconstruction_time][key].trench_segment_length).sum()  / self.slabs[reconstruction_time][key].trench_segment_length.sum()
+                v_slab_residual_lat = ((self.slabs[reconstruction_time][key].v_synthetic_lat-self.slabs[reconstruction_time][key].v_lower_plate_lat) * self.slabs[reconstruction_time][key].trench_segment_length).sum() / self.slabs[reconstruction_time][key].trench_segment_length.sum()
                 v_slab_residual[i,j] = _numpy.sqrt(v_slab_residual_lon**2 + v_slab_residual_lat**2)
 
         # Find the indices of the minimum value directly using _numpy.argmin
@@ -1338,14 +1340,10 @@ class PlateForces():
         slab_vectors = slab_data.iloc[::5]
 
         # Plot velocity magnitude at trenches
-        # if self.options[case]["Reconstructed motions"]:
-        variable = "v_absolute_mag"
-        # else:
-            # variable = "v_synthetic_mag"
         vels = ax.scatter(
             slab_data.lon,
             slab_data.lat,
-            c=slab_data[variable],
+            c=slab_data.v_lower_plate_mag,
             s=plotting_options["marker size"],
             transform=ccrs.PlateCarree(),
             cmap=plotting_options["velocity magnitude cmap"],
@@ -1354,15 +1352,11 @@ class PlateForces():
         )
 
         # Plot velocity at subduction zones
-        # if self.options[case]["Reconstructed motions"]:
-        variable = "v_absolute"
-        # else:
-            # variable = "v_synthetic"
         slab_vectors = ax.quiver(
             x=slab_vectors.lon,
             y=slab_vectors.lat,
-            u=slab_vectors[variable + "_lon"],
-            v=slab_vectors[variable + "_lat"],
+            u=slab_vectors.v_lower_plate_lon,
+            v=slab_vectors.v_lower_plate_lat,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=2e-3,
@@ -1372,15 +1366,11 @@ class PlateForces():
         )
 
         # Plot velocity at centroid
-        # if self.options[case]["Reconstructed motions"]:
-        variable = "v_absolute"
-        # else:
-            # variable = "v_synthetic"
         centroid_vectors = ax.quiver(
             x=plate_vectors.centroid_lon,
             y=plate_vectors.centroid_lat,
-            u=plate_vectors[variable + "_lon"],
-            v=plate_vectors[variable + "_lat"],
+            u=plate_vectors.v_absolute_lon,
+            v=plate_vectors.v_absolute_lat,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=5e-3,
@@ -1424,18 +1414,10 @@ class PlateForces():
             slab_vectors[case] = slab_data[case].iloc[::5]
         
         # Plot velocity magnitude at trenches
-        # if self.options[case1]["Reconstructed motions"]:
-        var1 = "v_absolute_"
-        # else:
-            # var1 = "v_synthetic_"
-        # if self.options[case2]["Reconstructed motions"]:
-        var2 = "v_absolute_"
-        # else:
-            # var2 = "v_synthetic_"
         vels = ax.scatter(
             slab_data[case1].lon,
             slab_data[case1].lat,
-            c=slab_data[case1][var1 + "mag"] - slab_data[case2][var2 + "mag"],
+            c=slab_data[case1].v_lower_plate_mag - slab_data[case2].v_lower_plate_mag,
             s=plotting_options["marker size"],
             transform=ccrs.PlateCarree(),
             cmap=plotting_options["velocity difference cmap"],
@@ -1447,8 +1429,8 @@ class PlateForces():
         slab_vectors = ax.quiver(
             x=slab_vectors[case1].lon,
             y=slab_vectors[case1].lat,
-            u=slab_vectors[case1][var1 + "lon"] - slab_vectors[case2][var2 + "lon"],
-            v=slab_vectors[case1][var1 + "lat"] - slab_vectors[case2][var2 + "lat"],
+            u=slab_vectors[case1].v_lower_plate_lon - slab_vectors[case2].v_lower_plate_lon,
+            v=slab_vectors[case1].v_lower_plate_lat - slab_vectors[case2].v_lower_plate_lat,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=2e-3,
@@ -1458,19 +1440,11 @@ class PlateForces():
         )
 
         # Plot velocity at centroid
-        # if self.options[case1]["Reconstructed motions"]:
-        variable1 = "v_absolute"
-        # else:
-            # variable1 = "v_synthetic"
-        # if self.options[case2]["Reconstructed motions"]:
-        variable2 = "v_absolute"
-        # else:
-            # variable2 = "v_synthetic"
         centroid_vectors = ax.quiver(
             x=plate_vectors[case1].centroid_lon,
             y=plate_vectors[case1].centroid_lat,
-            u=plate_vectors[case1][variable1 + "_lon"] - plate_vectors[case2][variable2 + "_lon"],
-            v=plate_vectors[case1][variable1 + "_lat"] - plate_vectors[case2][variable2 + "_lat"],
+            u=plate_vectors[case1].v_absolute_lon - plate_vectors[case2].v_absolute_lon,
+            v=plate_vectors[case1].v_absolute_lat - plate_vectors[case2].v_absolute_lat,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=5e-3,
@@ -1514,18 +1488,10 @@ class PlateForces():
             slab_vectors[case] = slab_data[case].iloc[::5]
         
         # Plot velocity magnitude at trenches
-        if self.options[case1]["Reconstructed motions"]:
-            var1 = "v_absolute_"
-        else:
-            var1 = "v_synthetic_"
-        if self.options[case2]["Reconstructed motions"]:
-            var2 = "v_absolute_"
-        else:
-            var2 = "v_synthetic_"
         vels = ax.scatter(
             slab_data[case1].lon,
             slab_data[case1].lat,
-            c=slab_data[case1][var1 + "mag"] / slab_data[case2][var2 + "mag"],
+            c=slab_data[case1].v_lower_plate_mag / slab_data[case2].v_lower_plate_mag,
             s=plotting_options["marker size"],
             transform=ccrs.PlateCarree(),
             cmap=plotting_options["relative velocity difference cmap"],
@@ -1542,8 +1508,8 @@ class PlateForces():
         slab_vectors = ax.quiver(
             x=slab_vectors[case1].lon,
             y=slab_vectors[case1].lat,
-            u=(slab_vectors[case1][var1 + "lon"] - slab_vectors[case2][var2 + "lon"]) / slab_vectors[case2][var2 + "mag"] * 10,
-            v=(slab_vectors[case1][var1 + "lat"] - slab_vectors[case2][var2 + "lat"]) / slab_vectors[case2][var2 + "mag"] * 10,
+            u=(slab_vectors[case1].v_lower_plate_lon - slab_vectors[case2].v_lower_plate_lon) / slab_vectors[case2].v_lower_plate_lon * 10,
+            v=(slab_vectors[case1].v_lower_plate_lat - slab_vectors[case2].v_lower_plate_lat) / slab_vectors[case2].v_lower_plate_lat * 10,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=2e-3,
@@ -1552,25 +1518,12 @@ class PlateForces():
             color='black'
         )
 
-        # relative_plate_vectors_lon = (plate_vectors[case1][var1 + "lon"] / plate_vectors[case2][var2 + "mag"])
-        # relative_plate_vectors_lon = _numpy.where(relative_plate_vectors_lon > 0, relative_plate_vectors_lon-1, relative_plate_vectors_lon+1)
-        # relative_plate_vectors_lat = (plate_vectors[case1][var1 + "lat"] / plate_vectors[case2][var2 + "mag"])
-        # relative_plate_vectors_lat = _numpy.where(relative_plate_vectors_lat > 0, relative_plate_vectors_lat-1, relative_plate_vectors_lat+1)
-
         # Plot velocity at centroid
-        if self.options[case1]["Reconstructed motions"]:
-            variable1 = "v_absolute"
-        else:
-            variable1 = "v_synthetic"
-        if self.options[case2]["Reconstructed motions"]:
-            variable2 = "v_absolute"
-        else:
-            variable2 = "v_synthetic"
         centroid_vectors = ax.quiver(
             x=plate_vectors[case1].centroid_lon,
             y=plate_vectors[case1].centroid_lat,
-            u=(plate_vectors[case1][var1 + "lon"] - plate_vectors[case2][var2 + "lon"]) / plate_vectors[case2][var2 + "mag"] * 10,
-            v=(plate_vectors[case1][var1 + "lat"] - plate_vectors[case2][var2 + "lat"]) / plate_vectors[case2][var2 + "mag"] * 10,
+            u=(plate_vectors[case1].v_absolute_lon - plate_vectors[case2].v_absolute_lon) / plate_vectors[case2].v_absolute_lon * 10,
+            v=(plate_vectors[case1].v_absolute_lat - plate_vectors[case2].v_absolute_lat) / plate_vectors[case2].v_absolute_lat * 10,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=5e-3,
