@@ -135,16 +135,10 @@ def compute_interface_term(slabs, options):
         slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= options["Shear zone width"], slabs["sediment_fraction"],  1)
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
-        # Calculate interface term for all components of the slab pull force
-        slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-        slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-        slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-
-    else:
-        # Calculate interface term for all components of the slab pull force
-        slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * options["Slab pull constant"]
-        slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * options["Slab pull constant"]
-        slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * options["Slab pull constant"]
+    # Calculate interface term for all components of the slab pull force
+    slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+    slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+    slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
 
     return slabs
 
@@ -368,31 +362,6 @@ def project_points(lat, lon, azimuth, distance):
 
     return new_lat, new_lon
 
-def conrad_hager(v_plate, interface_viscosity, slab_pull, lf, denominator, shear_zone_width):
-    """
-    Function to calculate subduction speed according to semi-empirical formulation from Conrad & Hager (1999)
-
-    :param v_plate:                 subduction speed [m/s]
-    :type v_plate:                  float
-    :param interface_viscosity:     interface viscosity [Pa s]
-    :type interface_viscosity:      float
-    :param slab_pull:               slab pull force [N/m]
-    :type slab_pull:                float
-    :param lf:                      length of the interface [m]
-    :type lf:                       float
-    :param denominator:             denominator of the equation [m]
-    :type denominator:              float
-    :param shear_zone_width:        width of the shear zone [m]
-    :type shear_zone_width:         float
-
-    :return:                        residual
-    :rtype:                         float
-    """
-    # Calculate theoretical subduction velocity
-    residual = (slab_pull - lf * 2 * interface_viscosity * (v_plate / (2 * shear_zone_width))) / denominator - v_plate
-
-    return residual
-
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # GRAVITATIONAL POTENTIAL ENERGY
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -558,21 +527,21 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
     # Get velocities at points
     if options["Reconstructed motions"]:
         # Calculate mantle drag force
-        points["mantle_drag_force_lat"] = -1 * points.v_lat * constants.cm_a2m_s
-        points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s
+        points["mantle_drag_force_lat"] = -1 * points.v_lat * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
 
     else:
         # Calculate residual torque
         for axis in ["_x", "_y", "_z"]:
-            torques["mantle_drag_torque_opt" + axis] = (torques["slab_pull_torque_opt" + axis] + torques["GPE_torque" + axis] + torques["slab_bend_torque" + axis]) * -1
-        torques["mantle_drag_torque_opt_mag"] = xyz2mag(torques["mantle_drag_torque_opt_x"], torques["mantle_drag_torque_opt_y"], torques["mantle_drag_torque_opt_z"])
+            torques["mantle_drag_torque" + axis] = (torques["slab_pull_torque_opt" + axis] + torques["GPE_torque" + axis] + torques["slab_bend_torque" + axis]) * -1
+        torques["mantle_drag_torque_opt_mag"] = xyz2mag(torques["mantle_drag_torque_x"], torques["mantle_drag_torque_y"], torques["mantle_drag_torque_z"])
         
         # Convert to centroid
         centroid_position = lat_lon2xyz(torques.centroid_lat, torques.centroid_lon, constants)
         centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
         
         # Calculate force from cross product of torques with centroid position
-        summed_torques_cartesian = _numpy.array([torques["mantle_drag_torque_opt_x"], torques["mantle_drag_torque_opt_y"], torques["mantle_drag_torque_opt_z"]])
+        summed_torques_cartesian = _numpy.array([torques["mantle_drag_torque_x"], torques["mantle_drag_torque_y"], torques["mantle_drag_torque_z"]])
         summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.array(torques.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
         force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
         velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)
@@ -583,8 +552,8 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
         )
 
         # Calculate velocity at centroid and convert to cm/a
-        torques["v_lat"], torques["v_lon"], torques["v_mag"], torques["v_azi"] = vector_xyz2lat_lon(torques.centroid_lat, torques.centroid_lon, velocity_at_centroid, constants)
-        torques["v_lat"] *= constants.m_s2cm_a; torques["v_lon"] *= constants.m_s2cm_a; torques["v_mag"] *= constants.m_s2cm_a
+        torques["centroid_v_lat"], torques["centroid_v_lon"], torques["centroid_v_mag"], torques["centroid_v_azi"] = vector_xyz2lat_lon(torques.centroid_lat, torques.centroid_lon, velocity_at_centroid, constants)
+        torques["centroid_v_lat"] *= constants.m_s2cm_a; torques["centroid_v_lon"] *= constants.m_s2cm_a; torques["centroid_v_mag"] *= constants.m_s2cm_a
 
         # Loop through slabs
         for j in range(len(slabs.lat)):
@@ -597,12 +566,12 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
                 if torques.area.values[n] >= options["Minimum plate area"]:
                     # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
                     slab_velocity = vector_xyz2lat_lon(
-                        [slabs.lat[j]],
-                        [slabs.lon[j]],
+                        [slabs.loc[j, "lat"]],
+                        [slabs.loc[j, "lon"]],
                         _numpy.array(
                             [_numpy.cross(
                             -1 * summed_torques_cartesian_normalised[:,n], lat_lon2xyz(
-                                slabs.lat[j], slabs.lon[j], constants
+                                slabs.loc[j, "lat"], slabs.loc[j, "lon"], constants
                                 ) / constants.mean_Earth_radius_m,
                             axis=0
                             )]

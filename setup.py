@@ -101,7 +101,7 @@ def get_plates(
     plates = _pandas.DataFrame(plates)
 
     # Initialise columns
-    plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "v_absolute_lon", "v_absolute_lat", "v_absolute_mag"]
+    plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_v_lon", "centroid_v_lat", "centroid_v_mag"]
 
     # Get plate names
     plates["name"] = _numpy.nan; plates.name = get_plate_names(plates.plateID)
@@ -116,8 +116,9 @@ def get_plates(
     coords = ["lat", "lon", "mag"]
     
     plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(plates.plateID))]
-    plates[[torque + "_torque_opt_" + axis for torque in [torques[0], torques[3]] for axis in axes]] = [[0] * len([torques[0], torques[3]]) * len(axes) for _ in range(len(plates.plateID))]
-    plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(plates.plateID))] 
+    plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(plates.plateID))]
+    plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(plates.plateID))]
+    plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(plates.plateID))]
 
     return plates
 
@@ -570,7 +571,7 @@ def get_options(
                       2,
                       False,
                       3e3,
-                      0.068,
+                      0.0681,
                       9.74e19,
                       250,
                       1,

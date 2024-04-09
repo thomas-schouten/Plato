@@ -266,7 +266,7 @@ class PlateForces():
                     )
 
                     # Calculate lower plate thickness
-                    self.slabs[reconstruction_time][key]["lower_plate_thickness"], crust_thickness, water_depth = functions_main.compute_thicknesses(
+                    self.slabs[reconstruction_time][key]["lower_plate_thickness"], _, _ = functions_main.compute_thicknesses(
                         self.slabs[reconstruction_time][key].lower_plate_age,
                         self.options[key],
                         crust = False, 
@@ -409,11 +409,17 @@ class PlateForces():
                     [[self.slabs[reconstruction_time][entry].update(
                         {"slab_pull_force_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_" + coord]}
                     ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                    [[self.slabs[reconstruction_time][entry].update(
+                        {"slab_pull_force_opt_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_opt_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
                     [[self.plates[reconstruction_time][entry].update(
                         {"slab_pull_force_" + coord: self.plates[reconstruction_time][key]["slab_pull_force_" + coord]}
                     ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
                     [[self.plates[reconstruction_time][entry].update(
                         {"slab_pull_torque_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_" + axis]}
+                    ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+                    [[self.plates[reconstruction_time][entry].update(
+                        {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
                     ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
             # Loop through gpe cases
@@ -475,7 +481,7 @@ class PlateForces():
                     {"slab_bend_force_" + coord: self.plates[reconstruction_time][key]["slab_bend_force_" + coord]}
                 ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
                 [self.plates[reconstruction_time][entry].update(
-                    {"mantle_drag_torque_" + axis: self.plates[reconstruction_time][key]["mantle_drag_torque_" + axis]}
+                    {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
                 ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
                     
             # Loop through mantle drag cases
@@ -652,9 +658,9 @@ class PlateForces():
 
             # Add mantle drag torque
             if self.options[opt_case]["Mantle drag torque"] and "mantle_drag_torque_x" in selected_plates.columns:
-                residual_x -= selected_plates.mantle_drag_torque_x.iloc[k] * visc_grid / self.mech.La
-                residual_y -= selected_plates.mantle_drag_torque_y.iloc[k] * visc_grid / self.mech.La
-                residual_z -= selected_plates.mantle_drag_torque_z.iloc[k] * visc_grid / self.mech.La
+                residual_x -= selected_plates.mantle_drag_torque_x.iloc[k] * visc_grid / self.options[opt_case]["Mantle viscosity"]
+                residual_y -= selected_plates.mantle_drag_torque_y.iloc[k] * visc_grid / self.options[opt_case]["Mantle viscosity"]
+                residual_z -= selected_plates.mantle_drag_torque_z.iloc[k] * visc_grid / self.options[opt_case]["Mantle viscosity"]
 
             # Compute magnitude of residual
             if weight_by_area:
@@ -1369,8 +1375,8 @@ class PlateForces():
         centroid_vectors = ax.quiver(
             x=plate_vectors.centroid_lon,
             y=plate_vectors.centroid_lat,
-            u=plate_vectors.v_absolute_lon,
-            v=plate_vectors.v_absolute_lat,
+            u=plate_vectors.centroid_v_lon,
+            v=plate_vectors.centroid_v_lat,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=5e-3,
@@ -1443,8 +1449,8 @@ class PlateForces():
         centroid_vectors = ax.quiver(
             x=plate_vectors[case1].centroid_lon,
             y=plate_vectors[case1].centroid_lat,
-            u=plate_vectors[case1].v_absolute_lon - plate_vectors[case2].v_absolute_lon,
-            v=plate_vectors[case1].v_absolute_lat - plate_vectors[case2].v_absolute_lat,
+            u=plate_vectors[case1].centroid_v_lon - plate_vectors[case2].centroid_v_lon,
+            v=plate_vectors[case1].centroid_v_lat - plate_vectors[case2].centroid_v_lat,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=5e-3,
