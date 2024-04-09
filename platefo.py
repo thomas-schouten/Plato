@@ -108,7 +108,7 @@ class PlateForces():
         self.point_cases = setup.process_cases(self.cases, self.options, point_options)
 
         # For torque computation
-        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid"]
+        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid", "Slab pull constant"]
         self.slab_pull_cases = setup.process_cases(self.cases, self.options, slab_pull_options)
         slab_bend_options = ["Slab bend torque", "Seafloor age profile"]
         self.slab_bend_cases = setup.process_cases(self.cases, self.options, slab_bend_options)
@@ -192,6 +192,60 @@ class PlateForces():
         self.misfit = {case: {reconstruction_time: {} for reconstruction_time in self.times} for case in self.cases}
 
         print("PlateForces object successfully instantiated!")
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# RESETTING OBJECT
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def reset(self):
+        """
+        Function to reset the object
+        """
+        # Reset plates, slabs, points, and seafloor
+
+        # Initialise other columns to store seafloor ages and forces
+        torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag"]
+        slab_forces = ["slab_pull", "slab_bend", "interface_shear"]
+        point_forces = ["GPE", "mantle_drag"]
+        axes = ["x", "y", "z", "mag"]
+        coords = ["lat", "lon", "mag"]
+        
+        # Upper plate
+        for reconstruction_time in self.times:
+            for case in self.cases:
+                # Reset plates
+
+                self.plates[reconstruction_time][case][[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+                self.plates[reconstruction_time][case][["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+                self.plates[reconstruction_time][case][[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+                self.plates[reconstruction_time][case][["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+
+                # Reset slabs
+                self.slabs[reconstruction_time][case]["upper_plate_thickness"] = 0.
+                self.slabs[reconstruction_time][case]["upper_plate_age"] = _numpy.nan   
+                self.slabs[reconstruction_time][case]["continental_arc"] = False
+                self.slabs[reconstruction_time][case]["erosion_rate"] = _numpy.nan
+                self.slabs[reconstruction_time][case]["lower_plate_age"] = _numpy.nan
+                self.slabs[reconstruction_time][case]["lower_plate_thickness"] = _numpy.nan
+                self.slabs[reconstruction_time][case]["sediment_thickness"] = 0.
+                self.slabs[reconstruction_time][case]["sediment_fraction"] = 0.
+                self.slabs[reconstruction_time][case][[force + "_force_" + coord for force in slab_forces for coord in coords]] = [[0] * 9 for _ in range(len(self.slabs[reconstruction_time][case]))] 
+
+                # Reset points
+
+
+        # Reset flags
+        self.sampled_points = False
+        self.sampled_upper_plates = False
+        self.sampled_slabs = False
+        self.optimised_torques = False
+
+        # Reset optimisations
+        self.residual_torque = {}; self.residual_torque_normalised = {}
+        self.driving_torque = {};  self.driving_torque_normalised = {}
+        self.opt_sp_const = {}; self.opt_visc = {}
+        self.opt_i = {}; self.opt_j = {}
+        self.misfit = {case: {reconstruction_time: {} for reconstruction_time in self.times} for case in self.cases}
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ADDING GRIDS 
@@ -452,7 +506,7 @@ class PlateForces():
                 ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
             #-----------------------#
-            #   RESISTIVE TORQUES   #
+            #   RESISTING TORQUES   #
             #-----------------------#
 
             # Loop through slab bend cases
@@ -565,7 +619,7 @@ class PlateForces():
             visc_range=[1e19, 5e20],
             plot=True,
             weight_by_area=True,
-            minimum_plate_area=0
+            minimum_plate_area=None
         ):
         """
         Function to find optimised coefficients to match plate motions using a grid search
@@ -600,6 +654,8 @@ class PlateForces():
             plates_of_interest = selected_plates["plateID"]
 
         # Filter plates by minimum area
+        if minimum_plate_area is None:
+            minimum_plate_area = self.options[opt_case]["Minimum plate area"]
         selected_plates = selected_plates[selected_plates["area"] > minimum_plate_area]
         selected_plates = selected_plates.reset_index(drop=True)
         plates_of_interest = selected_plates["plateID"]

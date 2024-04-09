@@ -111,7 +111,7 @@ def get_plates(
     plates = plates.reset_index(drop=True)
 
     # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
-    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "interface_shear"]
+    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag"]
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
@@ -484,8 +484,8 @@ def get_plate_names(
         901: "Pacific",
         902: "Farallon",
         904: "Aluk",
-        909: "Nazca",
-        911: "Cocos",
+        909: "Cocos",
+        911: "Nazca",
         918: "Kula",
         919: "Phoenix",
         926: "Izanagi",
