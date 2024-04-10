@@ -1584,8 +1584,8 @@ class PlateForces():
         centroid_vectors = ax.quiver(
             x=plate_vectors[case1].centroid_lon,
             y=plate_vectors[case1].centroid_lat,
-            u=(plate_vectors[case1].v_absolute_lon - plate_vectors[case2].v_absolute_lon) / plate_vectors[case2].v_absolute_lon * 10,
-            v=(plate_vectors[case1].v_absolute_lat - plate_vectors[case2].v_absolute_lat) / plate_vectors[case2].v_absolute_lat * 10,
+            u=(plate_vectors[case1].centroid_v_lon - plate_vectors[case2].centroid_v_lon) / plate_vectors[case2].centroid_v_lon * 10,
+            v=(plate_vectors[case1].centroid_v_lat - plate_vectors[case2].centroid_v_lat) / plate_vectors[case2].centroid_v_lat * 10,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=5e-3,

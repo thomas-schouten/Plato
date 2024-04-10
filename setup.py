@@ -103,24 +103,33 @@ def get_plates(
     # Initialise columns
     plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_v_lon", "centroid_v_lat", "centroid_v_mag"]
 
+    # Merge topological networks with main plate; this is necessary because the topological networks have the same PlateID as their host plate and this leads to computational issues down the road
+    main_plates_indices = plates.groupby("plateID")["area"].idxmax()
+
+    # Create new DataFrame with the main plates
+    merged_plates = plates.loc[main_plates_indices]
+
+    # Aggregating the area column by summing the areas of all plates with the same plateID
+    merged_plates["area"] = plates.groupby("plateID")["area"].sum().values
+
     # Get plate names
-    plates["name"] = _numpy.nan; plates.name = get_plate_names(plates.plateID)
+    merged_plates["name"] = _numpy.nan; merged_plates.name = get_plate_names(merged_plates.plateID)
 
     # Sort and index by plate ID
-    plates = plates.sort_values(by="plateID")
-    plates = plates.reset_index(drop=True)
+    merged_plates = merged_plates.sort_values(by="plateID")
+    merged_plates = merged_plates.reset_index(drop=True)
 
     # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
     torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag"]
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
-    plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(plates.plateID))]
-    plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(plates.plateID))]
-    plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(plates.plateID))]
-    plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(plates.plateID))]
+    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
 
-    return plates
+    return merged_plates
 
 def get_slabs(
         reconstruction: _gplately.PlateReconstruction,
