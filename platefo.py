@@ -1549,6 +1549,10 @@ class PlateForces():
             slab_data[case] = self.slabs[reconstruction_time][case].loc[self.slabs[reconstruction_time][case].lower_plateID.isin(plate_vectors[case].plateID)]
             slab_vectors[case] = slab_data[case].iloc[::5]
         
+        # Remove slab vectors that are zero in any of the two cases
+        # for case in [case1, case2]:
+        #     slab_vectors[case] = slab_vectors[case].loc[(slab_vectors[case1].v_lower_plate_mag != 0) & (slab_vectors[case2].v_lower_plate_mag != 0)]
+        
         # Plot velocity magnitude at trenches
         vels = ax.scatter(
             slab_data[case1].lon,
@@ -1561,17 +1565,12 @@ class PlateForces():
             vmax=plotting_options["relative velocity max"]
         )
 
-        # relative_slab_vectors_lon = (slab_vectors[case1][var1 + "lon"] / slab_vectors[case2][var2 + "mag"])
-        # relative_slab_vectors_lon = _numpy.where(relative_slab_vectors_lon > 0, relative_slab_vectors_lon-1, relative_slab_vectors_lon+1)
-        # relative_slab_vectors_lat = (slab_vectors[case1][var1 + "lat"] / slab_vectors[case2][var2 + "mag"])
-        # relative_slab_vectors_lat = _numpy.where(relative_slab_vectors_lat > 0, relative_slab_vectors_lat-1, relative_slab_vectors_lat+1)
-
         # Plot velocity at subduction zones
         slab_vectors = ax.quiver(
             x=slab_vectors[case1].lon,
             y=slab_vectors[case1].lat,
-            u=(slab_vectors[case1].v_lower_plate_lon - slab_vectors[case2].v_lower_plate_lon) / slab_vectors[case2].v_lower_plate_lon * 10,
-            v=(slab_vectors[case1].v_lower_plate_lat - slab_vectors[case2].v_lower_plate_lat) / slab_vectors[case2].v_lower_plate_lat * 10,
+            u=(slab_vectors[case1].v_lower_plate_lon - slab_vectors[case2].v_lower_plate_lon) / slab_vectors[case2].v_lower_plate_mag * 10,
+            v=(slab_vectors[case1].v_lower_plate_lat - slab_vectors[case2].v_lower_plate_lat) / slab_vectors[case2].v_lower_plate_mag * 10,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=2e-3,
@@ -1584,8 +1583,8 @@ class PlateForces():
         centroid_vectors = ax.quiver(
             x=plate_vectors[case1].centroid_lon,
             y=plate_vectors[case1].centroid_lat,
-            u=(plate_vectors[case1].centroid_v_lon - plate_vectors[case2].centroid_v_lon) / plate_vectors[case2].centroid_v_lon * 10,
-            v=(plate_vectors[case1].centroid_v_lat - plate_vectors[case2].centroid_v_lat) / plate_vectors[case2].centroid_v_lat * 10,
+            u=(plate_vectors[case1].centroid_v_lon - plate_vectors[case2].centroid_v_lon) / plate_vectors[case2].centroid_v_mag * 10,
+            v=(plate_vectors[case1].centroid_v_lat - plate_vectors[case2].centroid_v_lat) / plate_vectors[case2].centroid_v_mag * 10,
             transform=ccrs.PlateCarree(),
             # label=vector.capitalize(),
             width=5e-3,
