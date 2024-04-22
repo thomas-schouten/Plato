@@ -657,7 +657,7 @@ def get_seafloor_grid(
     age_grid_temp.save_to_netcdf4(temp_file_path)
 
     # Load the temporary file as an _xarray.dataset
-    age_grid = _xarray.open_dataset(temp_file_path)
+    age_grid = _xarray.open_dataset(temp_file_path, cache=False)
     
     # Rename coordinates and variables
     age_grid = age_grid.rename({"lat": "latitude"}); age_grid = age_grid.rename({"lon": "longitude"}); age_grid = age_grid.rename({"z": "seafloor_age"})
