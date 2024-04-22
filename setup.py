@@ -639,12 +639,6 @@ def get_seafloor_grid(
     :return:                       seafloor_grids
     :rtype:                        xarray.Dataset
     """
-    # Check if the reconstruction is supported by _gplately
-    supported_models = ["Seton2012", "Muller2016", "Muller2019", "Clennet2020"]
-    if reconstruction_name not in supported_models:
-        print(f"Plate topology for the {reconstruction_name} reconstruction not available. Exiting now")
-        sys.exit()
-
     # Call _gplately"s DataServer from the download.py module
     gdownload = _gplately.download.DataServer(reconstruction_name)
 
@@ -788,6 +782,10 @@ def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time,
     # Define target dir and check if it exists
     target_dir = os.path.join(folder, data_name)
     check_dir(target_dir)
+
+    # Delete old file to prevent "Permission denied error"
+    if os.path.exists(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")):
+        os.remove(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"))
 
     # Save data
     data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"))
@@ -992,7 +990,7 @@ def Dataset_from_netCDF(
     # Check if target folder exists
     if os.path.exists(target_file):
         # Load data
-        data = _xarray.open_dataset(os.path.join(target_file))
+        data = _xarray.open_dataset(os.path.join(target_file), cache=False)
 
         return data
     else:

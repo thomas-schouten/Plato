@@ -262,10 +262,8 @@ def sample_slabs_from_seafloor(
         # Manual overrides for island arcs that do not appear in the seafloor age grid. Hardcoded by lack of a better method for now.
         # island_arc_plateIDs = []
 
-        # Close the seafloor to free memory space
-        seafloor.close()
-
         # Sample erosion rate, if applicable
+        print(seafloor.data_vars, options["Sample erosion grid"])
         if options["Sediment subduction"] and options["Sample erosion grid"] in seafloor.data_vars:
             # Reset sediment thickness to avoid adding double the sediment
             sediment_thickness = _numpy.zeros(len(ages))
@@ -298,13 +296,21 @@ def sample_slabs_from_seafloor(
 
                 # Define new sampling distance
                 current_sampling_distance += 50
+
+            # Close the seafloor to free memory space
+            seafloor.close()
             
             # Convert erosion rate to sediment thickness
             sediment_thickness += erosion_rate * options["Erosion to sediment ratio"]
+
+            print(sediment_thickness)
             
             return ages, continental_arc, erosion_rate, sediment_thickness
         
         else:
+            # Close the seafloor to free memory space
+            seafloor.close()
+
             return ages, continental_arc
  
     if plate == "lower plate":

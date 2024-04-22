@@ -21,10 +21,14 @@ from gplately import pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
 from tqdm import tqdm
+import xarray as _xarray
 
 # Local libraries
 import setup
 import functions_main
+import shutil
+import sys
+import tempfile
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATE FORCES OBJECT
@@ -57,6 +61,12 @@ class PlateForces():
         :param topography:              Dictionary containing topography data (default is None).
         :type topography:               dict
         """
+        # Check if the reconstruction is supported by gplately
+        supported_models = ["Seton2012", "Muller2016", "Muller2019", "Clennett2020"]
+        if reconstruction_name not in supported_models:
+            print(f"Not all necessary files for the {reconstruction_name} reconstruction are available from GPlately. Exiting now")
+            sys.exit()
+
         # Let the user know you're busy
         print("Setting up PlateForces object...")
 
@@ -188,9 +198,6 @@ class PlateForces():
         self.opt_sp_const = {}; self.opt_visc = {}
         self.opt_i = {}; self.opt_j = {}
 
-        # Initialise dictionary to contain misfit
-        self.misfit = {case: {reconstruction_time: {} for reconstruction_time in self.times} for case in self.cases}
-
         print("PlateForces object successfully instantiated!")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -270,27 +277,40 @@ class PlateForces():
         """
         
         # Loop through times to load, interpolate, and store variables in seafloor grid
+        input_grids_interpolated = {}
         for reconstruction_time in self.times:
+            print(f"Adding {variable_name} grid for {reconstruction_time} Ma...")
             # Rename latitude and longitude if necessary
             if "lat" in list(input_grids[reconstruction_time].coords.keys()):
                 input_grids[reconstruction_time] = input_grids[reconstruction_time].rename({"lat": "latitude"})
             if "lon" in list(input_grids[reconstruction_time].coords.keys()):
                 input_grids[reconstruction_time] = input_grids[reconstruction_time].rename({"lon": "longitude"})
             
-            # Interpolate input grids to seafloor grid
-            input_grids[reconstruction_time] = input_grids[reconstruction_time].interp_like(self.seafloor[reconstruction_time]["seafloor_age"], method="nearest")
-            self.seafloor[reconstruction_time][variable_name] = input_grids[reconstruction_time][target_variable] * prefactor
+            # Check if target_variable exists in input grids
+            if target_variable in input_grids[reconstruction_time].variables:
+                # Interpolate input grids to seafloor grid
+                input_grids_interpolated[reconstruction_time] = input_grids[reconstruction_time].interp_like(self.seafloor[reconstruction_time]["seafloor_age"], method="nearest")
+                self.seafloor[reconstruction_time][variable_name] = input_grids_interpolated[reconstruction_time][target_variable] * prefactor
 
-            # Align grids in seafloor
-            if cut_to_seafloor:
-                mask = {}
-                for variable_1 in self.seafloor[reconstruction_time].data_vars:
-                    # Get masks for NaN values
-                    mask[variable_1] = _numpy.isnan(self.seafloor[reconstruction_time][variable_1].values)
+                # Align grids in seafloor
+                if cut_to_seafloor:
+                    mask = {}
+                    for variable_1 in self.seafloor[reconstruction_time].data_vars:
+                        # Set temporary directory for xarray
+                        tempdir = tempfile.mkdtemp()
+                        _xarray.set_temporary_directory(tempdir)
+                        # print(f"Aligning grids to variable {variable_1}")
+                        # Get masks for NaN values
+                        mask[variable_1] = _numpy.isnan(self.seafloor[reconstruction_time][variable_1].values)
 
-                    # Apply masks to all grids
-                    for variable_2 in self.seafloor[reconstruction_time].data_vars:
-                        self.seafloor[reconstruction_time][variable_2] = self.seafloor[reconstruction_time][variable_2].where(~mask[variable_1])
+                        # Apply masks to all grids
+                        for variable_2 in self.seafloor[reconstruction_time].data_vars:
+                            self.seafloor[reconstruction_time][variable_2] = self.seafloor[reconstruction_time][variable_2].where(~mask[variable_1])
+                        
+                        # Remove temporary directory
+                        shutil.rmtree(tempdir)
+            else:
+                print(f"Target variable '{target_variable}' does not exist in the input grids for {reconstruction_time} Ma.")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SAMPLING GRIDS 
@@ -344,8 +364,9 @@ class PlateForces():
             print(f"Sampling overriding plate at {reconstruction_time} Ma")
             # Select cases
             for key, entries in self.slab_pull_cases.items():
+                print(key, self.options[key]["Sample erosion grid"])
                 # Check whether to output erosion rate and sediment thickness
-                if self.options[key]["Sample erosion grid"] in self.seafloor[reconstruction_time].data_vars:
+                if self.options[key]["Sediment subduction"] and self.options[key]["Sample erosion grid"] in self.seafloor[reconstruction_time].data_vars:
                     # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
                     self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time][key]["erosion_rate"], self.slabs[reconstruction_time][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
                         self.slabs[reconstruction_time][key].lat, 
@@ -364,7 +385,7 @@ class PlateForces():
                         self.slabs[reconstruction_time][key].trench_normal_azimuth,  
                         self.seafloor[reconstruction_time],
                         self.options[key],
-                        "upper plate"
+                        "upper plate",
                     )
                 for entry in entries[1:]:
                     self.slabs[reconstruction_time][entry]["upper_plate_age"] = self.slabs[reconstruction_time][key]["upper_plate_age"]
@@ -1355,7 +1376,7 @@ class PlateForces():
             origin="lower"
         )
 
-        if self.options[case]["Active margin sediments"] != 0:
+        if self.options[case]["Active margin sediments"] != 0 or self.options[case]["Sample erosion grid"]:
             data = self.slabs[reconstruction_time][case]
             slab_data = ax.scatter(
                 data.lon,
@@ -1376,6 +1397,39 @@ class PlateForces():
             fig.colorbar(seds, ax=ax, label="Sediment thickness [m]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
             
         return ax, seds
+    
+    def plot_erosion_map(self, ax, fig, reconstruction_time: int, case, plotting_options: dict):
+        """
+        Function to create subplot with global sediment thicknesses
+            case:               case for which to plot the sediments
+            plotting_options:   dictionary with options for plotting
+        """
+        # Check if reconstruction time is in valid times
+        if reconstruction_time not in self.times:
+            return print("Invalid reconstruction time")
+        
+        # Set basemap
+        ax, gl = self.plot_basemap(ax)
+
+        # Plot sediment
+        im = ax.imshow(
+            self.seafloor[reconstruction_time].erosion_rate.values,
+            cmap = plotting_options["erosion cmap"],
+            transform=ccrs.PlateCarree(), 
+            zorder=1, 
+            vmin=0, 
+            vmax=plotting_options["erosion max"], 
+            origin="lower"
+        )
+
+        # Plot plates and coastlines
+        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines=False)
+
+        # Colourbar
+        if plotting_options["cbar"] is True:
+            fig.colorbar(im, ax=ax, label="Erosion rate [m/Ma]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
+            
+        return ax, im
     
     def plot_velocity_map(self, ax, fig, reconstruction_time, case, plotting_options):
         """
@@ -1479,7 +1533,7 @@ class PlateForces():
         vels = ax.scatter(
             slab_data[case1].lon,
             slab_data[case1].lat,
-            c=slab_data[case1].v_lower_plate_mag - slab_data[case2].v_lower_plate_mag,
+            c=abs(slab_data[case1].v_lower_plate_mag - slab_data[case2].v_lower_plate_mag),
             s=plotting_options["marker size"],
             transform=ccrs.PlateCarree(),
             cmap=plotting_options["velocity difference cmap"],
@@ -1634,7 +1688,10 @@ class PlateForces():
 
         # Plot coastlines
         if coastlines:
-            gplot.plot_coastlines(ax, color="lightgrey", zorder=-5)
+            try:
+                gplot.plot_coastlines(ax, color="lightgrey", zorder=-5)
+            except:
+                pass
         
         # Plot plates (NOTE: polygons do NOT cross the dateline)
         if plates:
