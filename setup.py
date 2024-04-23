@@ -642,29 +642,27 @@ def get_seafloor_grid(
     # Call _gplately"s DataServer from the download.py module
     gdownload = _gplately.download.DataServer(reconstruction_name)
 
-    # Make temporary directory to store files
-    temp_dir = tempfile.mkdtemp()
-
     # Download relevant age grids
     # Let the user know what is happening
     print(f"Downloading age grid for {reconstruction_name} at {reconstruction_time} Ma")
 
     # Download the age grid
-    age_grid_temp = gdownload.get_age_grid(time=reconstruction_time)
+    age_raster = gdownload.get_age_grid(time=reconstruction_time)
 
-    # Save it with a different format in the temporary directory
-    temp_file_path = os.path.join(temp_dir, "temp_file.nc")
-    age_grid_temp.save_to_netcdf4(temp_file_path)
+    seafloor_ages = age_raster.data
+    lon = age_raster.lons
+    lat = age_raster.lats
 
-    # Load the temporary file as an _xarray.dataset
-    age_grid = _xarray.open_dataset(temp_file_path, cache=False)
-    
-    # Rename coordinates and variables
-    age_grid = age_grid.rename({"lat": "latitude"}); age_grid = age_grid.rename({"lon": "longitude"}); age_grid = age_grid.rename({"z": "seafloor_age"})
-
-    # Step 4: Delete the temporary file and directory
-    os.remove(temp_file_path)
-    os.rmdir(temp_dir)
+    # Create a xarray dataset
+    age_grid = _xarray.Dataset(
+        {
+            "seafloor_age": (["latitude", "longitude"], seafloor_ages),
+        },
+        coords={
+            "latitude": lat,
+            "longitude": lon,
+        },
+    )
     
     return age_grid
 

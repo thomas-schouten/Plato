@@ -263,7 +263,6 @@ def sample_slabs_from_seafloor(
         # island_arc_plateIDs = []
 
         # Sample erosion rate, if applicable
-        print(seafloor.data_vars, options["Sample erosion grid"])
         if options["Sediment subduction"] and options["Sample erosion grid"] in seafloor.data_vars:
             # Reset sediment thickness to avoid adding double the sediment
             sediment_thickness = _numpy.zeros(len(ages))
@@ -302,8 +301,6 @@ def sample_slabs_from_seafloor(
             
             # Convert erosion rate to sediment thickness
             sediment_thickness += erosion_rate * options["Erosion to sediment ratio"]
-
-            print(sediment_thickness)
             
             return ages, continental_arc, erosion_rate, sediment_thickness
         
@@ -585,8 +582,6 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
                         constants
                     )
 
-                    # print(slab_velocity[0] * constants.m_s2cm_a, slab_velocity[1] * constants.m_s2cm_a, slab_velocity[2] * constants.m_s2cm_a)
-
                     # Assign the velocity to the respective columns in the slabs DataFrame
                     slabs.loc[j, "v_lower_plate_lat"] = slab_velocity[0]
                     slabs.loc[j, "v_lower_plate_lon"] = slab_velocity[1]
@@ -651,9 +646,7 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
         # Convert to cm/a
         slabs["v_lower_plate_lat"] *= constants.m_s2cm_a; slabs["v_lower_plate_lon"] *= constants.m_s2cm_a; slabs["v_lower_plate_mag"] *= constants.m_s2cm_a
         slabs["v_upper_plate_lat"] *= constants.m_s2cm_a; slabs["v_upper_plate_lon"] *= constants.m_s2cm_a; slabs["v_upper_plate_mag"] *= constants.m_s2cm_a
-
-        # print(slabs["v_lower_plate_lat"], slabs["v_lower_plate_lon"], slabs["v_lower_plate_mag"], slabs["v_lower_plate_azi"])
-
+        
     return torques, points, slabs
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
