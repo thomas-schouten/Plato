@@ -296,19 +296,12 @@ class PlateForces():
                 if cut_to_seafloor:
                     mask = {}
                     for variable_1 in self.seafloor[reconstruction_time].data_vars:
-                        # Set temporary directory for xarray
-                        # tempdir = tempfile.mkdtemp()
-                        # _xarray.set_temporary_directory(tempdir)
-                        # print(f"Aligning grids to variable {variable_1}")
-                        # Get masks for NaN values
                         mask[variable_1] = _numpy.isnan(self.seafloor[reconstruction_time][variable_1].values)
 
                         # Apply masks to all grids
                         for variable_2 in self.seafloor[reconstruction_time].data_vars:
                             self.seafloor[reconstruction_time][variable_2] = self.seafloor[reconstruction_time][variable_2].where(~mask[variable_1])
-                        
-                        # Remove temporary directory
-                        # shutil.rmtree(tempdir)
+
             else:
                 print(f"Target variable '{target_variable}' does not exist in the input grids for {reconstruction_time} Ma.")
 
