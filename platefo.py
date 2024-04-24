@@ -357,7 +357,6 @@ class PlateForces():
             print(f"Sampling overriding plate at {reconstruction_time} Ma")
             # Select cases
             for key, entries in self.slab_pull_cases.items():
-                print(key, self.options[key]["Sample erosion grid"])
                 # Check whether to output erosion rate and sediment thickness
                 if self.options[key]["Sediment subduction"] and self.options[key]["Sample erosion grid"] in self.seafloor[reconstruction_time].data_vars:
                     # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
