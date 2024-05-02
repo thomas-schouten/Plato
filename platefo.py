@@ -118,7 +118,7 @@ class PlateForces():
         self.point_cases = setup.process_cases(self.cases, self.options, point_options)
 
         # For torque computation
-        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid", "Slab pull constant"]
+        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid", "Slab pull constant", "Shear zone width"]
         self.slab_pull_cases = setup.process_cases(self.cases, self.options, slab_pull_options)
         slab_bend_options = ["Slab bend torque", "Seafloor age profile"]
         self.slab_bend_cases = setup.process_cases(self.cases, self.options, slab_bend_options)
