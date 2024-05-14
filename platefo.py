@@ -1319,6 +1319,10 @@ class PlateForces():
         # Set basemap
         ax, gl = self.plot_basemap(ax)
 
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
+
         # Plot age
         ages = ax.imshow(
             self.seafloor[reconstruction_time].seafloor_age.values,
@@ -1666,6 +1670,7 @@ class PlateForces():
             zorder=5
         )
 
+        # Turn off gridlabels for top and right
         gl.top_labels = False
         gl.right_labels = False  
 

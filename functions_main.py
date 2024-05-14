@@ -129,10 +129,17 @@ def compute_interface_term(slabs, options):
     :return:            slabs
     :rtype:             pandas.DataFrame
     """
+    # Determine sediment fraction
     if options["Sediment subduction"]:
-        # Calculate sediment fraction
-        slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / options["Shear zone width"])
-        slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= options["Shear zone width"], slabs["sediment_fraction"],  1)
+        # Determine shear zone width
+        if options["Shear zone width"] == "variable":
+            slabs["shear_zone_width"] = slabs["v_convergence_mag"] * constants.cm_a2m_s / options["Strain rate"]
+        else:
+            slabs["shear_zone_width"] = options["Shear zone width"]
+
+        # Calculate sediment fraction using sediment thickness and shear zone width
+        slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / slabs["shear_zone_width"])
+        slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= slabs["shear_zone_width"], slabs["sediment_fraction"],  1)
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
     # Calculate interface term for all components of the slab pull force

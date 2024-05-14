@@ -224,9 +224,9 @@ def get_slabs(
     slabs["sediment_fraction"] = 0.
 
     # Forces
-    forces = ["slab_pull", "slab_bend", "interface_shear"]
+    forces = ["slab_pull", "slab_bend"]
     coords = ["mag", "lat", "lon"]
-    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 9 for _ in range(len(slabs))] 
+    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 6 for _ in range(len(slabs))] 
 
     return slabs
 
@@ -555,6 +555,7 @@ def get_options(
                    "Erosion to sediment ratio",
                    "Sediment subduction",
                    "Shear zone width",
+                   "Strain rate",
                    "Slab pull constant",
                    "Mantle viscosity",
                    "Slab tesselation spacing",
@@ -579,7 +580,8 @@ def get_options(
                       False,
                       2,
                       False,
-                      3e3,
+                      2e3,
+                      1e-12,
                       0.0681,
                       9.74e19,
                       250,
