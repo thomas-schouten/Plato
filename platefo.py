@@ -768,287 +768,7 @@ class PlateForces():
 
         return self.opt_sp_const[opt_time][opt_case], self.opt_visc[opt_time][opt_case], self.residual_torque_normalised[opt_time][opt_case]
     
-    def minimise_residual_torque_v2(self, opt_time, opt_case, plates_of_interest=None, grid_size=500, visc_range=[1e19, 5e20], plot=True, weight_by_area=True):
-        """
-        Function to find optimised coefficients to match plate motions using a grid search
-
-        :param opt_time:                reconstruction time to optimise
-        :type opt_time:                 int
-        :param opt_case:                case to optimise
-        :type opt_case:                 str
-        :param plates_of_interest:      plate IDs to include in optimisation
-        :type plates_of_interest:       list of integers or None
-        :param grid_size:               size of the grid to find optimal viscosity and slab pull coefficient
-        :type grid_size:                int
-        :param plot:                    whether or not to plot the grid
-        :type plot:                     boolean
-        :param weight_by_area:          whether or not to weight the residual torque by plate area
-        :type weight_by_area:           boolean
-        """
-        # Define ranges
-        viscs = _numpy.linspace(visc_range[0],visc_range[1],grid_size)
-        int_consts = _numpy.linspace(1e-4,1,grid_size)
-        slab_consts = _numpy.linspace(1e-4,1,grid_size)
-
-        # Generate grid
-        visc_grid = _numpy.repeat(viscs[_numpy.newaxis, :], grid_size, axis=0)
-        int_const_grid = _numpy.repeat(int_consts[:, _numpy.newaxis], grid_size, axis=1)
-        slab_const_grid = _numpy.repeat(slab_consts[:, _numpy.newaxis], grid_size, axis=1)
-
-        visc_grid_3d, int_const_grid_3d, slab_const_grid_3d = _numpy.meshgrid(visc_grid, int_const_grid, slab_const_grid, indexing='ij')
-        ones_grid = _numpy.ones_like(visc_grid)
-
-        # Filter plates
-        selected_plates = self.plates[opt_time][opt_case].copy()
-        selected_slabs = self.slabs[opt_time][opt_case].copy()
-        if plates_of_interest:
-            selected_plates = selected_plates[selected_plates["plateID"].isin(plates_of_interest)]
-            selected_plates = selected_plates.reset_index(drop=True)
-            selected_slabs = selected_slabs[selected_slabs["lower_plateID"].isin(plates_of_interest)]
-            selected_slabs = selected_slabs.reset_index(drop=True)
-        else:
-            plates_of_interest = selected_plates["plateID"]
-
-        # Get total area
-        total_area = selected_plates["area"].sum()
-
-        # Initialise dictionaries and arrays to store driving and residual torques
-        if opt_time not in self.driving_torque.keys():
-            self.driving_torque[opt_time] = {}
-        if opt_time not in self.driving_torque_normalised.keys():
-            self.driving_torque_normalised[opt_time] = {}
-        if opt_time not in self.residual_torque.keys():
-            self.residual_torque[opt_time] = {}
-        if opt_time not in self.residual_torque_normalised.keys():
-            self.residual_torque_normalised[opt_time] = {}
-            
-        self.driving_torque[opt_time][opt_case] = _numpy.zeros_like(sp_const_grid); self.driving_torque_normalised[opt_time][opt_case] = _numpy.zeros_like(sp_const_grid)
-        self.residual_torque[opt_time][opt_case] = _numpy.zeros_like(sp_const_grid); self.residual_torque_normalised[opt_time][opt_case] = _numpy.zeros_like(sp_const_grid)
-
-        # Initialise dictionaries to store optimal coefficients
-        if opt_time not in self.opt_i.keys():
-            self.opt_i[opt_time] = {}
-        if opt_time not in self.opt_j.keys():
-            self.opt_j[opt_time] = {}
-        if opt_time not in self.opt_sp_const.keys():
-            self.opt_sp_const[opt_time] = {}
-        if opt_time not in self.opt_visc.keys():
-            self.opt_visc[opt_time] = {}
-
-        # Get torques
-        for k, _ in enumerate(plates_of_interest):
-            # Calculate slab pull torque
-            residual_x = _numpy.zeros_like(sp_const_grid); residual_y = _numpy.zeros_like(sp_const_grid); residual_z = _numpy.zeros_like(sp_const_grid)
-            if self.options[opt_case]["Slab pull torque"] and "slab_pull_torque_x" in selected_plates.columns:
-                slab_pull_torque_x = _numpy.zeros_like(sp_consts); slab_pull_torque_y = _numpy.zeros_like(sp_consts); slab_pull_torque_z = _numpy.zeros_like(sp_consts)
-                for i, (int_const, slab_const) in enumerate(int_consts, slab_consts):
-                    sp_const_plates = functions_main.torque_on_plates(
-                                selected_plates, 
-                                selected_slabs.lat, 
-                                selected_slabs.lon, 
-                                selected_slabs.lower_plateID, 
-                                selected_slabs.slab_pull_force_lat * sp_const * (selected_slabs.sediment_fraction+1), 
-                                selected_slabs.slab_pull_force_lon * sp_const * (selected_slabs.sediment_fraction+1),
-                                selected_slabs.trench_segment_length,
-                                1,
-                                self.constants,
-                                torque_variable="slab_pull_torque"
-                            )
-                    slab_pull_torque_x[i] = sp_const_plates.slab_pull_torque_x.iloc[k]
-                    slab_pull_torque_y[i] = sp_const_plates.slab_pull_torque_y.iloc[k]
-                    slab_pull_torque_z[i] = sp_const_plates.slab_pull_torque_z.iloc[k]
-                
-                # Expand to grid for vectorised calculation
-                slab_pull_torque_x_grid = _numpy.repeat(slab_pull_torque_x[:, _numpy.newaxis], grid_size, axis=1)
-                slab_pull_torque_y_grid = _numpy.repeat(slab_pull_torque_y[:, _numpy.newaxis], grid_size, axis=1)
-                slab_pull_torque_z_grid = _numpy.repeat(slab_pull_torque_z[:, _numpy.newaxis], grid_size, axis=1)
-
-                # Add to residual
-                residual_x -= slab_pull_torque_x_grid
-                residual_y -= slab_pull_torque_y_grid
-                residual_z -= slab_pull_torque_z_grid
-
-            # Add GPE torque
-            if self.options[opt_case]["GPE torque"] and "GPE_torque_x" in selected_plates.columns:
-                residual_x -= selected_plates.GPE_torque_x.iloc[k] * ones_grid
-                residual_y -= selected_plates.GPE_torque_y.iloc[k] * ones_grid
-                residual_z -= selected_plates.GPE_torque_z.iloc[k] * ones_grid
-            
-            # Compute magnitude of driving torque
-            if weight_by_area:
-                self.driving_torque[opt_time][opt_case] += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) * selected_plates.area.iloc[k] / total_area
-            else:
-                self.driving_torque[opt_time][opt_case] += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) / selected_plates.area.iloc[k]
-
-            # Add slab bend torque
-            if self.options[opt_case]["Slab bend torque"] and "slab_bend_torque_x" in selected_plates.columns:
-                residual_x -= selected_plates.slab_bend_torque_x.iloc[k] * ones_grid
-                residual_y -= selected_plates.slab_bend_torque_y.iloc[k] * ones_grid
-                residual_z -= selected_plates.slab_bend_torque_z.iloc[k] * ones_grid
-
-            # Add mantle drag torque
-            if self.options[opt_case]["Mantle drag torque"] and "mantle_drag_torque_x" in selected_plates.columns:
-                residual_x -= selected_plates.mantle_drag_torque_x.iloc[k] * visc_grid / self.mech.La
-                residual_y -= selected_plates.mantle_drag_torque_y.iloc[k] * visc_grid / self.mech.La
-                residual_z -= selected_plates.mantle_drag_torque_z.iloc[k] * visc_grid / self.mech.La
-
-            # Compute magnitude of residual
-            if weight_by_area:
-                self.residual_torque[opt_time][opt_case] += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) * selected_plates.area.iloc[k] / total_area
-            else:
-                self.residual_torque[opt_time][opt_case] += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) / selected_plates.area.iloc[k]
-    
-            # Divide residual by driving torque
-            self.residual_torque_normalised[opt_time][opt_case] = _numpy.log10(self.residual_torque[opt_time][opt_case] / self.driving_torque[opt_time][opt_case])
-
-        # Find the indices of the minimum value directly using _numpy.argmin
-        self.opt_i[opt_time][opt_case], self.opt_j[opt_time][opt_case] = _numpy.unravel_index(_numpy.argmin(self.residual_torque_normalised[opt_time][opt_case]), self.residual_torque_normalised[opt_time][opt_case].shape)
-        self.opt_visc[opt_time][opt_case] = visc_grid[self.opt_i[opt_time][opt_case], self.opt_j[opt_time][opt_case]]
-        self.opt_sp_const[opt_time][opt_case] = sp_const_grid[self.opt_i[opt_time][opt_case], self.opt_j[opt_time][opt_case]]
-
-        # Plot
-        if plot == True:
-            fig, ax = plt.subplots(figsize=(15*self.constants.cm2in, 12*self.constants.cm2in))
-            im = ax.imshow(self.residual_torque_normalised[opt_time][opt_case], cmap="cmc.lapaz_r", vmin=-1.5, vmax=1.5)
-            ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
-            ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
-            ax.set_xticklabels(["{:.2e}".format(visc) for visc in _numpy.linspace(visc_range[0], visc_range[1], 5)])
-            ax.set_yticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
-            ax.set_xlabel("Mantle viscosity [Pa s]")
-            ax.set_ylabel("Slab pull reduction factor")
-            ax.scatter(self.opt_j[opt_time][opt_case], self.opt_i[opt_time][opt_case], marker="*", facecolor="none", edgecolor="k", s=30)  # Adjust the marker style and size as needed
-            fig.colorbar(im, label = "Log(residual torque/driving torque)")
-            plt.show()
-        
-        print(f"Optimal coefficients for ", ", ".join(selected_plates.name.astype(str)), " plate(s), (PlateIDs: ", ", ".join(selected_plates.plateID.astype(str)), ")")
-        print("Minimum residual torque: {:.2%} of driving torque".format(10**(_numpy.amin(self.residual_torque_normalised[opt_time][opt_case]))))
-        print("Optimum viscosity [Pa s]: {:.2e}".format(self.opt_visc[opt_time][opt_case]))
-        print("Optimum Drag Coefficient [Pa s/m]: {:.2e}".format(self.opt_visc[opt_time][opt_case] / self.mech.La))
-        print("Optimum Slab Pull constant: {:.2%}".format(self.opt_sp_const[opt_time][opt_case]))
-
-        return self.opt_sp_const[opt_time][opt_case], self.opt_visc[opt_time][opt_case], self.residual_torque_normalised[opt_time][opt_case]
-
-    def minimise_residual_velocity(self, opt_time, opt_case, plates_of_interest=None, grid_size=100, visc_range=[1e19, 5e20], plot=True, weight_by_area=True):
-        """
-        Function to find optimised coefficients to match plate motions using a grid search
-
-        :param opt_time:                reconstruction time to optimise
-        :type opt_time:                 int
-        :param opt_case:                case to optimise
-        :type opt_case:                 str
-        :param plates_of_interest:      plate IDs to include in optimisation
-        :type plates_of_interest:       list of integers or None
-        :param grid_size:               size of the grid to find optimal viscosity and slab pull coefficient
-        :type grid_size:                int
-        :param plot:                    whether or not to plot the grid
-        :type plot:                     boolean
-        :param weight_by_area:          whether or not to weight the residual torque by plate area
-        :type weight_by_area:           boolean
-        """
-        # Generate grid
-        viscs = _numpy.linspace(visc_range[0],visc_range[1],grid_size)
-        sp_consts = _numpy.linspace(1e-4,1,grid_size)
-        v_plate_residual = _numpy.zeros((grid_size, grid_size))
-        v_slab_residual = _numpy.zeros((grid_size, grid_size))
-        
-        # Filter plates and slabs
-        selected_plates = self.plates[opt_time][opt_case].copy()
-        selected_slabs = self.slabs[opt_time][opt_case].copy()
-        selected_points = self.points[opt_time][opt_case].copy()
-        if plates_of_interest:
-            selected_plates = selected_plates[selected_plates["plateID"].isin(plates_of_interest)]
-            selected_plates = selected_plates.reset_index(drop=True)
-            selected_slabs = selected_slabs[selected_slabs["lower_plateID"].isin(plates_of_interest)]
-            selected_slabs = selected_slabs.reset_index(drop=True)
-            selected_points = selected_points[selected_points["plateID"].isin(plates_of_interest)]
-            selected_points = selected_points.reset_index(drop=True)
-            selected_options = self.options[opt_case].copy()
-        else:
-            plates_of_interest = selected_plates["plateID"]
-
-        selected_options["Reconstructed motions"] = False
-        # Loop through plates and slabs and calculate residual velocity
-        for i, visc in enumerate(viscs):
-            if i % 10 == 0:
-                print("Calculating residual velocities for viscosity {:.2e}".format(visc))
-            selected_options["Mantle viscosity"] = visc
-            for j, sp_const in enumerate(sp_consts):
-                selected_options["Slab pull constant"] = sp_const
-                # Calculate mantle drag force
-                self.plates[reconstruction_time][key] = selected_plates.copy()
-                self.slabs[reconstruction_time][key] = selected_slabs.copy()
-                self.points[reconstruction_time][key] = selected_points.copy()
-                self.plates[reconstruction_time][key], self.points[reconstruction_time][key] = functions_main.mantle_drag_force(self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key], selected_options, self.mech, self.constants)
-                self.plates[reconstruction_time][key] = functions_main.torque_on_plates(
-                    self.plates[reconstruction_time][key], 
-                    self.points[reconstruction_time][key].lat, 
-                    self.points[reconstruction_time][key].lon, 
-                    self.points[reconstruction_time][key].plateID, 
-                    self.points[reconstruction_time][key].mantle_drag_force_lat, 
-                    self.points[reconstruction_time][key].mantle_drag_force_lon,
-                    self.points[reconstruction_time][key].segment_length_lat,
-                    self.points[reconstruction_time][key].segment_length_lon,
-                    self.constants,
-                    torque_variable="mantle_drag_torque"
-                )
-
-                # Calculate residual of plate velocities
-                if weight_by_area:
-                    v_plate_residual_lon = ((self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_lower_plate_lon) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
-                    v_plate_residual_lat = ((self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_lower_plate_lat) * self.plates[reconstruction_time][key].area).sum() / self.plates[reconstruction_time][key].area.sum()
-                else:
-                    v_plate_residual_lon = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lon-self.plates[reconstruction_time][key].v_lower_plate_lon)
-                    v_plate_residual_lat = _numpy.mean(self.plates[reconstruction_time][key].v_synthetic_lat-self.plates[reconstruction_time][key].v_lower_plate_lat)
-                v_plate_residual[i,j] = _numpy.sqrt(v_plate_residual_lon**2 + v_plate_residual_lat**2)
-
-                # Calculate residual of slab velocities
-                v_slab_residual_lon = ((self.slabs[reconstruction_time][key].v_synthetic_lon-self.slabs[reconstruction_time][key].v_lower_plate_lon) * self.slabs[reconstruction_time][key].trench_segment_length).sum()  / self.slabs[reconstruction_time][key].trench_segment_length.sum()
-                v_slab_residual_lat = ((self.slabs[reconstruction_time][key].v_synthetic_lat-self.slabs[reconstruction_time][key].v_lower_plate_lat) * self.slabs[reconstruction_time][key].trench_segment_length).sum() / self.slabs[reconstruction_time][key].trench_segment_length.sum()
-                v_slab_residual[i,j] = _numpy.sqrt(v_slab_residual_lon**2 + v_slab_residual_lat**2)
-
-        # Find the indices of the minimum value directly using _numpy.argmin
-        opt_plate_i, opt_plate_j = _numpy.unravel_index(_numpy.argmin(v_plate_residual), v_plate_residual.shape)
-        opt_plate_visc = viscs[opt_plate_i]
-        opt_plate_sp_const = sp_consts[opt_plate_j]
-
-        opt_slab_i, opt_slab_j = _numpy.unravel_index(_numpy.argmin(v_slab_residual), v_slab_residual.shape)
-        opt_slab_visc = viscs[opt_slab_i]
-        opt_slab_sp_const = sp_consts[opt_slab_j]
-
-        # Plot
-        if plot == True:
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(33*self.constants.cm2in, 12*self.constants.cm2in))
-            im1 = ax1.imshow(v_plate_residual, cmap="cmc.davos_r", vmin=0, vmax=10)
-            ax1.scatter(opt_plate_j, opt_plate_i, marker="*", facecolor="none", edgecolor="k", s=30)  # Adjust the marker style and size as needed
-            fig.colorbar(im1, ax=ax1, label = "Residual velocity magnitude [cm/a]")
-
-            im2 = ax2.imshow(v_slab_residual, cmap="cmc.davos_r", vmin=0, vmax=10)
-            ax2.scatter(opt_slab_j, opt_slab_i, marker="*", facecolor="none", edgecolor="k", s=30)  # Adjust the marker style and size as needed
-            fig.colorbar(im2, ax=ax2, label = "Residual velocity magnitude [cm/a]")
-
-            for ax in [ax1, ax2]:
-                ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
-                ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
-                ax.set_xticklabels(["{:.2e}".format(visc) for visc in _numpy.linspace(visc_range[0], visc_range[1], 5)])
-                ax.set_yticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
-                ax.set_xlabel("Mantle viscosity [Pa s]")
-                ax.set_ylabel("Slab pull reduction factor")
-
-            plt.show()
-        
-        print(f"Optimal coefficients for ", ", ".join(selected_plates.name.astype(str)), " plate(s), (PlateIDs: ", ", ".join(selected_plates.plateID.astype(str)), ")")
-        print("Minimum residual plate velocity: {:.2f} cm/a".format(_numpy.amin(v_plate_residual)))
-        print("Optimum viscosity [Pa s]: {:.2e}".format(opt_plate_visc))
-        print("Optimum Drag Coefficient [Pa s/m]: {:.2e}".format(opt_plate_visc / 150e3))
-        print("Optimum Slab Pull constant: {:.2%}".format(opt_plate_sp_const))    
-        print("Minimum residual slab velocity: {:.2f} cm/a".format(_numpy.amin(v_slab_residual)))
-        print("Optimum viscosity [Pa s]: {:.2e}".format(opt_slab_visc))
-        print("Optimum Drag Coefficient [Pa s/m]: {:.2e}".format(opt_slab_visc / 150e3))
-        print("Optimum Slab Pull constant: {:.2%}".format(opt_slab_sp_const))  
-
-        return self.opt_sp_const, self.opt_visc, v_plate_residual, v_slab_residual
-    
-    def minimise_residual_velocity_v2(self, opt_time, opt_case, plates_of_interest=None, grid_size=10, visc_range=[1e19, 5e20], plot=True, weight_by_area=True, ref_case=None):
+    def minimise_residual_velocity(self, opt_time, opt_case, plates_of_interest=None, grid_size=10, visc_range=[1e19, 5e20], plot=True, weight_by_area=True, ref_case=None):
         """
         Function to find optimised coefficients to match plate motions using a grid search.
 
@@ -1258,37 +978,6 @@ class PlateForces():
 
         self.optimised_torques = True
 
-    def plot_normalised_residual_torque(self, ax, fig, opt_time, opt_case, plotting_options):
-        """
-        Plots the normalized residual torques on a given axis.
-
-        :param ax:                  The axis on which to plot the torques.
-        :type ax:                   matplotlib.axes.Axes
-        :param fig:                 The figure to which the axis belongs.
-        :type fig:                  matplotlib.figure.Figure
-        :param opt_time:            The index of the optimal time.
-        :type opt_time:             int
-        :param opt_case:            The index of the optimal case.
-        :type opt_case:             int
-        :param plotting_options:    A dictionary containing various plotting options.
-        :type plotting_options:     dict
-
-        :return:                    The axis and the image.
-        :rtype:                     matplotlib.axes.Axes, matplotlib.image.AxesImage
-        """
-        im = ax.imshow(self.residual_torque_normalised[opt_time][opt_case], cmap="cmc.lapaz_r", vmin=-1.5, vmax=1.5)
-        ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
-        ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
-        ax.set_xticklabels(["{:.2e}".format(visc) for visc in _numpy.linspace(visc_range[0], visc_range[1], 5)])
-        ax.set_yticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
-        ax.set_xlabel("Mantle viscosity [Pa s]")
-        ax.set_ylabel("Slab pull reduction factor")
-        ax.scatter(self.opt_j[opt_time][opt_case], self.opt_i[opt_time][opt_case], marker="*", facecolor="none", edgecolor="k", s=30)
-        if plotting_options["cbar"] is True:
-            fig.colorbar(im, label = "Log(residual torque/driving torque)")
-
-        return ax, im
-
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SAVING 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1307,10 +996,25 @@ class PlateForces():
 # PLOTTING 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     
-    def plot_age_map(self, ax, fig, reconstruction_time: int, plotting_options: dict):
+    def plot_age_map(
+            self,
+            ax,
+            fig,
+            reconstruction_time: int,
+            plotting_options: dict
+        ):
         """
-        Function to create subplot with global seafloor age
-            plotting_options:   dictionary with options for plotting
+        Function to create subplot with global seafloor age.
+
+        :param ax:                  axes object
+        :type ax:                   matplotlib.axes.Axes
+        :param fig:                 figure
+        :type fig:                  matplotlib.figure.Figure
+        :param reconstruction_time: the time for which to display the map
+        :type reconstruction_time:  int
+        :param plotting_options:    options for plotting
+        :type plotting_options:     dict
+
         """
         # Check if reconstruction time is in valid times
         if reconstruction_time not in self.times:
@@ -1343,11 +1047,36 @@ class PlateForces():
 
         return ax, ages
 
-    def plot_sediment_map(self, ax, fig, reconstruction_time: int, case, plotting_options: dict):
+    def plot_sediment_map(
+            self,
+            ax,
+            fig,
+            reconstruction_time: int,
+            case,
+            plotting_options: dict,
+            log_scale=False,
+        ):
         """
-        Function to create subplot with global sediment thicknesses
-            case:               case for which to plot the sediments
-            plotting_options:   dictionary with options for plotting
+        Function to create subplot with global sediment thicknesses.
+        
+        :param ax:                  axes object
+        :type ax:                   matplotlib.axes.Axes
+        :param fig:                 figure
+        :type fig:                  matplotlib.figure.Figure
+        :param reconstruction_time: the time for which to display the map
+        :type reconstruction_time:  int
+        :param case:                case for which to plot the sediments
+        :type case:                 str
+        :param plotting_options:    dictionary with options for plotting
+        :type plotting_options:     dict
+        :param log_scale:           whether or not to plot the sediment thickness on a log scale
+        :type log_scale:            bool
+        :param vmin:                minimum value for the colormap
+        :type vmin:                 float
+        :param vmax:                maximum value for the colormap
+        :type vmax:                 float
+        :param cmap:                colormap to use for plotting
+        :type cmap:                 str
         """
         # Check if reconstruction time is in valid times
         if reconstruction_time not in self.times:
@@ -1357,9 +1086,12 @@ class PlateForces():
         ax, gl = self.plot_basemap(ax)
 
         if self.options[case]["Sample sediment grid"] !=0:
-            raster = self.seafloor[reconstruction_time][self.options[case]["Sample sediment grid"]].values
+            raster = self.seafloor[reconstruction_time][self.options[case]["Sample sediment grid"]].copy()
         else:
             raster = _numpy.where(_numpy.isnan(self.seafloor[reconstruction_time].seafloor_age.values), _numpy.nan, 0)
+
+        if log_scale:
+            raster = _numpy.log10(raster + 1)
 
         # Plot sediment
         seds = ax.imshow(
@@ -1367,13 +1099,17 @@ class PlateForces():
             cmap = plotting_options["sediment cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
-            vmin=0, 
-            vmax=plotting_options["sediment max"], 
+            vmin=plotting_options["sediment vmin"], 
+            vmax=plotting_options["sediment vmax"], 
             origin="lower"
         )
 
         if self.options[case]["Active margin sediments"] != 0 or self.options[case]["Sample erosion grid"]:
-            data = self.slabs[reconstruction_time][case]
+            data = self.slabs[reconstruction_time][case].copy()
+            
+            if log_scale:
+                data["sediment_thickness"] = _numpy.log10(data["sediment_thickness"] + 1)
+
             slab_data = ax.scatter(
                 data.lon,
                 data.lat,
@@ -1381,8 +1117,8 @@ class PlateForces():
                 s=plotting_options["marker size"],
                 transform=ccrs.PlateCarree(),
                 cmap=plotting_options["sediment cmap"],
-                vmin=0,
-                vmax=plotting_options["sediment max"]
+                vmin=plotting_options["sediment vmin"],
+                vmax=plotting_options["sediment vmax"],
             )
 
         # Plot plates and coastlines

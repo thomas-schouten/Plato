@@ -222,6 +222,7 @@ def get_slabs(
     slabs["lower_plate_thickness"] = _numpy.nan
     slabs["sediment_thickness"] = 0.
     slabs["sediment_fraction"] = 0.
+    slabs["slab_length"] = options["Slab length"]
 
     # Forces
     forces = ["slab_pull", "slab_bend"]
@@ -555,6 +556,7 @@ def get_options(
                    "Erosion to sediment ratio",
                    "Sediment subduction",
                    "Shear zone width",
+                   "Slab length",
                    "Strain rate",
                    "Slab pull constant",
                    "Mantle viscosity",
@@ -581,8 +583,9 @@ def get_options(
                       2,
                       False,
                       2e3,
+                      700e3,
                       1e-12,
-                      0.0681,
+                      0.0661,
                       9.74e19,
                       250,
                       1,
