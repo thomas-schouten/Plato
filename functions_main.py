@@ -100,7 +100,7 @@ def compute_slab_pull_force(slabs, options, mech):
     slabs["slab_pull_force_mag"] = _numpy.where(
         _numpy.isnan(slabs.lower_plate_age),
         0,
-        slabs["lower_plate_thickness"] * mech.depth * mech.drho_slab * mech.g * 1/_numpy.sqrt(_numpy.pi)
+        slabs["lower_plate_thickness"] * slabs.slab_length * mech.drho_slab * mech.g * 1/_numpy.sqrt(_numpy.pi)
         )
 
     if options["Sediment subduction"]:
@@ -108,7 +108,7 @@ def compute_slab_pull_force(slabs, options, mech):
         slabs.slab_pull_force_mag = _numpy.where(
             _numpy.isnan(slabs.lower_plate_age), 
             slabs.slab_pull_force_mag,
-            slabs.slab_pull_force_mag + slabs.sediment_thickness * mech.depth * mech.drho_sed * mech.g * 1/_numpy.sqrt(_numpy.pi)
+            slabs.slab_pull_force_mag + slabs.sediment_thickness * slabs.slab_length * mech.drho_sed * mech.g * 1/_numpy.sqrt(_numpy.pi)
         )
 
     # Decompose into latitudinal and longitudinal components

@@ -118,7 +118,7 @@ class PlateForces():
         self.point_cases = setup.process_cases(self.cases, self.options, point_options)
 
         # For torque computation
-        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid", "Slab pull constant", "Shear zone width"]
+        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid", "Slab pull constant", "Shear zone width", "Slab length"]
         self.slab_pull_cases = setup.process_cases(self.cases, self.options, slab_pull_options)
         slab_bend_options = ["Slab bend torque", "Seafloor age profile"]
         self.slab_bend_cases = setup.process_cases(self.cases, self.options, slab_bend_options)
@@ -1054,7 +1054,6 @@ class PlateForces():
             reconstruction_time: int,
             case,
             plotting_options: dict,
-            log_scale=False,
         ):
         """
         Function to create subplot with global sediment thicknesses.
@@ -1069,8 +1068,6 @@ class PlateForces():
         :type case:                 str
         :param plotting_options:    dictionary with options for plotting
         :type plotting_options:     dict
-        :param log_scale:           whether or not to plot the sediment thickness on a log scale
-        :type log_scale:            bool
         :param vmin:                minimum value for the colormap
         :type vmin:                 float
         :param vmax:                maximum value for the colormap
@@ -1090,7 +1087,7 @@ class PlateForces():
         else:
             raster = _numpy.where(_numpy.isnan(self.seafloor[reconstruction_time].seafloor_age.values), _numpy.nan, 0)
 
-        if log_scale:
+        if plotting_options["sediment log scale"] is True:
             raster = _numpy.log10(raster + 1)
 
         # Plot sediment
@@ -1107,7 +1104,7 @@ class PlateForces():
         if self.options[case]["Active margin sediments"] != 0 or self.options[case]["Sample erosion grid"]:
             data = self.slabs[reconstruction_time][case].copy()
             
-            if log_scale:
+            if plotting_options["sediment log scale"] is True:
                 data["sediment_thickness"] = _numpy.log10(data["sediment_thickness"] + 1)
 
             slab_data = ax.scatter(
