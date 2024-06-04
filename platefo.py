@@ -1262,7 +1262,7 @@ class PlateForces():
         vels = ax.scatter(
             slab_data[case1].lon,
             slab_data[case1].lat,
-            c=abs(slab_data[case1].v_lower_plate_mag - slab_data[case2].v_lower_plate_mag),
+            c=slab_data[case1].v_lower_plate_mag - slab_data[case2].v_lower_plate_mag,
             s=plotting_options["marker size"],
             transform=ccrs.PlateCarree(),
             cmap=plotting_options["velocity difference cmap"],
@@ -1373,7 +1373,7 @@ class PlateForces():
             width=5e-3,
             scale=3e2,
             zorder=4,
-            color='white',
+            color=plate_vectors[case1].centroid_v_mag / plate_vectors[case2].centroid_v_mag,
             edgecolor='black',
             linewidth=1
         )
