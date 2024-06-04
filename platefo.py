@@ -1373,9 +1373,10 @@ class PlateForces():
             width=5e-3,
             scale=3e2,
             zorder=4,
-            color=plate_vectors[case1].centroid_v_mag / plate_vectors[case2].centroid_v_mag,
-            edgecolor='black',
-            linewidth=1
+            color="white", #plate_vectors[case1].centroid_v_mag / plate_vectors[case2].centroid_v_mag,
+            edgecolor="black",
+            linewidth=1,
+            cmap=plotting_options["relative velocity difference cmap"]
         )
 
         # Colourbar
