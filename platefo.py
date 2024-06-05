@@ -252,7 +252,6 @@ class PlateForces():
         self.driving_torque = {};  self.driving_torque_normalised = {}
         self.opt_sp_const = {}; self.opt_visc = {}
         self.opt_i = {}; self.opt_j = {}
-        self.misfit = {case: {reconstruction_time: {} for reconstruction_time in self.times} for case in self.cases}
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ADDING GRIDS 
@@ -767,6 +766,82 @@ class PlateForces():
         print("Optimum Slab Pull constant: {:.2%}".format(self.opt_sp_const[opt_time][opt_case]))
 
         return self.opt_sp_const[opt_time][opt_case], self.opt_visc[opt_time][opt_case], self.residual_torque_normalised[opt_time][opt_case]
+    
+    def find_slab_pull_coefficient(self, opt_time, opt_case, plates_of_interest=None, grid_size=500, viscosity=1e19, plot=True, weight_by_area=True):
+        """
+        Function to find optimised slab pull coefficient for a given (set of) plates using a grid search.
+
+        :param opt_time:                reconstruction time to optimise
+        :type opt_time:                 int
+        :param opt_case:                case to optimise
+        :type opt_case:                 str
+        :param plates_of_interest:      plate IDs to include in optimisation
+        :type plates_of_interest:       list of integers or None
+        :param grid_size:               size of the grid to find optimal slab pull coefficient
+        :type grid_size:                int
+        :param plot:                    whether or not to plot the grid
+        :type plot:                     boolean
+        :param weight_by_area:          whether or not to weight the residual torque by plate area
+        :type weight_by_area:           boolean
+        
+        :return:                        The optimal slab pull coefficient
+        :rtype:                         float
+        """
+        # Generate range of possible slab pull coefficients
+        sp_consts = _numpy.linspace(1e-5,1,grid_size)
+        ones = _numpy.ones_like(sp_consts)
+
+        # Filter plates
+        selected_plates = self.plates[opt_time][opt_case].copy()
+        if plates_of_interest:
+            selected_plates = selected_plates[selected_plates["plateID"].isin(plates_of_interest)]
+            if selected_plates.empty:
+                return _numpy.nan
+            
+            selected_plates = selected_plates.reset_index(drop=True)
+        else:
+            plates_of_interest = selected_plates["plateID"]
+
+        # Initialise dictionary to store optimal slab pull coefficient per plate
+        opt_sp_consts = {None for _ in plates_of_interest}
+        
+        # Loop through plates
+        for k, plateID in enumerate(plates_of_interest):
+            residual_x = _numpy.zeros_like(sp_consts)
+            residual_y = _numpy.zeros_like(sp_consts)
+            residual_z = _numpy.zeros_like(sp_consts)
+
+            if self.options[opt_case]["Slab pull torque"] and "slab_pull_torque_x" in selected_plates.columns:
+                residual_x -= selected_plates.slab_pull_torque_opt_x.iloc[k] * sp_consts / self.options[opt_case]["Slab pull constant"]
+                residual_y -= selected_plates.slab_pull_torque_opt_y.iloc[k] * sp_consts / self.options[opt_case]["Slab pull constant"]
+                residual_z -= selected_plates.slab_pull_torque_opt_z.iloc[k] * sp_consts / self.options[opt_case]["Slab pull constant"]
+
+            # Add GPE torque
+            if self.options[opt_case]["GPE torque"] and "GPE_torque_x" in selected_plates.columns:
+                residual_x -= selected_plates.GPE_torque_x.iloc[k] * ones
+                residual_y -= selected_plates.GPE_torque_y.iloc[k] * ones
+                residual_z -= selected_plates.GPE_torque_z.iloc[k] * ones
+            
+            # Add slab bend torque
+            if self.options[opt_case]["Slab bend torque"] and "slab_bend_torque_x" in selected_plates.columns:
+                residual_x -= selected_plates.slab_bend_torque_x.iloc[k] * ones
+                residual_y -= selected_plates.slab_bend_torque_y.iloc[k] * ones
+                residual_z -= selected_plates.slab_bend_torque_z.iloc[k] * ones
+
+            # Add mantle drag torque
+            if self.options[opt_case]["Mantle drag torque"] and "mantle_drag_torque_x" in selected_plates.columns:
+                residual_x -= selected_plates.mantle_drag_torque_x.iloc[k] * viscosity / self.options[opt_case]["Mantle viscosity"]
+                residual_y -= selected_plates.mantle_drag_torque_y.iloc[k] * viscosity / self.options[opt_case]["Mantle viscosity"]
+                residual_z -= selected_plates.mantle_drag_torque_z.iloc[k] * viscosity / self.options[opt_case]["Mantle viscosity"]
+
+            # Compute magnitude of residual
+            residual_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
+
+            # Find optimal slab pull coefficient
+            opt_sp_const = sp_consts[_numpy.argmin(residual_mag)]
+
+        return opt_sp_const
+        
     
     def minimise_residual_velocity(self, opt_time, opt_case, plates_of_interest=None, grid_size=10, visc_range=[1e19, 5e20], plot=True, weight_by_area=True, ref_case=None):
         """
