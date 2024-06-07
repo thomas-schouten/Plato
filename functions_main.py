@@ -798,7 +798,7 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
 
     # Compute force magnitude at centroid
     force_variable = torque_variable.replace("torque", "force")
-    torques[force_variable + "lat"], torques[force_variable + "lon"], torques[force_variable + "mag"], torques[force_variable + "azi"] = vector_xyz2lat_lon(
+    torques[force_variable + "_lat"], torques[force_variable + "_lon"], torques[force_variable + "_mag"], torques[force_variable + "_azi"] = vector_xyz2lat_lon(
         torques.centroid_lat, torques.centroid_lon, force_at_centroid, constants
     )
     
