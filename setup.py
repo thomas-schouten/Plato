@@ -12,6 +12,7 @@ import sys
 import math
 import tempfile
 import shutil
+import warnings
 from collections import defaultdict
 from typing import Optional
 from typing import Union
@@ -455,7 +456,9 @@ def get_topology_geometries(
 
     # Resolve topological networks and load as GeopandasDataFrame
     topology_file = os.path.join(temp_dir, "topologies.shp")
-    _pygplates.resolve_topologies(reconstruction.topology_features, reconstruction.rotation_model, topology_file, reconstruction_time, anchor_plate_id = anchor_plateID)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        _pygplates.resolve_topologies(reconstruction.topology_features, reconstruction.rotation_model, topology_file, reconstruction_time, anchor_plate_id = anchor_plateID)
     if os.path.exists(topology_file):
         topology_geometries = _geopandas.read_file(topology_file)
 
