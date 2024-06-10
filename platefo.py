@@ -221,7 +221,6 @@ class PlateForces():
         for reconstruction_time in self.times:
             for case in self.cases:
                 # Reset plates
-
                 self.plates[reconstruction_time][case][[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
                 self.plates[reconstruction_time][case][["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
                 self.plates[reconstruction_time][case][[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
