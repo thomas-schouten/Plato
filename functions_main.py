@@ -141,11 +141,15 @@ def compute_interface_term(slabs, options):
         slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / slabs["shear_zone_width"])
         slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= slabs["shear_zone_width"], slabs["sediment_fraction"],  1)
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
+        slabs["sediment_fraction"] = _numpy.where(slabs["sediment_fraction"] == 0, 1e-6, slabs["sediment_fraction"])
 
     # Calculate interface term for all components of the slab pull force
-    slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-    slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-    slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+    interface_term = _numpy.log10(1-slabs["sediment_fraction"]) * options["Slab pull constant"] * -1
+
+    # Apply interface term to slab pull force
+    slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * interface_term
+    slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * interface_term
+    slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * interface_term
 
     return slabs
 
