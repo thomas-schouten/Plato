@@ -143,7 +143,7 @@ def compute_interface_term(slabs, options):
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
     # Calculate interface term for all components of the slab pull force
-    interface_term = options["Slab pull constant"] * (11 - 10**(1-slabs["sediment_fraction"]))
+    interface_term = options["Slab pull constant"] #* (11 - 10**(1-slabs["sediment_fraction"]))
 
     # Apply interface term to slab pull force
     slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * interface_term

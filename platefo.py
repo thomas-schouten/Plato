@@ -18,7 +18,7 @@ import numpy as _numpy
 import matplotlib.pyplot as plt
 import geopandas as _gpd
 import gplately
-from gplately import _pygplates
+from gplately import pygplates as _pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
 from tqdm import tqdm
@@ -99,9 +99,9 @@ class PlateForces():
                 self.resolved_geometries[reconstruction_time] = setup.get_topology_geometries(
                                 self.reconstruction, reconstruction_time, anchor_plateID=0
                             )
-            self.resolved_topologies[reconstruction_time] = []
             
             # Resolve topologies
+            self.resolved_topologies[reconstruction_time] = []
             _pygplates.resolve_topologies(
                 self.topologies,
                 self.rotations, 
@@ -830,6 +830,9 @@ class PlateForces():
                 residual_x -= selected_plates.GPE_torque_x.iloc[k] * ones
                 residual_y -= selected_plates.GPE_torque_y.iloc[k] * ones
                 residual_z -= selected_plates.GPE_torque_z.iloc[k] * ones
+
+            # Compute magnitude of driving torque
+            driving_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
             
             # Add slab bend torque
             if self.options[opt_case]["Slab bend torque"] and "slab_bend_torque_x" in selected_plates.columns:
@@ -847,7 +850,7 @@ class PlateForces():
             residual_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
 
             # Find optimal slab pull coefficient
-            opt_sp_const = sp_consts[_numpy.argmin(residual_mag)]
+            opt_sp_const = sp_consts[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
 
         return opt_sp_const
         
