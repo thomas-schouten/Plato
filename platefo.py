@@ -16,8 +16,9 @@ from copy import deepcopy
 # Third-party libraries
 import numpy as _numpy
 import matplotlib.pyplot as plt
+import geopandas as _gpd
 import gplately
-from gplately import pygplates
+from gplately import _pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
 from tqdm import tqdm
@@ -85,20 +86,29 @@ class PlateForces():
         self.rotations, self.topologies, self.polygons = gdownload.get_plate_reconstruction_files()
         self.coastlines, self.continents, self.COBs = gdownload.get_topology_geometries()
 
-        # Create instance of plate reconstruction and resolve topologies for all timesteps
+        # Set up plate reconstruction and initialise dictionaries to store resolved topologies and geometries
         self.reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
         self.resolved_topologies, self.resolved_geometries = {}, {}
+
+        # Load or initialise geometries
         for reconstruction_time in self.times:
+            if os.path.exists(os.path.join(files_dir, f"geometries_{reconstruction_time}.shp")):
+                print(f"Loading geometries for {reconstruction_time} Ma...")
+                self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"geometries_{reconstruction_time}.shp"))
+            else:
+                self.resolved_geometries[reconstruction_time] = setup.get_topology_geometries(
+                                self.reconstruction, reconstruction_time, anchor_plateID=0
+                            )
             self.resolved_topologies[reconstruction_time] = []
-            pygplates.resolve_topologies(
+            
+            # Resolve topologies
+            _pygplates.resolve_topologies(
                 self.topologies,
                 self.rotations, 
                 self.resolved_topologies[reconstruction_time], 
                 reconstruction_time, 
                 anchor_plate_id=0)
-            self.resolved_geometries[reconstruction_time] = setup.get_topology_geometries(
-                self.reconstruction, reconstruction_time, anchor_plateID=0
-            )
+            
         print("Plate reconstruction ready!")
 
         # Store cases and case options
@@ -627,7 +637,7 @@ class PlateForces():
             opt_case,
             plates_of_interest=None,
             grid_size=500,
-            visc_range=[1e19, 5e20],
+            visc_range=[5e18, 5e20],
             plot=True,
             weight_by_area=True,
             minimum_plate_area=None
@@ -1062,9 +1072,44 @@ class PlateForces():
                 setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path)
                 setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path)
                 setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path)
+            setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path)
             setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path)
 
         print(f"All data saved to {self.dir_path}!")
+
+    def save_plates(self):
+        for reconstruction_time in self.times:
+            for case in self.cases:
+                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path)
+
+        print(f"Plates data saved to {self.dir_path}!")
+
+    def save_slabs(self):
+        for reconstruction_time in self.times:
+            for case in self.cases:
+                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path)
+
+        print(f"Slabs data saved to {self.dir_path}!")
+    
+    def save_points(self):
+        for reconstruction_time in self.times:
+            for case in self.cases:
+                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path)
+
+        print(f"Points data saved to {self.dir_path}!")
+
+    def save_geometries(self):
+        for reconstruction_time in self.times:
+            for case in self.cases:
+                setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path)
+
+        print(f"Geometries data saved to {self.dir_path}!")
+
+    def save_seafloor(self):
+        for reconstruction_time in self.times:
+            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path)
+
+        print(f"Seafloor data saved to {self.dir_path}!")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLOTTING 

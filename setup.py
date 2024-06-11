@@ -459,8 +459,8 @@ def get_topology_geometries(
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         _pygplates.resolve_topologies(reconstruction.topology_features, reconstruction.rotation_model, topology_file, reconstruction_time, anchor_plate_id = anchor_plateID)
-    if os.path.exists(topology_file):
-        topology_geometries = _geopandas.read_file(topology_file)
+        if os.path.exists(topology_file):
+            topology_geometries = _geopandas.read_file(topology_file)
 
     # Remove temporary directory
     shutil.rmtree(temp_dir)
@@ -588,8 +588,8 @@ def get_options(
                       2e3,
                       700e3,
                       1e-12,
-                      0.0321,
-                      1.29e19,
+                      0.0301,
+                      8.97e18,
                       250,
                       1,
                       7.5e12,
@@ -795,6 +795,44 @@ def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time,
 
     # Save data
     data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"))
+
+def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstruction_time, folder):
+    """
+    Function to save GeoDataFrame to a folder
+
+    :param data:                  data
+    :type data:                   geopandas.GeoDataFrame
+    :param data_name:             name of dataset
+    :type data_name:              string
+    :param reconstruction_name:   name of reconstruction
+    :type reconstruction_name:    string
+    :param reconstruction_time:   age of reconstruction in Ma
+    :type reconstruction_time:    int
+    :param folder:                folder
+    :type folder:                 string
+    """
+    if folder:
+        target_dir = os.path.join(folder, data_name)
+    else:
+        target_dir = os.path.join(os.getcwd(), data_name)  # Use the current working directory
+
+    check_dir(target_dir)
+
+    if folder:
+        print(f"Saving {data_name} to {folder}")
+    else:
+        print(f"Saving {data_name} to this folder")
+
+    # Define target dir and check if it exists
+    target_dir = os.path.join(folder, data_name)
+    check_dir(target_dir)
+
+    # Delete old file to prevent "Permission denied error"
+    if os.path.exists(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp")):
+        os.remove(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp"))
+
+    # Save data
+    data.to_file(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp"))
 
 def check_dir(target_dir):
     """
