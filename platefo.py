@@ -626,6 +626,19 @@ class PlateForces():
                             self.constants,
                             torque_variable="mantle_drag_torque"
                         )
+        #-----------------------#
+        #   RESIDUAL TORQUES    #
+        #-----------------------#
+
+       # Loop through all reconstruction times
+        for reconstruction_time in self.times:
+            # Loop through all cases
+            for case in self.cases:
+                # Select cases that require residual torque computation
+                if self.options[case]["Reconstructed motions"]:
+                    # Calculate residual torque
+                    self.plates[reconstruction_time][case] = functions_main.compute_residual_torque(self.plates[reconstruction_time][case])
+        
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OPTIMISATION 
