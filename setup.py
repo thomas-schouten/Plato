@@ -121,7 +121,7 @@ def get_plates(
     merged_plates = merged_plates.reset_index(drop=True)
 
     # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
-    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag"]
+    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "residual"]
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
@@ -447,7 +447,6 @@ def get_topology_geometries(
     :type reconstruction_time:    integer
     :param anchor_plateID:        anchor plate ID
     :type anchor_plateID:         integer
-
     :return:                      resolved_topologies
     :rtype:                       _geopandas.GeoDataFrame
     """
