@@ -142,10 +142,17 @@ def compute_interface_term(slabs, options):
         slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= slabs["shear_zone_width"], slabs["sediment_fraction"],  1)
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
+    # Old implementation of interface term
+    interface_term = 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+
     # Calculate interface term for all components of the slab pull force
-    slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-    slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-    slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+    # NOTE: Turned off for now, awaiting further testing
+    # interface_term = options["Slab pull constant"] * (11 - 10**(1-slabs["sediment_fraction"]))
+
+    # Apply interface term to slab pull force
+    slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * interface_term
+    slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * interface_term
+    slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * interface_term
 
     return slabs
 
@@ -657,6 +664,45 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
     return torques, points, slabs
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# RESIDUALS
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def compute_residual_torque(torques):
+    """
+    Function to calculate residual torque on a plate
+
+    :param torques:                 pandas.DataFrame containing
+    :type torques:                  pandas.DataFrame
+    :param mech:                    mechanical parameters used in calculations
+    :type mech:                     class
+    :param constants:               constants used in calculations
+    :type constants:                class
+
+    :return:                        torques, points
+    :rtype:                         pandas.DataFrame, pandas.DataFrame
+    """
+    # Calculate residual torque in Cartesian coordinates
+    for j, axis in enumerate(["_x", "_y", "_z"]):
+        torques["residual_torque" + axis] = (
+            torques["slab_pull_torque" + axis] + 
+            torques["GPE_torque" + axis] + 
+            torques["slab_bend_torque" + axis] + 
+            torques["mantle_drag_torque" + axis]
+        )
+        torques["residual_torque_opt" + axis] = (
+            torques["slab_pull_torque" + axis] + 
+            torques["GPE_torque" + axis] + 
+            torques["slab_bend_torque" + axis] + 
+            torques["mantle_drag_torque" + axis]
+        )
+    
+    # Calculate residual torque magnitude
+    torques["residual_torque_mag"] = xyz2mag(torques["residual_torque_x"], torques["residual_torque_y"], torques["residual_torque_z"])
+    torques["residual_torque_opt_mag"] = xyz2mag(torques["residual_torque_opt_x"], torques["residual_torque_opt_y"], torques["residual_torque_opt_z"])
+
+    return torques
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # GENERAL FUNCTIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -902,12 +948,12 @@ def torques2xyz(position, lat, lon, force_lat, force_lon, segment_length_lat, se
     force_magnitude = _numpy.sqrt((force_lat*segment_length_lat*segment_length_lon)**2 + (force_lon*segment_length_lat*segment_length_lon)**2)
 
     theta = _numpy.where(
-        (force_lon >= 0) & (force_lat >= 0),                     # Condition 1
-        _numpy.arctan(force_lat/force_lon),                          # Value when Condition 1 is True
+        (force_lon >= 0) & (force_lat >= 0),                     
+        _numpy.arctan(force_lat/force_lon),                          
         _numpy.where(
-            (force_lon < 0) & (force_lat >= 0) | (force_lon < 0) & (force_lat < 0),    # Condition 2
-            _numpy.pi + _numpy.arctan(force_lat/force_lon),              # Value when Condition 2 is True
-            (2*_numpy.pi) + _numpy.arctan(force_lat/force_lon)           # Value when Condition 3 is True
+            (force_lon < 0) & (force_lat >= 0) | (force_lon < 0) & (force_lat < 0),    
+            _numpy.pi + _numpy.arctan(force_lat/force_lon),              
+            (2*_numpy.pi) + _numpy.arctan(force_lat/force_lon)           
         )
     )
 
@@ -920,7 +966,7 @@ def torques2xyz(position, lat, lon, force_lat, force_lon, segment_length_lat, se
     # Calculate torque
     torque = _numpy.cross(position, force, axis=0)
 
-    return torque
+    return torque    
 
 def mag_azi2lat_lon(magnitude, azimuth):
     """
@@ -964,7 +1010,7 @@ def lat_lon2mag_azi(component_lat, component_lon):
 
     return magnitude, azimuth_deg
 
-def xyz2lat_lon(position, constants):
+def xyz2lat_lon(position):
     """
     Function to convert a 2D vector into magnitude and azimuth [degrees from north]
 
