@@ -43,6 +43,8 @@ class PlateForces():
             cases_file: str, 
             cases_sheet: str = "Sheet1", 
             files_dir: str = None,
+            rotation_file: Optional[str] = None,
+            topology_file: Optional[str] = None,
         ):
         """
         PlateForces object.
@@ -59,8 +61,10 @@ class PlateForces():
         :type cases_sheet:              str
         :param files_dir:               Directory for storing/loading files (default is None).
         :type files_dir:                str
-        :param topography:              Dictionary containing topography data (default is None).
-        :type topography:               dict
+        :param rotation_file:           path to .rot file with finite Euler rotations (default is None).
+        :type rotation_file:            str
+        :param topology_file:           path to .gpml file with topologies (default is None).
+        :type topology_file:            str
         """
         # Check if the reconstruction is supported by gplately
         supported_models = ["Seton2012", "Muller2016", "Muller2019", "Clennett2020"]
@@ -83,11 +87,25 @@ class PlateForces():
         # Download reconstruction files from gplately DataServer
         print("Setting up plate reconstruction...")
         gdownload = gplately.DataServer(reconstruction_name)
-        self.rotations, self.topologies, self.polygons = gdownload.get_plate_reconstruction_files()
+        self.default_rotations, self.default_topologies, self.polygons = gdownload.get_plate_reconstruction_files()
         self.coastlines, self.continents, self.COBs = gdownload.get_topology_geometries()
+
+        # Set 
+        # NOTE: The default rotation file is used to sample the seafloor age grid and to plot the plate reconstruction.
+        # The actual torque computations will be done using the rotations provided in the rotation_file.
+        if rotation_file is not None:
+            self.rotations = gplately.RotationModel(rotation_file)
+        else:
+            self.rotations = self.default_rotations
+
+        if topology_file is not None:
+            self.topologies = gplately.TopologyModel(topology_file)
+        else:
+            self.topologies = self.default_topologies
 
         # Set up plate reconstruction and initialise dictionaries to store resolved topologies and geometries
         self.reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
+        self.default_reconstruction = gplately.PlateReconstruction(self.default_rotations, self.default_topologies, self.polygons)
         self.resolved_topologies, self.resolved_geometries = {}, {}
 
         # Load or initialise geometries
@@ -171,6 +189,7 @@ class PlateForces():
             files_dir,
             plates = self.plates,
             resolved_geometries = self.resolved_geometries
+            default_reconstruction = self.default_reconstruction,
         )
 
         # Load or initialise points

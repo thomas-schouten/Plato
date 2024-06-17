@@ -14,6 +14,7 @@ import tempfile
 import shutil
 import warnings
 from collections import defaultdict
+from copy import deepcopy
 from typing import Optional
 from typing import Union
 
@@ -234,6 +235,7 @@ def get_slabs(
 
 def get_points(
         reconstruction: _gplately.PlateReconstruction,
+        default_reconstruction: _gplately.PlateReconstruction or None,
         reconstruction_time: int,
         plates: _pandas.DataFrame,
         topology_geometries: _geopandas.GeoDataFrame,
@@ -242,19 +244,23 @@ def get_points(
     """
     Function to get data on regularly spaced grid points in reconstruction.
 
-    :param reconstruction:        reconstruction
-    :type reconstruction:         _gplately.PlateReconstruction
-    :param reconstruction_time:   reconstruction time
-    :type reconstruction_time:    integer
-    :param plates:                plates
-    :type plates:                 pandas.DataFrame
-    :param topology_geometries:   topology geometries
-    :type topology_geometries:    geopandas.GeoDataFrame
-    :param options:               options for the case
-    :type options:                dict
+    :param reconstruction:          reconstruction
+    :type reconstruction:           gplately.PlateReconstruction
+    :param default_reconstruction:  default reconstruction
+    :type default_reconstruction:   gplately.PlateReconstruction or None
+    :param reconstruction_time:     reconstruction time
+    :type reconstruction_time:      integer
+    :param plates:                  plates
+    :type plates:                   pandas.DataFrame
+    :param topology_geometries:     topology geometries
+    :type topology_geometries:      geopandas.GeoDataFrame
+    :param options:                 options for the case
+    :type options:                  dict
 
-    :return:                      points
-    :rtype:                       pandas.DataFrame    
+    :return:                        points
+    :rtype:                         pandas.DataFrame    
+
+    
     """
     # Set constants
     constants = set_constants()
@@ -269,6 +275,24 @@ def get_points(
 
     # Get plateIDs for points
     plateIDs = get_plateIDs(reconstruction, topology_geometries, lat_grid, lon_grid, reconstruction_time)
+
+    # Get sampling points for the age grid (which is in the default reference frame, plateID = 0)
+    # First find the equivalent stage rotation in the default reference frame
+    if options["Anchor plateID"] != 0:
+        stage_rotation = reconstruction.rotation_model.get_rotation(
+            to_time=reconstruction_time,
+            moving_plate_id=0,
+            from_time=reconstruction_time + options["Velocity time step"],
+            anchor_plate_id=options["Anchor plateID"]
+        ).get_lat_lon_euler_pole_and_angle_degrees()
+        # Then rotate the sampling points to the default reference frame
+        # This is inefficiently written as a loop for now, could be vectorised at some point
+        reconstructed_points = []
+        for i in range(len(lat_grid)):
+            point = _pygplates.PointOnSphere(_pygplates.LatLonPoint(lat_grid[i], lon_grid[i]))
+            point_feature = _pygplates.Feature(_pygplates.FeatureType.gpml_unclassified_feature)
+            point_feature.set_geometry(point)
+            _pygplates.reconstruct(point_feature, stage_rotation, reconstructed_points, reconstruction_time)
 
     # Initialise empty array to store velocities
     velocity_lat, velocity_lon = _numpy.zeros(len(lat_grid)), _numpy.zeros(len(lat_grid))
@@ -314,7 +338,9 @@ def get_points(
                            "segment_length_lon": segment_length_lon,
                            "v_lat": velocity_lat, 
                            "v_lon": velocity_lon,
-                           "v_mag": velocity_mag,})
+                           "v_mag": velocity_mag,
+                           "sampling_lat": sampling_lat_grid,
+                           "sampling_lon": sampling_lon_grid,})
 
     # Add additional columns to store seafloor ages and forces
     points["seafloor_age"] = _numpy.nan; points["U"] = 0.
@@ -858,21 +884,40 @@ def load_data(
         plates = None,
         resolved_topologies = None,
         resolved_geometries = None,
+        default_reconstruction = None,
     ):
     """
     Function to load DataFrames from a folder, or initialise new DataFrames
     
-    :param data:                  data
-    :type data:                   dict
-    :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
-    :param reconstruction_name:   name of reconstruction
-    :type reconstruction_name:    string
-    :param reconstruction_times:  reconstruction times
-    :type reconstruction_times:   list or _numpy.array
+    :param data:                    data
+    :type data:                     dict
+    :param reconstruction:          reconstruction
+    :type reconstruction:           gplately.PlateReconstruction
+    :param reconstruction_name:     name of reconstruction
+    :type reconstruction_name:      string
+    :param reconstruction_times:    reconstruction times
+    :type reconstruction_times:     list or _numpy.array
+    :param type:                    type of data
+    :type type:                     string
+    :param all_cases:               all cases
+    :type all_cases:                list
+    :param all_options:             all options
+    :type all_options:              dict
+    :param matching_case_dict:      matching case dictionary
+    :type matching_case_dict:       dict
+    :param files_dir:               files directory
+    :type files_dir:                string
+    :param plates:                  plates
+    :type plates:                   dict
+    :param resolved_topologies:     resolved topologies
+    :type resolved_topologies:      dict
+    :param resolved_geometries:     resolved geometries
+    :type resolved_geometries:      dict
+    :param default_reconstruction:  default reconstruction
+    :type default_reconstruction:   gplately.PlateReconstruction
 
-    :return:                      data
-    :rtype:                       dict
+    :return:                        data
+    :rtype:                         dict
     """
     # Loop through times
     for reconstruction_time in reconstruction_times:
@@ -925,9 +970,9 @@ def load_data(
                     if type == "Plates":
                         data[reconstruction_time][unavailable_case] = get_plates(reconstruction.rotation_model, reconstruction_time, resolved_topologies[reconstruction_time], all_options[unavailable_case])
                     if type == "Slabs":
-                        data[reconstruction_time][unavailable_case] = get_slabs(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
+                        data[reconstruction_time][unavailable_case] = get_slabs(reconstruction, default_reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
                     if type == "Points":
-                        data[reconstruction_time][unavailable_case] = get_points(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
+                        data[reconstruction_time][unavailable_case] = get_points(reconstruction, default_reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
 
                     # Append case to available cases
                     available_cases.append(unavailable_case)
