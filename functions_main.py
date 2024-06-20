@@ -868,7 +868,8 @@ def vector_xyz2lat_lon(lats, lons, vector, constants):
     :return:         Latitudinal and longitudinal components of the vector.
     :rtype:          numpy.array, numpy.array
 
-    NOTE: This function uses the pygplates library to convert the vector from Cartesian to magnitude, azimuth, and inclination. It could be optimised using vectorised operations, but so far it has not impacted performance in its current form.
+    NOTE: This function uses the pygplates library to convert the vector from Cartesian to magnitude, azimuth, and inclination
+          It could be optimised using vectorised operations, but so far it has not impacted performance in its current form
     """
     # Convert lats and lons to numpy arrays, if not already
     lats = _numpy.array(lats); lons = _numpy.array(lons)
@@ -1050,3 +1051,101 @@ def xyz2mag(x, y, z):
     :rtype:     float or numpy.array
     """
     return _numpy.sqrt(x**2 + y**2 + z**2)
+
+def rotate_torque(plateID, torque, rotations_a, rotations_b, reconstruction_time):
+    """
+    Function to rotate a torque vector in Cartesian coordinates between two reference frames.
+
+    :param plateID:             PlateID for which the torque is rotated.
+    :type plateID:              int, float
+    :param torque:              Torque vector in Cartesian coordinates.
+    :type torque:               numpy.array of length 3
+    :param rotations_a:         Rotation model A.
+    :type rotations_a:          numpy.array
+    :param rotations_b:         Rotation model B.
+    :type rotations_b:          numpy.array
+    :param reconstruction_time: Time of reconstruction.
+    :type reconstruction_time:  float
+    
+    :return:                    Rotated torque vector in Cartesian coordinates.
+    :rtype:                     numpy.array
+    """
+    # Get equivalent total rotations for the plateID in both rotation models
+    relative_rotation_pole = get_relative_rotaton_pole(plateID, rotations_a, rotations_b, reconstruction_time)
+
+    # Rotate torque vector
+    rotated_torque = rotate_vector(torque, relative_rotation_pole)
+
+    return rotated_torque
+
+def get_relative_rotaton_pole(plateID, rotations_a, rotations_b, reconstruction_time):
+    """
+    Function to get the relative rotation pole between two reference frames for any plateID.
+
+    :param plateID:         PlateID for which the relative rotation pole is calculated.
+    :type plateID:          int, float
+    :param rotations_a:     Rotation model A.
+    :type rotations_a:      numpy.array
+    :param rotations_b:     Rotation model B.
+    :type rotations_b:      numpy.array
+    """
+    # Make sure the plateID is an integer
+    plateID = int(plateID)
+
+    # Make sure the reconstruction time is an integer
+    reconstruction_time = int(reconstruction_time)
+
+    # Get equivalent total rotations for the plateID in both rotation models
+    rotation_a = rotations_a.get_rotation(
+        to_time=reconstruction_time,
+        moving_plate_id=plateID,
+    )
+    rotation_b = rotations_b.get_rotation(
+        to_time=reconstruction_time,
+        moving_plate_id=plateID,
+    )
+
+    # Calculate relative rotation pole
+    relative_rotation_pole = rotation_a * rotation_b.get_inverse()
+
+    return relative_rotation_pole.get_lat_lon_euler_pole_and_angle_degrees()
+
+def rotate_vector(vector, rotation):
+    """
+    Function to rotate a vector in Cartesian coordinates with a given Euler rotation.
+
+    :param vector:      Vector in 3D Cartesian coordinates.
+    :type vector:       numpy.array of length 3
+    :param rotation:    Rotation pole latitude, rotation pole longitude, and rotation angle in degrees.
+    :type rotation:     numpy.array of length 3
+
+    :return:            Rotated vector in Cartesian coordinates.
+    :rtype:             numpy.array
+    """
+    # Convert rotation axis to Cartesian coordinates
+    rotation_axis = lat_lon2xyz(rotation[0], rotation[1])
+
+    # Convert to unit vector
+    rotation_axis = rotation_axis / _numpy.linalg.norm(rotation_axis)
+
+    # Calculate Euler parameters
+    a = _numpy.cos(_numpy.deg2rad(rotation[2]) / 2)
+    b = rotation_axis[0] * _numpy.sin(_numpy.deg2rad(rotation[2]) / 2)
+    c = rotation_axis[1] * _numpy.sin(_numpy.deg2rad(rotation[2]) / 2)
+    d = rotation_axis[2] * _numpy.sin(_numpy.deg2rad(rotation[2]) / 2)
+
+    # Check if squares of Euler parameters is 1
+    if not _numpy.isclose(a**2 + b**2 + c**2 + d**2, 1):
+        raise ValueError("Euler parameters do not sum to 1")
+    
+    # Calculate rotation matrix
+    rotation_matrix = _numpy.array([
+        [a**2 + b**2 - c**2 - d**2, 2 * (b * c - a * d), 2 * (a * c + b * d)],
+        [2 * (b * c + a * d), a**2 - b**2 + c**2 - d**2, 2 * (c * d - a * b)],
+        [2 * (b * d - a * c), 2 * (a * b + c * d), a**2 - b**2 - c**2 + d**2]
+    ])
+
+    # Rotate vector
+    rotated_vector = _numpy.dot(rotation_matrix, vector)
+
+    return rotated_vector

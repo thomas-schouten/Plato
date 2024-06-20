@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PLATEFO
+# PLATO
 # Algorithm to calculate plate forces from tectonic reconstructions
 # PlateForces object
 # Thomas Schouten and Edward Clennett, 2023
@@ -41,8 +41,10 @@ class PlateForces():
             reconstruction_name: str, 
             reconstruction_times: List[int] or _numpy.array, 
             cases_file: str, 
-            cases_sheet: str = "Sheet1", 
-            files_dir: str = None,
+            cases_sheet: Optional[str] = "Sheet1", 
+            files_dir: Optional[str] = None,
+            rotation_file: Optional[List[str]] = None,
+            topology_file: Optional[List[str]] = None,
         ):
         """
         PlateForces object.
@@ -83,31 +85,72 @@ class PlateForces():
         # Download reconstruction files from gplately DataServer
         print("Setting up plate reconstruction...")
         gdownload = gplately.DataServer(reconstruction_name)
-        self.rotations, self.topologies, self.polygons = gdownload.get_plate_reconstruction_files()
+        self.default_rotations, self.default_topologies, self.polygons = gdownload.get_plate_reconstruction_files()
         self.coastlines, self.continents, self.COBs = gdownload.get_topology_geometries()
 
-        # Set up plate reconstruction and initialise dictionaries to store resolved topologies and geometries
+        # Check whether to use default or custom rotation and topology files
+        if rotation_file is None:
+            # Set to default rotations
+            self.rotations = self.default_rotations
+
+            # Set flag to False
+            self.rotate_torques = False
+        else:
+            # Load topologies as feature collections, if not already
+            self.rotations = _pygplates.RotationModel(rotation_file)
+
+            # Set flag to True
+            self.rotate_torques = True
+
+        if topology_file is None:
+            # Set to default topologies
+            self.topologies = self.default_topologies
+        else:
+            # Load topologies as feature collections, if not already
+            self.topologies = _pygplates.FeatureCollection(topology_file)
+
+        # Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries
         self.reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
+        self.default_reconstruction = gplately.PlateReconstruction(self.default_rotations, self.default_topologies, self.polygons)
         self.resolved_topologies, self.resolved_geometries = {}, {}
 
         # Load or initialise geometries
         for reconstruction_time in self.times:
-            if os.path.exists(os.path.join(files_dir, f"geometries_{reconstruction_time}.shp")):
+            if os.path.exists(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp")):
                 print(f"Loading geometries for {reconstruction_time} Ma...")
-                self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"geometries_{reconstruction_time}.shp"))
+                self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp"))
+            if os.path.exists(os.path.join(files_dir, f"Default_geometries_{reconstruction_time}.shp")):
+                print(f"Loading default geometries for {reconstruction_time} Ma...")
+                self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"Default_geometries_{reconstruction_time}.shp"))
             else:
                 self.resolved_geometries[reconstruction_time] = setup.get_topology_geometries(
                                 self.reconstruction, reconstruction_time, anchor_plateID=0
                             )
+                self.resolved_default_geometries[reconstruction_time] = setup.get_topology_geometries(
+                                self.default_reconstruction, reconstruction_time, anchor_plateID=0
+                            )
             
-            # Resolve topologies
+            # Resolve topologies to use to get plates
+            # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
+            #       This step could be sped up by extracting all information from the resolved geometries
             self.resolved_topologies[reconstruction_time] = []
             _pygplates.resolve_topologies(
                 self.topologies,
                 self.rotations, 
                 self.resolved_topologies[reconstruction_time], 
                 reconstruction_time, 
-                anchor_plate_id=0)
+                anchor_plate_id=0
+            )
+            
+            # Resolve default topologies
+            self.resolved_default_topologies[reconstruction_time] = []
+            _pygplates.resolve_topologies(
+                self.default_topologies,
+                self.default_rotations,
+                self.resolved_topologies[reconstruction_time],
+                reconstruction_time,
+                anchor_plate_id=0
+            )
             
         print("Plate reconstruction ready!")
 
@@ -248,7 +291,8 @@ class PlateForces():
                 self.slabs[reconstruction_time][case][[force + "_force_" + coord for force in slab_forces for coord in coords]] = [[0] * 9 for _ in range(len(self.slabs[reconstruction_time][case]))] 
 
                 # Reset points
-
+                self.points[reconstruction_time][case]["seafloor_age"] = _numpy.nan
+                self.points[reconstruction_time][case][[force + "_force_" + coord for force in point_forces for coord in coords]] = [[0] * 12 for _ in range(len(self.points[reconstruction_time][case]))]
 
         # Reset flags
         self.sampled_points = False
@@ -480,6 +524,17 @@ class PlateForces():
                         torque_variable="slab_pull_torque_opt"
                     )
 
+                    # Rotate torques if necessary
+                    if self.rotate_torques:
+                        for plateID in self.plates[reconstruction_time][key].plateID:
+                            self.plates[reconstruction_time][key].loc[self.plates[reconstruction_time][key].plateID == plateID, ["slab_pull_torque_x", "slab_pull_torque_y", "slab_pull_torque_z"]] = functions_main.rotate_torque(
+                                plateID,
+                                [self.plates[reconstruction_time][key].slab_pull_torque_x, self.plates[reconstruction_time][key].slab_pull_torque_y, self.plates[reconstruction_time][key].slab_pull_torque_z],
+                                self.rotations,
+                                self.default_rotations,
+                                reconstruction_time
+                            )
+
                     # Copy DataFrames
                     [[self.slabs[reconstruction_time][entry].update(
                         {"slab_pull_force_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_" + coord]}
@@ -515,16 +570,27 @@ class PlateForces():
                         torque_variable="GPE_torque"
                     )
 
-                # Copy DataFrames
-                [[self.points[reconstruction_time][entry].update(
-                    {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                [[self.plates[reconstruction_time][entry].update(
-                    {"GPE_force_" + coord: self.plates[reconstruction_time][key]["GPE_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                [[self.plates[reconstruction_time][entry].update(
-                    {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
-                ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+                    # Rotate torques if necessary
+                    if self.rotate_torques:
+                        for plateID in self.plates[reconstruction_time][key].plateID:
+                            self.plates[reconstruction_time][key].loc[self.plates[reconstruction_time][key].plateID == plateID, ["GPE_torque_x", "GPE_torque_y", "GPE_torque_z"]] = functions_main.rotate_torque(
+                                plateID,
+                                [self.plates[reconstruction_time][key].GPE_torque_x, self.plates[reconstruction_time][key].GPE_torque_y, self.plates[reconstruction_time][key].GPE_torque_z],
+                                self.rotations,
+                                self.default_rotations,
+                                reconstruction_time
+                            )
+
+                    # Copy DataFrames
+                    [[self.points[reconstruction_time][entry].update(
+                        {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                    [[self.plates[reconstruction_time][entry].update(
+                        {"GPE_force_" + coord: self.plates[reconstruction_time][key]["GPE_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                    [[self.plates[reconstruction_time][entry].update(
+                        {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
+                    ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
             #-----------------------#
             #   RESISTING TORQUES   #
@@ -547,17 +613,28 @@ class PlateForces():
                         self.constants,
                         torque_variable="slab_bend_torque"
                     )
+
+                    # Rotate torques if necessary
+                    if self.rotate_torques:
+                        for plateID in self.plates[reconstruction_time][key].plateID:
+                            self.plates[reconstruction_time][key].loc[self.plates[reconstruction_time][key].plateID == plateID, ["slab_bend_torque_x", "slab_bend_torque_y", "slab_bend_torque_z"]] = functions_main.rotate_torque(
+                                plateID,
+                                [self.plates[reconstruction_time][key].slab_bend_torque_x, self.plates[reconstruction_time][key].slab_bend_torque_y, self.plates[reconstruction_time][key].slab_bend_torque_z],
+                                self.rotations,
+                                self.default_rotations,
+                                reconstruction_time
+                            )
                     
-                # Copy DataFrames
-                [self.slabs[reconstruction_time][entry].update(
-                    {"slab_bend_force_" + coord: self.slabs[reconstruction_time][key]["slab_bend_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                [self.plates[reconstruction_time][entry].update(
-                    {"slab_bend_force_" + coord: self.plates[reconstruction_time][key]["slab_bend_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                [self.plates[reconstruction_time][entry].update(
-                    {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
-                ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
+                    # Copy DataFrames
+                    [self.slabs[reconstruction_time][entry].update(
+                        {"slab_bend_force_" + coord: self.slabs[reconstruction_time][key]["slab_bend_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
+                    [self.plates[reconstruction_time][entry].update(
+                        {"slab_bend_force_" + coord: self.plates[reconstruction_time][key]["slab_bend_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
+                    [self.plates[reconstruction_time][entry].update(
+                        {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
+                    ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
                     
             # Loop through mantle drag cases
             for key, entries in self.mantle_drag_cases.items():
@@ -588,16 +665,16 @@ class PlateForces():
                             torque_variable="mantle_drag_torque"
                         )
 
-                # Enter mantle drag torque in other cases
-                [self.points[reconstruction_time][entry].update(
-                    {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                [self.plates[reconstruction_time][entry].update(
-                    {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                [self.plates[reconstruction_time][entry].update(
-                    {"mantle_drag_torque_" + axis: self.plates[reconstruction_time][key]["mantle_drag_torque_" + axis]}
-                ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
+                    # Enter mantle drag torque in other cases
+                    [self.points[reconstruction_time][entry].update(
+                        {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
+                    [self.plates[reconstruction_time][entry].update(
+                        {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
+                    [self.plates[reconstruction_time][entry].update(
+                        {"mantle_drag_torque_" + axis: self.plates[reconstruction_time][key]["mantle_drag_torque_" + axis]}
+                    ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
 
             # Loop through all cases
             for case in self.cases:
@@ -1545,21 +1622,52 @@ class PlateForces():
 
         return ax, gl
     
-    def plot_reconstruction(self, ax, reconstruction_time: int, plotting_options: dict, coastlines=True, plates=False, trenches=False):
+    def plot_reconstruction(
+            self,
+            ax, 
+            reconstruction_time: int, 
+            plotting_options: dict, 
+            coastlines=True, 
+            plates=False, 
+            trenches=False,
+            default_frame=True
+        ):
         """
         Function to plot reconstructed features: coastlines, plates and trenches
+
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param reconstruction_time:     the time for which to display the map
+        :type reconstruction_time:      int
+        :param plotting_options:        options for plotting
+        :type plotting_options:         dict
+        :param coastlines:              whether or not to plot coastlines
+        :type coastlines:               boolean
+        :param plates:                  whether or not to plot plates
+        :type plates:                   boolean
+        :param trenches:                whether or not to plot trenches
+        :type trenches:                 boolean
+        :param default_frame:           whether or not to use the default reconstruction
+        :type default_frame:            boolean
+
+        :return:                        axes object with plotted features
+        :rtype:                         matplotlib.axes.Axes
         """
         # Set gplot object
-        gplot = gplately.PlotTopologies(self.reconstruction, time=reconstruction_time, coastlines=self.coastlines)
+        if default_frame == True:
+            gplot = gplately.PlotTopologies(self.default_reconstruction, time=reconstruction_time, coastlines=self.coastlines)
+        else:
+            gplot = gplately.PlotTopologies(self.reconstruction, time=reconstruction_time, coastlines=self.coastlines)
 
         # Plot coastlines
+        # NOTE: Some reconstructions on the GPlately DataServer do not have polygons for coastlines, that's why we need to catch the exception
         if coastlines:
             try:
                 gplot.plot_coastlines(ax, color="lightgrey", zorder=-5)
             except:
                 pass
         
-        # Plot plates (NOTE: polygons do NOT cross the dateline)
+        # Plot plates 
         if plates:
             gplot.plot_all_topologies(ax, lw=plotting_options["linewidth plate boundaries"])
             
@@ -1586,20 +1694,6 @@ class PlateForces():
         # Get cases
         if selected_cases == None:
             selected_cases = self.cases
-
-        # Initialise dictionaries to store data
-
-        # for reconstruction_time in selected_times:
-        
-
-
-        # Generate listed colormap
-
-        # Plot
-        # for case in cases:
-        #     ax.plot()
-
-        # return ax 
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # RANDOMISATION
