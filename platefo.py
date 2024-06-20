@@ -1442,6 +1442,44 @@ class PlateForces():
             
         return ax, im
     
+    def plot_velocity_map_v2(
+            self,
+            ax,
+            reconstruction_time,
+            case,
+            plotting_options
+        ):
+        """
+        Function to plot plate velocities on an axes object
+            ax:                     axes object
+            fig:                    figure
+            reconstruction_time:    the time for which to display the map
+            case:                   case for which to plot the sediments
+            plotting_options:       dictionary with options for plotting
+        """
+        # Check if reconstruction time is in valid times
+        if reconstruction_time not in self.times:
+            return print("Invalid reconstruction time")
+        
+        # Set basemap
+        ax, gl = self.plot_basemap(ax)
+
+        # Plot plates and coastlines
+        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge", velocities=case)
+
+        # Plot velocity grid
+        ax.imshow(
+            self.velocity_grid[reconstruction_time][case].velocity_magnitude.values,
+            cmap = plotting_options["velocity cmap"],
+            transform=ccrs.PlateCarree(), 
+            zorder=1, 
+            vmin=0, 
+            vmax=plotting_options["velocity max"], 
+            origin="lower"
+        )
+
+        return ax
+
     def plot_velocity_map(
             self,
             ax,
@@ -1701,12 +1739,13 @@ class PlateForces():
     
     def plot_reconstruction(
             self,
-            ax, 
+            ax,
             reconstruction_time: int, 
             plotting_options: dict, 
             coastlines=True, 
             plates=False, 
             trenches=False,
+            velocities=None,
             default_frame=True
         ):
         """
@@ -1738,9 +1777,15 @@ class PlateForces():
 
         # Plot coastlines
         # NOTE: Some reconstructions on the GPlately DataServer do not have polygons for coastlines, that's why we need to catch the exception
-        if coastlines:
+        if coastlines == "fill":
             try:
                 gplot.plot_coastlines(ax, color="lightgrey", zorder=-5)
+            except:
+                pass
+
+        if coastlines == "edge":
+            try:
+                gplot.plot_coastlines(ax, color="black", zorder=2, lw=0.1)
             except:
                 pass
         
@@ -1751,6 +1796,17 @@ class PlateForces():
         # Plot trenches
         if plates and trenches:
             gplot.plot_subduction_teeth(ax)
+
+        # Plot velocities
+        if velocities != None:
+            gplot.plot_plate_vectors(
+                ax,
+                self.velocity_grid[reconstruction_time][velocities],
+                spacingX=plotting_options["vector spacing"],
+                spacingY=plotting_options["vector spacing"],
+                normalise=plotting_options["normalise vectors"],
+                zorder=5
+            )
 
         return ax
     
