@@ -468,9 +468,9 @@ class PlateForces():
 # COMPUTING TORQUES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def compute_torques(self):
+    def compute_slab_pull_torque(self):
         """
-        Computes torques 
+        Compute slab pull torque
         """
         # Check if upper plates have been sampled already
         if self.sampled_upper_plates == False:
@@ -480,18 +480,10 @@ class PlateForces():
         if self.sampled_slabs == False:
             self.sample_slabs()
 
-        # Check if points have been sampled
-        if self.sampled_points == False:
-            self.sample_points()
-        
         # Loop through reconstruction times
         for i, reconstruction_time in enumerate(self.times):
-            print(f"Computing torques at {reconstruction_time} Ma")
+            print(f"Computing slab pull torques at {reconstruction_time} Ma")
 
-            #---------------------#
-            #   DRIVING TORQUES   #
-            #---------------------#
-            
             # Loop through slab pull cases
             for key, entries in self.slab_pull_cases.items():
                 # Calculate slab pull torque
@@ -510,6 +502,7 @@ class PlateForces():
                         torque_variable="slab_pull_torque"
                     )
 
+                    # Compute interface term
                     self.slabs[reconstruction_time][key] = functions_main.compute_interface_term(self.slabs[reconstruction_time][key], self.options[key])
                     self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
                         self.plates[reconstruction_time][key], 
@@ -523,17 +516,6 @@ class PlateForces():
                         self.constants,
                         torque_variable="slab_pull_torque_opt"
                     )
-
-                    # Rotate torques if necessary
-                    if self.rotate_torques:
-                        for plateID in self.plates[reconstruction_time][key].plateID:
-                            self.plates[reconstruction_time][key].loc[self.plates[reconstruction_time][key].plateID == plateID, ["slab_pull_torque_x", "slab_pull_torque_y", "slab_pull_torque_z"]] = functions_main.rotate_torque(
-                                plateID,
-                                [self.plates[reconstruction_time][key].slab_pull_torque_x, self.plates[reconstruction_time][key].slab_pull_torque_y, self.plates[reconstruction_time][key].slab_pull_torque_z],
-                                self.rotations,
-                                self.default_rotations,
-                                reconstruction_time
-                            )
 
                     # Copy DataFrames
                     [[self.slabs[reconstruction_time][entry].update(
@@ -552,49 +534,17 @@ class PlateForces():
                         {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
                     ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-            # Loop through gpe cases
-            for key, entries in self.gpe_cases.items():
-                # Calculate GPE torque
-                if self.options[key]["GPE torque"]: 
-                    self.points[reconstruction_time][key] = functions_main.compute_GPE_force(self.points[reconstruction_time][key], self.seafloor[reconstruction_time], self.options[key], self.mech)
-                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
-                        self.plates[reconstruction_time][key], 
-                        self.points[reconstruction_time][key].lat, 
-                        self.points[reconstruction_time][key].lon, 
-                        self.points[reconstruction_time][key].plateID, 
-                        self.points[reconstruction_time][key].GPE_force_lat, 
-                        self.points[reconstruction_time][key].GPE_force_lon,
-                        self.points[reconstruction_time][key].segment_length_lat, 
-                        self.points[reconstruction_time][key].segment_length_lon,
-                        self.constants,
-                        torque_variable="GPE_torque"
-                    )
+    def compute_slab_bend_torque(self):
+        """
+        Compute slab bend torque
+        """
+        # Check if slabs have been sampled already
+        if self.sampled_slabs == False:
+            self.sample_slabs()
 
-                    # Rotate torques if necessary
-                    if self.rotate_torques:
-                        for plateID in self.plates[reconstruction_time][key].plateID:
-                            self.plates[reconstruction_time][key].loc[self.plates[reconstruction_time][key].plateID == plateID, ["GPE_torque_x", "GPE_torque_y", "GPE_torque_z"]] = functions_main.rotate_torque(
-                                plateID,
-                                [self.plates[reconstruction_time][key].GPE_torque_x, self.plates[reconstruction_time][key].GPE_torque_y, self.plates[reconstruction_time][key].GPE_torque_z],
-                                self.rotations,
-                                self.default_rotations,
-                                reconstruction_time
-                            )
-
-                    # Copy DataFrames
-                    [[self.points[reconstruction_time][entry].update(
-                        {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                    [[self.plates[reconstruction_time][entry].update(
-                        {"GPE_force_" + coord: self.plates[reconstruction_time][key]["GPE_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                    [[self.plates[reconstruction_time][entry].update(
-                        {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
-                    ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
-
-            #-----------------------#
-            #   RESISTING TORQUES   #
-            #-----------------------#
+        # Loop through reconstruction times
+        for i, reconstruction_time in enumerate(self.times):
+            print(f"Computing slab bend torques at {reconstruction_time} Ma")
 
             # Loop through slab bend cases
             for key, entries in self.slab_bend_cases.items():
@@ -614,17 +564,6 @@ class PlateForces():
                         torque_variable="slab_bend_torque"
                     )
 
-                    # Rotate torques if necessary
-                    if self.rotate_torques:
-                        for plateID in self.plates[reconstruction_time][key].plateID:
-                            self.plates[reconstruction_time][key].loc[self.plates[reconstruction_time][key].plateID == plateID, ["slab_bend_torque_x", "slab_bend_torque_y", "slab_bend_torque_z"]] = functions_main.rotate_torque(
-                                plateID,
-                                [self.plates[reconstruction_time][key].slab_bend_torque_x, self.plates[reconstruction_time][key].slab_bend_torque_y, self.plates[reconstruction_time][key].slab_bend_torque_z],
-                                self.rotations,
-                                self.default_rotations,
-                                reconstruction_time
-                            )
-                    
                     # Copy DataFrames
                     [self.slabs[reconstruction_time][entry].update(
                         {"slab_bend_force_" + coord: self.slabs[reconstruction_time][key]["slab_bend_force_" + coord]}
@@ -635,7 +574,56 @@ class PlateForces():
                     [self.plates[reconstruction_time][entry].update(
                         {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
                     ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
-                    
+
+    def compute_gpe_torque(self):
+        """
+        Function to compute gravitational potential energy (GPE) torque
+        """
+        # Check if points have been sampled
+        if self.sampled_points == False:
+            self.sample_points()
+
+        # Loop through reconstruction times
+        for i, reconstruction_time in enumerate(self.times):
+            print(f"Computing slab bend torques at {reconstruction_time} Ma")
+
+            # Loop through gpe cases
+            for key, entries in self.gpe_cases.items():
+                # Calculate GPE torque
+                if self.options[key]["GPE torque"]: 
+                    self.points[reconstruction_time][key] = functions_main.compute_GPE_force(self.points[reconstruction_time][key], self.seafloor[reconstruction_time], self.options[key], self.mech)
+                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
+                        self.plates[reconstruction_time][key], 
+                        self.points[reconstruction_time][key].lat, 
+                        self.points[reconstruction_time][key].lon, 
+                        self.points[reconstruction_time][key].plateID, 
+                        self.points[reconstruction_time][key].GPE_force_lat, 
+                        self.points[reconstruction_time][key].GPE_force_lon,
+                        self.points[reconstruction_time][key].segment_length_lat, 
+                        self.points[reconstruction_time][key].segment_length_lon,
+                        self.constants,
+                        torque_variable="GPE_torque"
+                    )
+
+                    # Copy DataFrames
+                    [[self.points[reconstruction_time][entry].update(
+                        {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                    [[self.plates[reconstruction_time][entry].update(
+                        {"GPE_force_" + coord: self.plates[reconstruction_time][key]["GPE_force_" + coord]}
+                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                    [[self.plates[reconstruction_time][entry].update(
+                        {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
+                    ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+
+    def compute_mantle_drag_torque(self):
+        """
+        Function to calculate mantle drag torque
+        """
+        # Loop through reconstruction times
+        for i, reconstruction_time in enumerate(self.times):
+            print(f"Computing mantle drag torques at {reconstruction_time} Ma")
+
             # Loop through mantle drag cases
             for key, entries in self.mantle_drag_cases.items():
                 if self.options[key]["Reconstructed motions"]:
@@ -665,17 +653,14 @@ class PlateForces():
                             torque_variable="mantle_drag_torque"
                         )
 
-                    # Enter mantle drag torque in other cases
-                    [self.points[reconstruction_time][entry].update(
-                        {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                    [self.plates[reconstruction_time][entry].update(
-                        {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                    [self.plates[reconstruction_time][entry].update(
-                        {"mantle_drag_torque_" + axis: self.plates[reconstruction_time][key]["mantle_drag_torque_" + axis]}
-                    ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
-
+                        # Enter mantle drag torque in other cases
+                        [[self.points[reconstruction_time][entry].update(
+                            {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                
             # Loop through all cases
             for case in self.cases:
                 if not self.options[case]["Reconstructed motions"]:
@@ -703,20 +688,98 @@ class PlateForces():
                             self.constants,
                             torque_variable="mantle_drag_torque"
                         )
-        #-----------------------#
-        #   RESIDUAL TORQUES    #
-        #-----------------------#
 
-       # Loop through all reconstruction times
-        for reconstruction_time in self.times:
-            # Loop through all cases
-            for case in self.cases:
-                # Select cases that require residual torque computation
-                if self.options[case]["Reconstructed motions"]:
-                    # Calculate residual torque
-                    self.plates[reconstruction_time][case] = functions_main.compute_residual_torque(self.plates[reconstruction_time][case])
+    def compute_residual_torque(self):
+        """
+        Function to calculate residual torque
+        """
+        # Loop through reconstruction times
+        for i, reconstruction_time in enumerate(self.times):
+            print(f"Computing residual torques at {reconstruction_time} Ma")
+
+            # Loop through all reconstruction times
+            for reconstruction_time in self.times:
+                # Loop through all cases
+                for case in self.cases:
+                    # Select cases that require residual torque computation
+                    if self.options[case]["Reconstructed motions"]:
+                        # Calculate residual torque
+                        self.plates[reconstruction_time][case] = functions_main.compute_residual_torque(self.plates[reconstruction_time][case])
+
+    def compute_all_torques(self):
+        """
+        Computes all torques 
+        """
+        # Calculate slab pull torque
+        self.compute_slab_pull_torque()
+
+        # Calculate slab bend torque
+        self.compute_slab_bend_torque()
+
+        # Calculate GPE torque
+        self.compute_gpe_torque()
+
+        # Calculate mantle drag torque
+        self.compute_mantle_drag_torque()
         
+        # Calculate residual torque
+        self.compute_residual_torque()
 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ROTATION 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def rotate_torque(
+            self,
+            torque: str,
+            reference_rotations: _pygplates.RotationModel,
+            reference_plates: dict,
+            reference_case: Optional[str] = None,
+            case: Optional[str] = None,
+        ):
+        """
+        Function to rotate torques all plates to a new reference frame
+
+        :param torque:                  torque to rotate
+        :type torque:                   str
+        :param reference_rotations:     reference rotations
+        :type reference_rotations:      pygplates.RotationModel
+        :param reference_plates:        reference plates
+        :type reference_plates:         dict
+        :param case:                    case to rotate
+        :type case:                     str or None
+        """
+        # Check if the torque is valid
+        if torque not in ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]:
+            raise ValueError(f"Invalid torque '{torque}' Please select one of slab_pull_torque, GPE_torque, slab_bend_torque or mantle_drag_torque.")
+        
+        # Check for which cases to rotate the torques
+        if case == None:
+            rotate_cases = self.cases
+        else:
+            rotate_cases = [case]
+
+        # Check if reference case is provided, otherwise default to first case in list
+        if reference_case == None:
+            reference_case = reference_plates.keys[0]
+    
+        # Loop through all reconstruction times
+        for reconstruction_time in self.times:
+            # Check if times in reference_plates dictionary
+            if reference_case in reference_plates.keys():
+                # Loop through all cases
+                for case in rotate_cases:
+                    # Select cases that require rotation
+                    if self.options[case]["Reconstructed motions"] and self.options[case]["Mantle drag torque"]:
+                        for plateID in self.plates[reconstruction_time][case].plateID.values:
+                            self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].plateID == plateID, [torque + "_x", torque + "_y", torque + "_z"]] = functions_main.rotate_torque(
+                                plateID,
+                                torque,
+                                reference_rotations,
+                                self.rotations,
+                                reconstruction_time
+                            )
+        
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OPTIMISATION 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1339,7 +1402,14 @@ class PlateForces():
             
         return ax, seds
     
-    def plot_erosion_map(self, ax, fig, reconstruction_time: int, case, plotting_options: dict):
+    def plot_erosion_map(
+            self,
+            ax,
+            fig,
+            reconstruction_time: int,
+            case,
+            plotting_options: dict
+        ):
         """
         Function to create subplot with global sediment thicknesses
             case:               case for which to plot the sediments
@@ -1372,7 +1442,14 @@ class PlateForces():
             
         return ax, im
     
-    def plot_velocity_map(self, ax, fig, reconstruction_time, case, plotting_options):
+    def plot_velocity_map(
+            self,
+            ax,
+            fig,
+            reconstruction_time,
+            case,
+            plotting_options
+        ):
         """
         Function to create subplot with plate velocities
             ax:                     axes object

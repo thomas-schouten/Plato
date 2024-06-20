@@ -673,6 +673,41 @@ def get_seafloor_grid(
     
     return age_grid
 
+def get_velocity_grid(
+        reconstruction_name: str,
+        reconstruction_time: int,
+        points: _pandas.DataFrame,
+        seafloor_grid: _xarray.DataArray,
+    ):
+    """
+    Function to obtain velocity grid from the velocity sampled at the points interpolated to the resolution of the seafloor grid.
+
+    :param reconstruction_name:    name of reconstruction
+    :type reconstruction_name:     string
+    :param reconstruction_time:    reconstruction time
+    :type reconstruction_time:     integer
+    :param seafloor_grid:          seafloor ages
+    :type seafloor_grid:           xarray.DataArray
+
+    :return:                       velocity_grid
+    :rtype:                        xarray.Dataset
+    """
+    # Make xarray velocity grid
+    velocity_grid = _xarray.Dataset(
+            {
+                "velocity_magnitude": (["latitude", "longitude"], points.v_mag.values.reshape(points.lat.unique().size, points.lon.unique().size)),
+            },
+            coords={
+                "latitude": points.lat.unique(),
+                "longitude": points.lon.unique(),
+            },
+        )
+    
+    # Interpolate to resolution of seafloor grid
+    velocity_grid = velocity_grid.interp_like(seafloor_grid)
+
+    return velocity_grid
+
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PROCESS CASES 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
