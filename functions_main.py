@@ -572,150 +572,43 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
         torques["centroid_v_lat"], torques["centroid_v_lon"], torques["centroid_v_mag"], torques["centroid_v_azi"] = vector_xyz2lat_lon(torques.centroid_lat, torques.centroid_lon, velocity_at_centroid, constants)
         torques["centroid_v_lat"] *= constants.m_s2cm_a; torques["centroid_v_lon"] *= constants.m_s2cm_a; torques["centroid_v_mag"] *= constants.m_s2cm_a
 
-        # Loop through slabs
-        for j in range(len(slabs.lat)):
-            # Check if upper plate is in torques
-            if slabs.lower_plateID[j] in torques.plateID.values:
-                # Get the index of the lower plate in the torques DataFrame
-                n = _numpy.where(torques.plateID.values == slabs.lower_plateID[j])[0][0]
+        # Get velocity of upper and lower plates
+        plates = ["upper_", "lower_"]
+        for plate in plates:
+            slab_velocities = compute_velocities(
+                slabs.lat,
+                slabs.lon,
+                points[f"{plate}_plateID"],
+                torques,
+                summed_torques_cartesian_normalised,
+                options,
+                constants
+            )
 
-                # Check if the area condition is satisfied
-                if torques.area.values[n] >= options["Minimum plate area"]:
-                    # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
-                    slab_velocity = vector_xyz2lat_lon(
-                        [slabs.loc[j, "lat"]],
-                        [slabs.loc[j, "lon"]],
-                        _numpy.array(
-                            [_numpy.cross(
-                            -1 * summed_torques_cartesian_normalised[:,n], lat_lon2xyz(
-                                slabs.loc[j, "lat"], slabs.loc[j, "lon"], constants
-                                ) / constants.mean_Earth_radius_m,
-                            axis=0
-                            )]
-                        ).T,
-                        constants
-                    )
+            slabs[f"v_{plate}plate_lat"], points[f"v_{plate}plate_lon"], points[f"v_{plate}plate_mag"], points[f"v_{plate}plate_azi"] = slab_velocities
 
-                    # Assign the velocity to the respective columns in the slabs DataFrame
-                    slabs.loc[j, "v_lower_plate_lat"] = slab_velocity[0]
-                    slabs.loc[j, "v_lower_plate_lon"] = slab_velocity[1]
-                    slabs.loc[j, "v_lower_plate_mag"] = slab_velocity[2]
-                    slabs.loc[j, "v_lower_plate_azi"] = slab_velocity[3]
-                else:
-                    # If the area condition is not satisfied, set the velocity to zero
-                    slabs.loc[j, "v_lower_plate_lat"] = 0
-                    slabs.loc[j, "v_lower_plate_lon"] = 0
-                    slabs.loc[j, "v_lower_plate_mag"] = 0
-                    slabs.loc[j, "v_lower_plate_azi"] = _numpy.nan
+        # Get velocity at points
+        point_velocities = compute_velocities(
+            points.lat,
+            points.lon,
+            points.plateID,
+            torques,
+            summed_torques_cartesian_normalised,
+            options,
+            constants
+        )
 
-            # If the torque balance is not known for the lower plate, set the velocity to zero
-            else:
-                slabs.loc[j, "v_lower_plate_lat"] = 0
-                slabs.loc[j, "v_lower_plate_lon"] = 0
-                slabs.loc[j, "v_lower_plate_mag"] = 0
-                slabs.loc[j, "v_lower_plate_azi"] = _numpy.nan
-
-            # Check if the torque balance is known for the upper plate
-            if slabs.upper_plateID[j] in torques.plateID.values:
-                # Get the index of the plate in the torques DataFrame
-                m = _numpy.where(torques.plateID.values == slabs.upper_plateID[j])[0][0]
-
-                # Check if the area condition is satisfied
-                if torques.area.values[m] >= options["Minimum plate area"]:
-                    # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
-                    trench_velocity = vector_xyz2lat_lon(
-                        [slabs.lat[j]],
-                        [slabs.lon[j]],
-                        _numpy.array(
-                            [_numpy.cross(
-                            -1 * summed_torques_cartesian_normalised[:,m], lat_lon2xyz(
-                                slabs.lat[j], slabs.lon[j], constants
-                                ) / constants.mean_Earth_radius_m,
-                            axis=0
-                            )]
-                        ).T,
-                        constants
-                    )
-                    
-                    # Assign the velocity to the respective columns in the slabs DataFrame
-                    slabs.loc[j, "v_upper_plate_lat"] = trench_velocity[0]
-                    slabs.loc[j, "v_upper_plate_lon"] = trench_velocity[1]
-                    slabs.loc[j, "v_upper_plate_mag"] = trench_velocity[2]
-                    slabs.loc[j, "v_upper_plate_azi"] = trench_velocity[3]
-
-                else:
-                    # If the area condition is not satisfied, set the velocity to zero
-                    slabs.loc[j, "v_upper_plate_lat"] = 0
-                    slabs.loc[j, "v_upper_plate_lon"] = 0
-                    slabs.loc[j, "v_upper_plate_mag"] = 0
-                    slabs.loc[j, "v_upper_plate_azi"] = _numpy.nan
-
-            # If the torque balance is not known for the upper plate, set the velocity to zero
-            else:
-                slabs.loc[j, "v_upper_plate_lat"] = 0
-                slabs.loc[j, "v_upper_plate_lon"] = 0
-                slabs.loc[j, "v_upper_plate_mag"] = 0
-                slabs.loc[j, "v_upper_plate_azi"] = _numpy.nan
-
-        # Convert to cm/a
-        slabs["v_lower_plate_lat"] *= constants.m_s2cm_a; slabs["v_lower_plate_lon"] *= constants.m_s2cm_a; slabs["v_lower_plate_mag"] *= constants.m_s2cm_a
-        slabs["v_upper_plate_lat"] *= constants.m_s2cm_a; slabs["v_upper_plate_lon"] *= constants.m_s2cm_a; slabs["v_upper_plate_mag"] *= constants.m_s2cm_a
-
-        # Loop through points
-        for j in range(len(points.lat)):
-            # Check if upper plate is in torques
-            if points.lower_plateID[j] in torques.plateID.values:
-                # Get the index of the lower plate in the torques DataFrame
-                n = _numpy.where(torques.plateID.values == points.lower_plateID[j])[0][0]
-
-                # Check if the area condition is satisfied
-                if torques.area.values[n] >= options["Minimum plate area"]:
-                    # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
-                    point_velocity = vector_xyz2lat_lon(
-                        [points.loc[j, "lat"]],
-                        [points.loc[j, "lon"]],
-                        _numpy.array(
-                            [_numpy.cross(
-                            -1 * summed_torques_cartesian_normalised[:,n], lat_lon2xyz(
-                                points.loc[j, "lat"], points.loc[j, "lon"], constants
-                                ) / constants.mean_Earth_radius_m,
-                            axis=0
-                            )]
-                        ).T,
-                        constants
-                    )
-
-                    # Assign the velocity to the respective columns in the points DataFrame
-                    points.loc[j, "v_lat"] = point_velocity[0]
-                    points.loc[j, "v_lon"] = point_velocity[1]
-                    points.loc[j, "v_mag"] = point_velocity[2]
-                    points.loc[j, "v_azi"] = point_velocity[3]
-                else:
-                    # If the area condition is not satisfied, set the velocity to zero
-                    points.loc[j, "v_lat"] = 0
-                    points.loc[j, "v_lon"] = 0
-                    points.loc[j, "v_mag"] = 0
-                    points.loc[j, "v_azi"] = _numpy.nan
-
-            # If the torque balance is not known for the lower plate, set the velocity to zero
-            else:
-                points.loc[j, "v_lat"] = 0
-                points.loc[j, "v_lon"] = 0
-                points.loc[j, "v_mag"] = 0
-                points.loc[j, "v_azi"] = _numpy.nan
-
-        # Convert to cm/a
-        points["v_lat"] *= constants.m_s2cm_a; points["v_lon"] *= constants.m_s2cm_a; points["v_mag"] *= constants.m_s2cm_a
+        points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"] = point_velocities
         
     return torques, points, slabs
 
-def velocity_at_points(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants):
+def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants):
     # Initialise arrays to store velocities
-    v_lat = _numpy.empty_like(lat); v_lon = _numpy.empty_like(lat)
-    v_mag = _numpy.empty_like(lat); v_azi = _numpy.empty_like(lat)
+    v_lats = _numpy.empty_like(lat); v_lons = _numpy.empty_like(lat)
+    v_mags = _numpy.empty_like(lat); v_azis = _numpy.empty_like(lat)
 
     # Loop through points
-    for j, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
+    for lat, lon, plateID, v_lat, v_lon, v_mag, v_azi in zip(lats, lons, plateIDs, v_lats, v_lons, v_mags, v_azis):
         # Check if upper plate is in torques
         if plateID in torques.plateID.values:
             # Get the index of the lower plate in the torques DataFrame
@@ -739,26 +632,15 @@ def velocity_at_points(lats, lons, plateIDs, torques, summed_torques_cartesian_n
                 )
 
                 # Assign the velocity to the respective columns in the points DataFrame
-                v_lat[j] = point_velocity[0]
-                points.loc[j, "v_lon"] = point_velocity[1]
-                points.loc[j, "v_mag"] = point_velocity[2]
-                points.loc[j, "v_azi"] = point_velocity[3]
-            else:
-                # If the area condition is not satisfied, set the velocity to zero
-                points.loc[j, "v_lat"] = 0
-                points.loc[j, "v_lon"] = 0
-                points.loc[j, "v_mag"] = 0
-                points.loc[j, "v_azi"] = _numpy.nan
-
-        # If the torque balance is not known for the lower plate, set the velocity to zero
-        else:
-            points.loc[j, "v_lat"] = 0
-            points.loc[j, "v_lon"] = 0
-            points.loc[j, "v_mag"] = 0
-            points.loc[j, "v_azi"] = _numpy.nan
+                v_lat = point_velocity[0]
+                v_lon = point_velocity[1]
+                v_mag = point_velocity[2]
+                v_azi = point_velocity[3]
 
     # Convert to cm/a
-    points["v_lat"] *= constants.m_s2cm_a; points["v_lon"] *= constants.m_s2cm_a; points["v_mag"] *= constants.m_s2cm_a
+    v_lat *= constants.m_s2cm_a; v_lon *= constants.m_s2cm_a; v_mag *= constants.m_s2cm_a
+
+    return v_lats, v_lons, v_mags, v_azis
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # RESIDUALS

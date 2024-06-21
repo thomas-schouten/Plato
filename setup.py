@@ -1008,6 +1008,10 @@ def load_grid(
     """
     # Loop through times
     for reconstruction_time in reconstruction_times:
+        # Check if the grid for the reconstruction time is already in the dictionary
+        if reconstruction_time in grid:
+            continue
+
         # Load grid if found
         grid[reconstruction_time] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name)
 

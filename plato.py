@@ -45,6 +45,9 @@ class PlateForces():
             files_dir: Optional[str] = None,
             rotation_file: Optional[List[str]] = None,
             topology_file: Optional[List[str]] = None,
+            polygon_file: Optional[List[str]] = None,
+            coastline_file: Optional[str] = None,
+            seafloor_grids: Optional[dict] = None,
         ):
         """
         PlateForces object.
@@ -61,8 +64,16 @@ class PlateForces():
         :type cases_sheet:              str
         :param files_dir:               Directory for storing/loading files (default is None).
         :type files_dir:                str
-        :param topography:              Dictionary containing topography data (default is None).
-        :type topography:               dict
+        :param rotation_file:           Path to the rotation file (default is None).
+        :type rotation_file:            str
+        :param topology_file:           Path to the topology file (default is None).
+        :type topology_file:            str
+        :param polygon_file:            Path to the polygon file (default is None).
+        :type polygon_file:             str
+        :param coastline_file:          Path to the coastline file (default is None).
+        :type coastline_file:           str
+        :param seafloor_grids:          Dictionary of seafloor grids (default is None).
+        :type seafloor_grids:           dict
         """
         # Check if the reconstruction is supported by gplately
         supported_models = ["Seton2012", "Muller2016", "Muller2019", "Clennett2020"]
@@ -82,53 +93,51 @@ class PlateForces():
         self.name = reconstruction_name
         self.times = _numpy.array(reconstruction_times)
 
-        # Download reconstruction files from gplately DataServer
+        # Let the user know you're busy setting up the plate reconstruction
         print("Setting up plate reconstruction...")
-        gdownload = gplately.DataServer(reconstruction_name)
-        self.default_rotations, self.default_topologies, self.polygons = gdownload.get_plate_reconstruction_files()
-        self.coastlines, self.continents, self.COBs = gdownload.get_topology_geometries()
 
-        # Check whether to use default or custom rotation and topology files
-        if rotation_file is None:
-            # Set to default rotations
-            self.rotations = self.default_rotations
+        # Set connection to GPlately DataServer if one of the required files is missing
+        if not rotation_file or not topology_file or not polygon_file or not coastline_file or not seafloor_grids:
+            gdownload = gplately.DataServer(reconstruction_name)
 
-            # Set flag to False
-            self.rotate_torques = False
-        else:
-            # Load topologies as feature collections, if not already
+        # Download reconstruction files if rotation or topology file not provided
+        if not rotation_file or not topology_file or not polygon_file:
+            reconstruction_files = gdownload.get_plate_reconstruction_files()
+        
+        # Initialise RotationModel object
+        if rotation_file:
             self.rotations = _pygplates.RotationModel(rotation_file)
+        else: 
+            self.rotations = reconstruction_files[0]
 
-            # Set flag to True
-            self.rotate_torques = True
-
-        if topology_file is None:
-            # Set to default topologies
-            self.topologies = self.default_topologies
-        else:
-            # Load topologies as feature collections, if not already
+        # Initialise topology FeatureCollection object
+        if topology_file:
             self.topologies = _pygplates.FeatureCollection(topology_file)
+        else:
+            self.topologies = reconstruction_files[1]
+
+        # Initialise static polygons
+        if polygon_file:
+            self.polygons = _pygplates.FeatureCollection(polygon_file)
+        else:
+            self.polygons = reconstruction_files[2]
+        
+        # Download coastline file if not provided
+        if not coastline_file:
+            self.coastlines, _, _ = gdownload.get_topology_geometries()
 
         # Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries
         self.reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
-        self.default_reconstruction = gplately.PlateReconstruction(self.default_rotations, self.default_topologies, self.polygons)
         self.resolved_topologies, self.resolved_geometries = {}, {}
-        self.resolved_default_topologies, self.resolved_default_geometries = {}, {}
 
         # Load or initialise geometries
         for reconstruction_time in self.times:
             if os.path.exists(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp")):
                 print(f"Loading geometries for {reconstruction_time} Ma...")
                 self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp"))
-            if os.path.exists(os.path.join(files_dir, f"Default_geometries_{reconstruction_time}.shp")):
-                print(f"Loading default geometries for {reconstruction_time} Ma...")
-                self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"Default_geometries_{reconstruction_time}.shp"))
             else:
                 self.resolved_geometries[reconstruction_time] = setup.get_topology_geometries(
                                 self.reconstruction, reconstruction_time, anchor_plateID=0
-                            )
-                self.resolved_default_geometries[reconstruction_time] = setup.get_topology_geometries(
-                                self.default_reconstruction, reconstruction_time, anchor_plateID=0
                             )
             
             # Resolve topologies to use to get plates
@@ -143,16 +152,6 @@ class PlateForces():
                 anchor_plate_id=0
             )
             
-            # Resolve default topologies
-            self.resolved_default_topologies[reconstruction_time] = []
-            _pygplates.resolve_topologies(
-                self.default_topologies,
-                self.default_rotations,
-                self.resolved_topologies[reconstruction_time],
-                reconstruction_time,
-                anchor_plate_id=0
-            )
-            
         print("Plate reconstruction ready!")
 
         # Store cases and case options
@@ -163,7 +162,7 @@ class PlateForces():
         self.constants = functions_main.set_constants()
 
         # Subdivide cases to accelerate computation
-        # For loading
+        # Group cases for initialisation of plates, slabs, and points
         plate_options = ["Minimum plate area"]
         self.plate_cases = setup.process_cases(self.cases, self.options, plate_options)
         slab_options = ["Slab tesselation spacing"]
@@ -171,21 +170,39 @@ class PlateForces():
         point_options = ["Grid spacing"]
         self.point_cases = setup.process_cases(self.cases, self.options, point_options)
 
-        # For torque computation
-        slab_pull_options = ["Slab pull torque", "Seafloor age profile", "Sample sediment grid", "Active margin sediments", "Sediment subduction", "Sample erosion grid", "Slab pull constant", "Shear zone width", "Slab length"]
+        # Group cases for torque computation
+        slab_pull_options = [
+            "Slab pull torque",
+            "Seafloor age profile",
+            "Sample sediment grid",
+            "Active margin sediments",
+            "Sediment subduction",
+            "Sample erosion grid",
+            "Slab pull constant",
+            "Shear zone width",
+            "Slab length"
+        ]
         self.slab_pull_cases = setup.process_cases(self.cases, self.options, slab_pull_options)
+
         slab_bend_options = ["Slab bend torque", "Seafloor age profile"]
         self.slab_bend_cases = setup.process_cases(self.cases, self.options, slab_bend_options)
-        gpe_options = ["Continental crust", "Seafloor age profile"]
+
+        gpe_options = ["Continental crust", "Seafloor age profile", "Grid spacing"]
         self.gpe_cases = setup.process_cases(self.cases, self.options, gpe_options)
-        mantle_drag_options = ["Reconstructed motions"]
+
+        mantle_drag_options = ["Reconstructed motions", "Grid spacing"]
         self.mantle_drag_cases = setup.process_cases(self.cases, self.options, mantle_drag_options)
 
-        # Load or initialise dictionaries with DataFrames for plates, slabs, points, seafloor, and velocity
+        # Load or initialise dictionaries with DataFrames for plates, slabs, points.
         self.plates = {}
         self.slabs = {}
         self.points = {}
-        self.seafloor = {}
+        
+        # Set up dictionaries for seafloor and velocity grids
+        if not seafloor_grids:
+            self.seafloor = {}
+        else:
+            self.seafloor = seafloor_grids
         self.velocity = {}
 
         # Load or initialise plates
@@ -1797,7 +1814,6 @@ class PlateForces():
             plates=False, 
             trenches=False,
             velocities=None,
-            default_frame=True
         ):
         """
         Function to plot reconstructed features: coastlines, plates and trenches
@@ -1821,10 +1837,7 @@ class PlateForces():
         :rtype:                         matplotlib.axes.Axes
         """
         # Set gplot object
-        if default_frame == True:
-            gplot = gplately.PlotTopologies(self.default_reconstruction, time=reconstruction_time, coastlines=self.coastlines)
-        else:
-            gplot = gplately.PlotTopologies(self.reconstruction, time=reconstruction_time, coastlines=self.coastlines)
+        gplot = gplately.PlotTopologies(self.reconstruction, time=reconstruction_time, coastlines=self.coastlines)
 
         # Plot coastlines
         # NOTE: Some reconstructions on the GPlately DataServer do not have polygons for coastlines, that's why we need to catch the exception
