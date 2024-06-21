@@ -9,8 +9,8 @@
 # Standard libraries
 import os
 import multiprocessing
+import warnings
 from typing import List, Optional
-import itertools
 from copy import deepcopy
 
 # Third-party libraries
@@ -113,6 +113,7 @@ class PlateForces():
         self.reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
         self.default_reconstruction = gplately.PlateReconstruction(self.default_rotations, self.default_topologies, self.polygons)
         self.resolved_topologies, self.resolved_geometries = {}, {}
+        self.resolved_default_topologies, self.resolved_default_geometries = {}, {}
 
         # Load or initialise geometries
         for reconstruction_time in self.times:
@@ -180,11 +181,12 @@ class PlateForces():
         mantle_drag_options = ["Reconstructed motions"]
         self.mantle_drag_cases = setup.process_cases(self.cases, self.options, mantle_drag_options)
 
-        # Load or initialise dictionaries with DataFrames for plates, slabs and points
+        # Load or initialise dictionaries with DataFrames for plates, slabs, points, seafloor, and velocity
         self.plates = {}
         self.slabs = {}
         self.points = {}
         self.seafloor = {}
+        self.velocity = {}
 
         # Load or initialise plates
         self.plates = setup.load_data(
@@ -236,7 +238,19 @@ class PlateForces():
             self.seafloor,
             self.name,
             self.times,
+            "Seafloor",
             files_dir,
+        )
+
+        # Load or initialise velocity grid
+        self.velocity = setup.load_grid(
+            self.velocity,
+            self.name,
+            self.times,
+            "Velocity",
+            files_dir,
+            points=self.points,
+            seafloor_grid=self.seafloor,
         )
 
         # Set sampling flags to False:
@@ -274,25 +288,25 @@ class PlateForces():
         for reconstruction_time in self.times:
             for case in self.cases:
                 # Reset plates
-                self.plates[reconstruction_time][case][[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
-                self.plates[reconstruction_time][case][["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
-                self.plates[reconstruction_time][case][[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
-                self.plates[reconstruction_time][case][["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+                self.plates[reconstruction_time][case][[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[_numpy.nan] * len(torques) * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+                self.plates[reconstruction_time][case][["slab_pull_torque_opt_" + axis for axis in axes]] = [[_numpy.nan] * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+                self.plates[reconstruction_time][case][[torque + "_force_" + coord for torque in torques for coord in coords]] = [[_numpy.nan] * len(torques) * len(coords) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
+                self.plates[reconstruction_time][case][["slab_pull_force_opt_" + coord for coord in coords]] = [[_numpy.nan] * len(coords) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
 
                 # Reset slabs
-                self.slabs[reconstruction_time][case]["upper_plate_thickness"] = 0.
+                self.slabs[reconstruction_time][case]["upper_plate_thickness"] = _numpy.nan
                 self.slabs[reconstruction_time][case]["upper_plate_age"] = _numpy.nan   
                 self.slabs[reconstruction_time][case]["continental_arc"] = False
                 self.slabs[reconstruction_time][case]["erosion_rate"] = _numpy.nan
                 self.slabs[reconstruction_time][case]["lower_plate_age"] = _numpy.nan
                 self.slabs[reconstruction_time][case]["lower_plate_thickness"] = _numpy.nan
-                self.slabs[reconstruction_time][case]["sediment_thickness"] = 0.
+                self.slabs[reconstruction_time][case]["sediment_thickness"] = _numpy.nan
                 self.slabs[reconstruction_time][case]["sediment_fraction"] = 0.
-                self.slabs[reconstruction_time][case][[force + "_force_" + coord for force in slab_forces for coord in coords]] = [[0] * 9 for _ in range(len(self.slabs[reconstruction_time][case]))] 
+                self.slabs[reconstruction_time][case][[force + "_force_" + coord for force in slab_forces for coord in coords]] = [[_numpy.nan] * 9 for _ in range(len(self.slabs[reconstruction_time][case]))] 
 
                 # Reset points
                 self.points[reconstruction_time][case]["seafloor_age"] = _numpy.nan
-                self.points[reconstruction_time][case][[force + "_force_" + coord for force in point_forces for coord in coords]] = [[0] * 12 for _ in range(len(self.points[reconstruction_time][case]))]
+                self.points[reconstruction_time][case][[force + "_force_" + coord for force in point_forces for coord in coords]] = [[_numpy.nan] * 12 for _ in range(len(self.points[reconstruction_time][case]))]
 
         # Reset flags
         self.sampled_points = False
@@ -518,21 +532,22 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    [[self.slabs[reconstruction_time][entry].update(
-                        {"slab_pull_force_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                    [[self.slabs[reconstruction_time][entry].update(
-                        {"slab_pull_force_opt_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_opt_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                    [[self.plates[reconstruction_time][entry].update(
-                        {"slab_pull_force_" + coord: self.plates[reconstruction_time][key]["slab_pull_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                    [[self.plates[reconstruction_time][entry].update(
-                        {"slab_pull_torque_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_" + axis]}
-                    ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
-                    [[self.plates[reconstruction_time][entry].update(
-                        {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
-                    ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+                    if len(entries) > 1:
+                        [[self.slabs[reconstruction_time][entry].update(
+                            {"slab_pull_force_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                        [[self.slabs[reconstruction_time][entry].update(
+                            {"slab_pull_force_opt_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_opt_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"slab_pull_force_" + coord: self.plates[reconstruction_time][key]["slab_pull_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"slab_pull_torque_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_" + axis]}
+                        ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
+                        ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
     def compute_slab_bend_torque(self):
         """
@@ -565,15 +580,16 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    [self.slabs[reconstruction_time][entry].update(
-                        {"slab_bend_force_" + coord: self.slabs[reconstruction_time][key]["slab_bend_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                    [self.plates[reconstruction_time][entry].update(
-                        {"slab_bend_force_" + coord: self.plates[reconstruction_time][key]["slab_bend_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                    [self.plates[reconstruction_time][entry].update(
-                        {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
-                    ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
+                    if len(entries) > 1:
+                        [self.slabs[reconstruction_time][entry].update(
+                            {"slab_bend_force_" + coord: self.slabs[reconstruction_time][key]["slab_bend_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
+                        [self.plates[reconstruction_time][entry].update(
+                            {"slab_bend_force_" + coord: self.plates[reconstruction_time][key]["slab_bend_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
+                        [self.plates[reconstruction_time][entry].update(
+                            {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
+                        ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
 
     def compute_gpe_torque(self):
         """
@@ -606,15 +622,16 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    [[self.points[reconstruction_time][entry].update(
-                        {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                    [[self.plates[reconstruction_time][entry].update(
-                        {"GPE_force_" + coord: self.plates[reconstruction_time][key]["GPE_force_" + coord]}
-                    ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                    [[self.plates[reconstruction_time][entry].update(
-                        {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
-                    ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+                    if len(entries) > 1:
+                        [[self.points[reconstruction_time][entry].update(
+                            {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"GPE_force_" + coord: self.plates[reconstruction_time][key]["GPE_force_" + coord]}
+                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
+                        ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
     def compute_mantle_drag_torque(self):
         """
@@ -654,12 +671,13 @@ class PlateForces():
                         )
 
                         # Enter mantle drag torque in other cases
-                        [[self.points[reconstruction_time][entry].update(
-                            {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                        [[self.plates[reconstruction_time][entry].update(
-                            {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                        if len(entries) > 1:
+                            [[self.points[reconstruction_time][entry].update(
+                                {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
+                            ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                            [[self.plates[reconstruction_time][entry].update(
+                                {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
+                            ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
                 
             # Loop through all cases
             for case in self.cases:
@@ -1230,6 +1248,7 @@ class PlateForces():
                 setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path)
             setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path)
             setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path)
+            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path)
 
         print(f"All data saved to {self.dir_path}!")
 
@@ -1267,6 +1286,12 @@ class PlateForces():
 
         print(f"Seafloor data saved to {self.dir_path}!")
 
+    def save_velocity(self):
+        for reconstruction_time in self.times:
+            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path)
+
+        print(f"Velocity data saved to {self.dir_path}!")
+
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLOTTING 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1290,6 +1315,8 @@ class PlateForces():
         :param plotting_options:    options for plotting
         :type plotting_options:     dict
 
+        :return:                    axes object and image object
+        :rtype:                     matplotlib.axes.Axes, matplotlib.image.AxesImage
         """
         # Check if reconstruction time is in valid times
         if reconstruction_time not in self.times:
@@ -1314,7 +1341,7 @@ class PlateForces():
         )
 
         # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True)
+        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="fill")
 
         # Colourbar
         if plotting_options["cbar"] is True:
@@ -1434,7 +1461,7 @@ class PlateForces():
         )
 
         # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines=False)
+        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines=False)
 
         # Colourbar
         if plotting_options["cbar"] is True:
@@ -1464,12 +1491,9 @@ class PlateForces():
         # Set basemap
         ax, gl = self.plot_basemap(ax)
 
-        # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge", velocities=case)
-
         # Plot velocity grid
-        ax.imshow(
-            self.velocity_grid[reconstruction_time][case].velocity_magnitude.values,
+        im = ax.imshow(
+            self.velocity[reconstruction_time].velocity_magnitude.values,
             cmap = plotting_options["velocity cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
@@ -1478,7 +1502,34 @@ class PlateForces():
             origin="lower"
         )
 
-        return ax
+        # Subsample velocity vectors
+        velocity_vectors = self.points[reconstruction_time][case].iloc[::209].copy()
+
+        # Normalise, if necessary
+        if plotting_options["normalise velocity"] is True:
+            velocity_vectors["v_lon"] = velocity_vectors["v_lon"] / velocity_vectors["v_mag"]
+            velocity_vectors["v_lat"] = velocity_vectors["v_lat"] / velocity_vectors["v_mag"]
+
+        # Plot velocity vectors
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            qu = ax.quiver(
+                x=velocity_vectors.lon,
+                y=velocity_vectors.lat,
+                u=velocity_vectors.v_lon,
+                v=velocity_vectors.v_lat,
+                transform=ccrs.PlateCarree(),
+                width=4e-3,
+                scale=3e2,
+                zorder=4,
+                color="k",
+                alpha=0.5
+            )
+
+        # Plot plates and coastlines
+        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge")
+
+        return im, qu
 
     def plot_velocity_map(
             self,
@@ -1779,33 +1830,33 @@ class PlateForces():
         # NOTE: Some reconstructions on the GPlately DataServer do not have polygons for coastlines, that's why we need to catch the exception
         if coastlines == "fill":
             try:
-                gplot.plot_coastlines(ax, color="lightgrey", zorder=-5)
+                gplot.plot_coastlines(ax, facecolor="lightgrey", zorder=-5)
             except:
                 pass
 
         if coastlines == "edge":
             try:
-                gplot.plot_coastlines(ax, color="black", zorder=2, lw=0.1)
+                gplot.plot_coastlines(ax, edgecolor="black", facecolor="none", zorder=2, lw=0.1)
             except:
                 pass
         
         # Plot plates 
         if plates:
-            gplot.plot_all_topologies(ax, lw=plotting_options["linewidth plate boundaries"])
+            gplot.plot_all_topologies(ax, lw=plotting_options["linewidth plate boundaries"], zorder=4)
             
         # Plot trenches
         if plates and trenches:
-            gplot.plot_subduction_teeth(ax)
+            gplot.plot_subduction_teeth(ax, zorder=4)
 
         # Plot velocities
         if velocities != None:
-            gplot.plot_plate_vectors(
+            gplot.plot_plate_motion_vectors(
                 ax,
-                self.velocity_grid[reconstruction_time][velocities],
                 spacingX=plotting_options["vector spacing"],
                 spacingY=plotting_options["vector spacing"],
                 normalise=plotting_options["normalise vectors"],
-                zorder=5
+                alpha=0.5,
+                zorder=5,
             )
 
         return ax

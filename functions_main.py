@@ -660,8 +660,105 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
         # Convert to cm/a
         slabs["v_lower_plate_lat"] *= constants.m_s2cm_a; slabs["v_lower_plate_lon"] *= constants.m_s2cm_a; slabs["v_lower_plate_mag"] *= constants.m_s2cm_a
         slabs["v_upper_plate_lat"] *= constants.m_s2cm_a; slabs["v_upper_plate_lon"] *= constants.m_s2cm_a; slabs["v_upper_plate_mag"] *= constants.m_s2cm_a
+
+        # Loop through points
+        for j in range(len(points.lat)):
+            # Check if upper plate is in torques
+            if points.lower_plateID[j] in torques.plateID.values:
+                # Get the index of the lower plate in the torques DataFrame
+                n = _numpy.where(torques.plateID.values == points.lower_plateID[j])[0][0]
+
+                # Check if the area condition is satisfied
+                if torques.area.values[n] >= options["Minimum plate area"]:
+                    # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
+                    point_velocity = vector_xyz2lat_lon(
+                        [points.loc[j, "lat"]],
+                        [points.loc[j, "lon"]],
+                        _numpy.array(
+                            [_numpy.cross(
+                            -1 * summed_torques_cartesian_normalised[:,n], lat_lon2xyz(
+                                points.loc[j, "lat"], points.loc[j, "lon"], constants
+                                ) / constants.mean_Earth_radius_m,
+                            axis=0
+                            )]
+                        ).T,
+                        constants
+                    )
+
+                    # Assign the velocity to the respective columns in the points DataFrame
+                    points.loc[j, "v_lat"] = point_velocity[0]
+                    points.loc[j, "v_lon"] = point_velocity[1]
+                    points.loc[j, "v_mag"] = point_velocity[2]
+                    points.loc[j, "v_azi"] = point_velocity[3]
+                else:
+                    # If the area condition is not satisfied, set the velocity to zero
+                    points.loc[j, "v_lat"] = 0
+                    points.loc[j, "v_lon"] = 0
+                    points.loc[j, "v_mag"] = 0
+                    points.loc[j, "v_azi"] = _numpy.nan
+
+            # If the torque balance is not known for the lower plate, set the velocity to zero
+            else:
+                points.loc[j, "v_lat"] = 0
+                points.loc[j, "v_lon"] = 0
+                points.loc[j, "v_mag"] = 0
+                points.loc[j, "v_azi"] = _numpy.nan
+
+        # Convert to cm/a
+        points["v_lat"] *= constants.m_s2cm_a; points["v_lon"] *= constants.m_s2cm_a; points["v_mag"] *= constants.m_s2cm_a
         
     return torques, points, slabs
+
+def velocity_at_points(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants):
+    # Initialise arrays to store velocities
+    v_lat = _numpy.empty_like(lat); v_lon = _numpy.empty_like(lat)
+    v_mag = _numpy.empty_like(lat); v_azi = _numpy.empty_like(lat)
+
+    # Loop through points
+    for j, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
+        # Check if upper plate is in torques
+        if plateID in torques.plateID.values:
+            # Get the index of the lower plate in the torques DataFrame
+            n = _numpy.where(torques.plateID.values == plateID[0][0])
+
+            # Check if the area condition is satisfied
+            if torques.area.values[n] >= options["Minimum plate area"]:
+                # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
+                point_velocity = vector_xyz2lat_lon(
+                    [lat],
+                    [lon],
+                    _numpy.array(
+                        [_numpy.cross(
+                        -1 * summed_torques_cartesian_normalised[:,n], lat_lon2xyz(
+                            lat, lon, constants
+                            ) / constants.mean_Earth_radius_m,
+                        axis=0
+                        )]
+                    ).T,
+                    constants
+                )
+
+                # Assign the velocity to the respective columns in the points DataFrame
+                v_lat[j] = point_velocity[0]
+                points.loc[j, "v_lon"] = point_velocity[1]
+                points.loc[j, "v_mag"] = point_velocity[2]
+                points.loc[j, "v_azi"] = point_velocity[3]
+            else:
+                # If the area condition is not satisfied, set the velocity to zero
+                points.loc[j, "v_lat"] = 0
+                points.loc[j, "v_lon"] = 0
+                points.loc[j, "v_mag"] = 0
+                points.loc[j, "v_azi"] = _numpy.nan
+
+        # If the torque balance is not known for the lower plate, set the velocity to zero
+        else:
+            points.loc[j, "v_lat"] = 0
+            points.loc[j, "v_lon"] = 0
+            points.loc[j, "v_mag"] = 0
+            points.loc[j, "v_azi"] = _numpy.nan
+
+    # Convert to cm/a
+    points["v_lat"] *= constants.m_s2cm_a; points["v_lon"] *= constants.m_s2cm_a; points["v_mag"] *= constants.m_s2cm_a
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # RESIDUALS
@@ -748,14 +845,14 @@ def compute_thicknesses(ages, options, crust=True, water=True):
                                         mech.cont_crust_thick, 
                                         mech.ocean_crust_thick)
         else:
-            crustal_thickness = None
+            crustal_thickness = _numpy.nan
             
         if water:
             water_depth = _numpy.where(_numpy.isnan(ages), 
                                 0,
                                 (lithospheric_mantle_thickness * ((mech.rho_a - mech.rho_l) / (mech.rho_sw - mech.rho_a))) + 2600)
         else:
-            water_depth = None
+            water_depth = _numpy.nan
         
     # Water depth from half space cooling and lithospheric thickness from isostasy
     elif options["Seafloor age profile"] == "plate model":
@@ -768,12 +865,12 @@ def compute_thicknesses(ages, options, crust=True, water=True):
                                         mech.cont_crust_thick, 
                                         mech.ocean_crust_thick)
         else:
-            crustal_thickness = None
+            crustal_thickness = _numpy.nan
         
         if water:
             water_depth = hw
         else:
-            water_depth = None
+            water_depth = _numpy.nan
 
     return lithospheric_mantle_thickness, crustal_thickness, water_depth
 

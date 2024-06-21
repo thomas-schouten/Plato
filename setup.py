@@ -8,8 +8,6 @@
 # Import libraries
 # Standard libraries
 import os
-import sys
-import math
 import tempfile
 import shutil
 import warnings
@@ -115,6 +113,7 @@ def get_plates(
 
     # Get plate names
     merged_plates["name"] = _numpy.nan; merged_plates.name = get_plate_names(merged_plates.plateID)
+    merged_plates["name"] = merged_plates["name"].astype(str)
 
     # Sort and index by plate ID
     merged_plates = merged_plates.sort_values(by="plateID")
@@ -125,10 +124,10 @@ def get_plates(
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
-    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[_numpy.nan] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[_numpy.nan] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[_numpy.nan] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[_numpy.nan] * len(coords) for _ in range(len(merged_plates.plateID))]
 
     return merged_plates
 
@@ -213,7 +212,7 @@ def get_slabs(
 
     # Initialise other columns to store seafloor ages and forces
     # Upper plate
-    slabs["upper_plate_thickness"] = 0.
+    slabs["upper_plate_thickness"] = _numpy.nan
     slabs["upper_plate_age"] = _numpy.nan   
     slabs["continental_arc"] = False
     slabs["erosion_rate"] = _numpy.nan
@@ -221,14 +220,17 @@ def get_slabs(
     # Lower plate
     slabs["lower_plate_age"] = _numpy.nan
     slabs["lower_plate_thickness"] = _numpy.nan
-    slabs["sediment_thickness"] = 0.
+    slabs["sediment_thickness"] = _numpy.nan
     slabs["sediment_fraction"] = 0.
     slabs["slab_length"] = options["Slab length"]
 
     # Forces
     forces = ["slab_pull", "slab_bend"]
     coords = ["mag", "lat", "lon"]
-    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 6 for _ in range(len(slabs))] 
+    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[_numpy.nan] * 6 for _ in range(len(slabs))] 
+
+    # Make sure all the columns are floats
+    slabs = slabs.astype(float)
 
     return slabs
 
@@ -260,8 +262,8 @@ def get_points(
     constants = set_constants()
     
     # Define grid spacing and 
-    lats = _numpy.arange(-90,91,options["Grid spacing"])
-    lons = _numpy.arange(-180,181,options["Grid spacing"])
+    lats = _numpy.arange(-90,91,options["Grid spacing"], dtype=float)
+    lons = _numpy.arange(-180,180,options["Grid spacing"], dtype=float)
 
     # Create a meshgrid of latitudes and longitudes
     lon_grid, lat_grid = _numpy.meshgrid(lons, lats)
@@ -271,8 +273,8 @@ def get_points(
     plateIDs = get_plateIDs(reconstruction, topology_geometries, lat_grid, lon_grid, reconstruction_time)
 
     # Initialise empty array to store velocities
-    velocity_lat, velocity_lon = _numpy.zeros(len(lat_grid)), _numpy.zeros(len(lat_grid))
-    velocity_mag, velocity_azi = _numpy.zeros(len(lat_grid)), _numpy.zeros(len(lat_grid))
+    velocity_lat, velocity_lon = _numpy.empty_like(lat_grid), _numpy.empty_like(lat_grid)
+    velocity_mag, velocity_azi = _numpy.empty_like(lat_grid), _numpy.empty_like(lat_grid)
 
     # Loop through plateIDs to get velocities
     for plateID in _numpy.unique(plateIDs):
@@ -314,10 +316,17 @@ def get_points(
                            "segment_length_lon": segment_length_lon,
                            "v_lat": velocity_lat, 
                            "v_lon": velocity_lon,
-                           "v_mag": velocity_mag,})
+                           "v_mag": velocity_mag,
+                           "v_azi": velocity_azi,},
+                           dtype=float
+                        )
 
     # Add additional columns to store seafloor ages and forces
-    points["seafloor_age"] = _numpy.nan; points["U"] = 0.
+    points["seafloor_age"] = _numpy.nan
+    points["lithospheric_thickness"] = _numpy.nan
+    points["crustal_thickness"] = _numpy.nan
+    points["water_depth"] = _numpy.nan
+    points["U"] = _numpy.nan
     forces = ["GPE", "mantle_drag"]
     coords = ["lat", "lon", "mag"]
 
@@ -674,8 +683,6 @@ def get_seafloor_grid(
     return age_grid
 
 def get_velocity_grid(
-        reconstruction_name: str,
-        reconstruction_time: int,
         points: _pandas.DataFrame,
         seafloor_grid: _xarray.DataArray,
     ):
@@ -696,6 +703,8 @@ def get_velocity_grid(
     velocity_grid = _xarray.Dataset(
             {
                 "velocity_magnitude": (["latitude", "longitude"], points.v_mag.values.reshape(points.lat.unique().size, points.lon.unique().size)),
+                "velocity_latitude": (["latitude", "longitude"], points.v_lat.values.reshape(points.lat.unique().size, points.lon.unique().size)),
+                "velocity_longitude": (["latitude", "longitude"], points.v_lon.values.reshape(points.lat.unique().size, points.lon.unique().size)),
             },
             coords={
                 "latitude": points.lat.unique(),
@@ -970,10 +979,13 @@ def load_data(
     return data
 
 def load_grid(
-        grids: dict,
+        grid: dict,
         reconstruction_name: str,
         reconstruction_times: list,
+        type: str,
         files_dir: str,
+        points: Optional[dict] = None,
+        seafloor_grid: Optional[_xarray.Dataset] = None,
     ):
     """
     Function to load grid from a folder.
@@ -984,8 +996,12 @@ def load_grid(
     :type reconstruction_name:     string
     :param reconstruction_times:   reconstruction times
     :type reconstruction_times:    list or numpy.array
+    :param type:                   type of grid
+    :type type:                    string
     :param files_dir:              files directory
     :type files_dir:               string
+    :param points:                 points
+    :type points:                  dict
 
     :return:                       grids
     :rtype:                        xarray.Dataset
@@ -993,14 +1009,28 @@ def load_grid(
     # Loop through times
     for reconstruction_time in reconstruction_times:
         # Load grid if found
-        grids[reconstruction_time] = Dataset_from_netCDF(files_dir, reconstruction_time, reconstruction_name)
+        grid[reconstruction_time] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name)
 
-        # If not found, download from GPlately DataServer
-        if grids[reconstruction_time] is None:
-            print(f"Seafloor grid for {reconstruction_name} at {reconstruction_time} Ma not found, downloading from GPlately DataServer...")
-            grids[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
+        # If not found, initialise a new grid
+        if grid[reconstruction_time] is None:
+            # Download seafloor age grid from GPlately DataServer
+            if type == "Seafloor":
+                print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, downloading from GPlately DataServer...")
 
-    return grids
+                # Download seafloor grid
+                grid[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
+
+            # Interpolate velocity grid from points
+            if type == "Velocity":
+                print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
+
+                # Get the first key in the points dictionary. It doesn't matter which key is used, as the reconstructed velocities are the same for all points DataFrames.
+                key = list(points[reconstruction_time].keys())[0]
+
+                # Get velocity grid
+                grid[reconstruction_time] = get_velocity_grid(points[reconstruction_time][key], seafloor_grid[reconstruction_time])
+
+    return grid
 
 def DataFrame_from_csv(
         folder: str,
@@ -1043,6 +1073,7 @@ def DataFrame_from_csv(
 
 def Dataset_from_netCDF(
         folder: str,
+        type: str,
         reconstruction_time: int,
         reconstruction_name: str,
     ):
@@ -1061,9 +1092,9 @@ def Dataset_from_netCDF(
     """
     # Get target folder
     if folder:
-        target_file = os.path.join(folder, "Seafloor", f"Seafloor_{reconstruction_name}_{reconstruction_time}Ma.nc")
+        target_file = os.path.join(folder, type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.nc")
     else:
-        target_file = os.getcwd("Seafloor", f"Seafloor_{reconstruction_name}_{reconstruction_time}Ma.nc")  # Use the current working directory
+        target_file = os.getcwd(type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.nc")  # Use the current working directory
 
     # Check if target folder exists
     if os.path.exists(target_file):
