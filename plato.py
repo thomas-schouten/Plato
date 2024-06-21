@@ -82,9 +82,6 @@ class PlateForces():
             print(f"No seafloor grids for the {reconstruction_name} reconstruction are available from GPlately. Exiting now")
             sys.exit()
 
-        # Let the user know you're busy
-        print("Setting up PlateForces object...")
-
         # Set flag for debugging mode
         self.DEBUG_MODE = DEBUG_MODE
 

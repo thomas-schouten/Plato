@@ -717,6 +717,9 @@ def get_velocity_grid(
     # Interpolate to resolution of seafloor grid
     velocity_grid = velocity_grid.interp_like(seafloor_grid)
 
+    # Interpolate NaN values along the dateline
+    velocity_grid = velocity_grid.interpolate_na()
+
     return velocity_grid
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -827,16 +830,23 @@ def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time,
         else:
             print(f"Saving {data_name} to this folder")
 
-    # Define target dir and check if it exists
-    target_dir = os.path.join(folder, data_name)
+    # Determine the target directory
+    target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
+    
+    # Ensure the directory exists
     check_dir(target_dir)
+    
+    # File name
+    file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"
+    file_path = os.path.join(target_dir, file_name)
 
-    # Delete old file to prevent "Permission denied error"
-    if os.path.exists(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc")):
-        os.remove(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"))
+    # Delete old file if it exists to prevent "Permission denied" error
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
-    # Save data
-    data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"))
+    # Save the data to NetCDF
+    data.to_netcdf(file_path)
+    print(f"Saved {data_name} to {file_path}")
 
 def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstruction_time, folder, DEBUG_MODE=False):
     """
