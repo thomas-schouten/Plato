@@ -48,6 +48,7 @@ class PlateForces():
             polygon_file: Optional[List[str]] = None,
             coastline_file: Optional[str] = None,
             seafloor_grids: Optional[dict] = None,
+            DEBUG_MODE: Optional[bool] = False,
         ):
         """
         PlateForces object.
@@ -75,14 +76,17 @@ class PlateForces():
         :param seafloor_grids:          Dictionary of seafloor grids (default is None).
         :type seafloor_grids:           dict
         """
-        # Check if the reconstruction is supported by gplately
+        # If no seafloor age grids are provided, check if they are available on the GPLately DataServer
         supported_models = ["Seton2012", "Muller2016", "Muller2019", "Clennett2020"]
-        if reconstruction_name not in supported_models:
-            print(f"Not all necessary files for the {reconstruction_name} reconstruction are available from GPlately. Exiting now")
+        if reconstruction_name not in supported_models and not seafloor_grids:
+            print(f"No seafloor grids for the {reconstruction_name} reconstruction are available from GPlately. Exiting now")
             sys.exit()
 
         # Let the user know you're busy
         print("Setting up PlateForces object...")
+
+        # Set flag for debugging mode
+        self.DEBUG_MODE = DEBUG_MODE
 
         # Set files directory
         self.dir_path = os.path.join(os.getcwd(), files_dir)
@@ -104,26 +108,28 @@ class PlateForces():
         if not rotation_file or not topology_file or not polygon_file:
             reconstruction_files = gdownload.get_plate_reconstruction_files()
         
-        # Initialise RotationModel object
+        # Initialise or download RotationModel object
         if rotation_file:
             self.rotations = _pygplates.RotationModel(rotation_file)
         else: 
             self.rotations = reconstruction_files[0]
 
-        # Initialise topology FeatureCollection object
+        # Initialise or download topology FeatureCollection object
         if topology_file:
             self.topologies = _pygplates.FeatureCollection(topology_file)
         else:
             self.topologies = reconstruction_files[1]
 
-        # Initialise static polygons
+        # Initialise or download static polygons
         if polygon_file:
             self.polygons = _pygplates.FeatureCollection(polygon_file)
         else:
             self.polygons = reconstruction_files[2]
         
-        # Download coastline file if not provided
-        if not coastline_file:
+        # Initialise or download coastlines
+        if coastline_file:
+            self.coastlines = _pygplates.FeatureCollection(coastline_file)
+        else:
             self.coastlines, _, _ = gdownload.get_topology_geometries()
 
         # Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries
@@ -131,9 +137,11 @@ class PlateForces():
         self.resolved_topologies, self.resolved_geometries = {}, {}
 
         # Load or initialise geometries
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Loading geometries"):
             if os.path.exists(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp")):
-                print(f"Loading geometries for {reconstruction_time} Ma...")
+                if self.DEBUG_MODE:
+                    print(f"Loading geometries for {reconstruction_time} Ma...")
+
                 self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp"))
             else:
                 self.resolved_geometries[reconstruction_time] = setup.get_topology_geometries(
@@ -217,7 +225,8 @@ class PlateForces():
             self.plate_cases,
             files_dir,
             resolved_topologies = self.resolved_topologies,
-            resolved_geometries = self.resolved_geometries
+            resolved_geometries = self.resolved_geometries,
+            DEBUG_MODE = self.DEBUG_MODE,
         )
 
         # Load or initialise slabs
@@ -232,7 +241,8 @@ class PlateForces():
             self.slab_cases,
             files_dir,
             plates = self.plates,
-            resolved_geometries = self.resolved_geometries
+            resolved_geometries = self.resolved_geometries,
+            DEBUG_MODE = self.DEBUG_MODE,
         )
 
         # Load or initialise points
@@ -247,7 +257,8 @@ class PlateForces():
             self.point_cases,
             files_dir,
             plates = self.plates,
-            resolved_geometries = self.resolved_geometries
+            resolved_geometries = self.resolved_geometries,
+            DEBUG_MODE = self.DEBUG_MODE,
         )
 
         # Load or initialise seafloor
@@ -257,6 +268,7 @@ class PlateForces():
             self.times,
             "Seafloor",
             files_dir,
+            DEBUG_MODE = self.DEBUG_MODE
         )
 
         # Load or initialise velocity grid
@@ -268,6 +280,7 @@ class PlateForces():
             files_dir,
             points=self.points,
             seafloor_grid=self.seafloor,
+            DEBUG_MODE = self.DEBUG_MODE,
         )
 
         # Set sampling flags to False:
@@ -302,7 +315,7 @@ class PlateForces():
         coords = ["lat", "lon", "mag"]
         
         # Upper plate
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Resetting plates, slabs, and points", disable=self.DEBUG_MODE):
             for case in self.cases:
                 # Reset plates
                 self.plates[reconstruction_time][case][[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[_numpy.nan] * len(torques) * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
@@ -361,8 +374,10 @@ class PlateForces():
         
         # Loop through times to load, interpolate, and store variables in seafloor grid
         input_grids_interpolated = {}
-        for reconstruction_time in self.times:
-            print(f"Adding {variable_name} grid for {reconstruction_time} Ma...")
+        for reconstruction_time in tqdm(self.times, desc=f"Adding {variable_name} grid", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Adding {variable_name} grid for {reconstruction_time} Ma...")
+
             # Rename latitude and longitude if necessary
             if "lat" in list(input_grids[reconstruction_time].coords.keys()):
                 input_grids[reconstruction_time] = input_grids[reconstruction_time].rename({"lat": "latitude"})
@@ -386,7 +401,8 @@ class PlateForces():
                             self.seafloor[reconstruction_time][variable_2] = self.seafloor[reconstruction_time][variable_2].where(~mask[variable_1])
 
             else:
-                print(f"Target variable '{target_variable}' does not exist in the input grids for {reconstruction_time} Ma.")
+                if self.DEBUG_MODE:
+                    print(f"Target variable '{target_variable}' does not exist in the input grids for {reconstruction_time} Ma.")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SAMPLING GRIDS 
@@ -398,8 +414,10 @@ class PlateForces():
         The results are stored in the `slabs` DataFrame, specifically in the `lower_plate_age`, `sediment_thickness`, and `lower_plate_thickness` fields for each case and reconstruction time.
         """
         # Check options for slabs
-        for reconstruction_time in self.times:
-            print(f"Sampling slabs at {reconstruction_time} Ma")
+        for reconstruction_time in tqdm(self.times, desc="Sampling slabs", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Sampling slabs at {reconstruction_time} Ma")
+
             # Select cases
             for key, entries in self.slab_pull_cases.items():
                 if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
@@ -436,8 +454,10 @@ class PlateForces():
         The results are stored in the `slabs` DataFrame, specifically in the `upper_plate_age`, `upper_plate_thickness` fields for each case and reconstruction time.
         """
         # Loop through valid times    
-        for reconstruction_time in self.times:
-            print(f"Sampling overriding plate at {reconstruction_time} Ma")
+        for reconstruction_time in tqdm(self.times, desc="Sampling upper plates", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Sampling overriding plate at {reconstruction_time} Ma")
+
             # Select cases
             for key, entries in self.slab_pull_cases.items():
                 # Check whether to output erosion rate and sediment thickness
@@ -475,8 +495,10 @@ class PlateForces():
         The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and reconstruction time.
         """
         # Loop through valid times
-        for reconstruction_time in self.times:
-            print(f"Sampling points at {reconstruction_time} Ma")
+        for reconstruction_time in tqdm(self.times, desc="Sampling points", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Sampling points at {reconstruction_time} Ma")
+
             for key, entries in self.gpe_cases.items():
                 # Select dictionaries
                 self.seafloor[reconstruction_time] = self.seafloor[reconstruction_time]
@@ -512,8 +534,9 @@ class PlateForces():
             self.sample_slabs()
 
         # Loop through reconstruction times
-        for i, reconstruction_time in enumerate(self.times):
-            print(f"Computing slab pull torques at {reconstruction_time} Ma")
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing slab pull torques", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Computing slab pull torques at {reconstruction_time} Ma")
 
             # Loop through slab pull cases
             for key, entries in self.slab_pull_cases.items():
@@ -575,8 +598,9 @@ class PlateForces():
             self.sample_slabs()
 
         # Loop through reconstruction times
-        for i, reconstruction_time in enumerate(self.times):
-            print(f"Computing slab bend torques at {reconstruction_time} Ma")
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing slab bend torques", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Computing slab bend torques at {reconstruction_time} Ma")
 
             # Loop through slab bend cases
             for key, entries in self.slab_bend_cases.items():
@@ -617,8 +641,9 @@ class PlateForces():
             self.sample_points()
 
         # Loop through reconstruction times
-        for i, reconstruction_time in enumerate(self.times):
-            print(f"Computing slab bend torques at {reconstruction_time} Ma")
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing GPE torques", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Computing slab bend torques at {reconstruction_time} Ma")
 
             # Loop through gpe cases
             for key, entries in self.gpe_cases.items():
@@ -655,8 +680,9 @@ class PlateForces():
         Function to calculate mantle drag torque
         """
         # Loop through reconstruction times
-        for i, reconstruction_time in enumerate(self.times):
-            print(f"Computing mantle drag torques at {reconstruction_time} Ma")
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing mantle drag torques", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Computing mantle drag torques at {reconstruction_time} Ma")
 
             # Loop through mantle drag cases
             for key, entries in self.mantle_drag_cases.items():
@@ -729,8 +755,9 @@ class PlateForces():
         Function to calculate residual torque
         """
         # Loop through reconstruction times
-        for i, reconstruction_time in enumerate(self.times):
-            print(f"Computing residual torques at {reconstruction_time} Ma")
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing residual torques", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Computing residual torques at {reconstruction_time} Ma")
 
             # Loop through all reconstruction times
             for reconstruction_time in self.times:
@@ -799,7 +826,7 @@ class PlateForces():
             reference_case = reference_plates.keys[0]
     
         # Loop through all reconstruction times
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Rotating torques", disable=self.DEBUG_MODE):
             # Check if times in reference_plates dictionary
             if reference_case in reference_plates.keys():
                 # Loop through all cases
@@ -1258,54 +1285,54 @@ class PlateForces():
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def save_all(self):
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Saving data", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path)
-                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path)
-                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path)
-            setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path)
-            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path)
-            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path)
+                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"All data saved to {self.dir_path}!")
 
     def save_plates(self):
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Saving plates", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path)
+                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Plates data saved to {self.dir_path}!")
 
     def save_slabs(self):
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Saving slabs", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path)
+                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Slabs data saved to {self.dir_path}!")
     
     def save_points(self):
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Saving points", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path)
+                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Points data saved to {self.dir_path}!")
 
     def save_geometries(self):
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Saving geometries", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path)
+                setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Geometries data saved to {self.dir_path}!")
 
     def save_seafloor(self):
-        for reconstruction_time in self.times:
-            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path)
+        for reconstruction_time in tqdm(self.times, desc="Saving seafloor", disable=self.DEBUG_MODE):
+            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Seafloor data saved to {self.dir_path}!")
 
     def save_velocity(self):
-        for reconstruction_time in self.times:
-            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path)
+        for reconstruction_time in tqdm(self.times, desc="Saving velocity", disable=self.DEBUG_MODE):
+            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Velocity data saved to {self.dir_path}!")
 
@@ -1912,7 +1939,7 @@ class PlateForces():
         num_processes = multiprocessing.cpu_count()
         pool = multiprocessing.Pool(processes=num_processes)
 
-        for reconstruction_time in self.times:
+        for reconstruction_time in tqdm(self.times, desc="Reconstruction times"):
             print(f"Running {function_to_run.__name__} at {reconstruction_time} Ma")
             for case in self.cases:
                 pool.apply_async(function_to_run, args=(reconstruction_time, case))

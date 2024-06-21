@@ -7,23 +7,28 @@
 
 # Import libraries
 # Standard libraries
+import contextlib
+import io
 import os
 import tempfile
 import shutil
 import warnings
+
 from collections import defaultdict
 from typing import Optional
 from typing import Union
 
 # Third-party libraries
-import numpy as _numpy
-import xarray as _xarray
-import pandas as _pandas
-import gplately as _gplately
-import pygplates as _pygplates
-from shapely.geometry import Point
 import geopandas as _geopandas
 import matplotlib.pyplot as plt
+import numpy as _numpy
+import gplately as _gplately
+import pandas as _pandas
+import pygplates as _pygplates
+import xarray as _xarray
+
+from shapely.geometry import Point
+from tqdm import tqdm
 
 # Local libraries
 from functions_main import set_constants
@@ -635,6 +640,7 @@ def get_options(
 def get_seafloor_grid(
         reconstruction_name: str,
         reconstruction_time: int,
+        DEBUG_MODE: bool = False
     ):
     """
     Function to obtain seafloor grid from GPlately DataServer
@@ -643,14 +649,8 @@ def get_seafloor_grid(
     :type reconstruction_name:     string
     :param reconstruction_times:   reconstruction times
     :type reconstruction_times:    list or numpy.array
-    :param age_grid_file:          filepath to age grid, if available
-    :type age_grid_file:           string
-    :param grid_files:             filepath to sediment grids, if available
-    :type grid_files:              string
-    :param variable_names:         names of variables associated with passed grid files
-    :type variable_names:          list of strings
-    :param output_dir:             filepath to store seafloor grid
-    :type output_dir:              string
+    :param DEBUG_MODE:             whether to run in debug mode
+    :type DEBUG_MODE:              bool
 
     :return:                       seafloor_grids
     :rtype:                        xarray.Dataset
@@ -658,12 +658,14 @@ def get_seafloor_grid(
     # Call _gplately"s DataServer from the download.py module
     gdownload = _gplately.download.DataServer(reconstruction_name)
 
-    # Download relevant age grids
-    # Let the user know what is happening
-    print(f"Downloading age grid for {reconstruction_name} at {reconstruction_time} Ma")
-
-    # Download the age grid
-    age_raster = gdownload.get_age_grid(time=reconstruction_time)
+    if DEBUG_MODE:
+        # Let the user know what is happening
+        print(f"Downloading age grid for {reconstruction_name} at {reconstruction_time} Ma")
+        age_raster = gdownload.get_age_grid(time=reconstruction_time)
+    else:
+        # Suppress print statements if not in debug mode
+        with contextlib.redirect_stdout(io.StringIO()):
+            age_raster = gdownload.get_age_grid(time=reconstruction_time)
 
     seafloor_ages = age_raster.data
     lon = age_raster.lons
@@ -769,12 +771,12 @@ def process_cases(cases, options, target_options):
 # SAVING 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, case, folder):
+def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, case, folder, DEBUG_MODE=False):
     """
     Function to save DataFrame to a folder
 
     :param data:                  data
-    :type data:                   _pandas.DataFrame
+    :type data:                   pandas.DataFrame
     :param data_name:             name of dataset
     :type data_name:              string
     :param reconstruction_name:   name of reconstruction
@@ -785,6 +787,8 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     :type case:                   string
     :param folder:                folder
     :type folder:                 string
+    :param DEBUG_MODE:                 whether to run in debug mode
+    :type DEBUG_MODE:                  bool
     """
     if folder:
         target_dir = os.path.join(folder, data_name)
@@ -793,15 +797,16 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
 
     check_dir(target_dir)
 
-    if folder:
-        print(f"Saving {data_name} at {reconstruction_time} Ma to {folder}")
-    else:
-        print(f"Saving {data_name} at {reconstruction_time} Ma to this folder")
+    if DEBUG_MODE:
+        if folder:
+            print(f"Saving {data_name} at {reconstruction_time} Ma to {folder}")
+        else:
+            print(f"Saving {data_name} at {reconstruction_time} Ma to this folder")
 
     filename = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
     data.to_csv(os.path.join(target_dir, filename), index=False)
 
-def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, folder):
+def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, folder, DEBUG_MODE=False):
     """
     Function to save xarray Dataset to a folder
 
@@ -816,17 +821,11 @@ def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time,
     :param folder:                folder
     :type folder:                 string
     """
-    if folder:
-        target_dir = os.path.join(folder, data_name)
-    else:
-        target_dir = os.path.join(os.getcwd(), data_name)  # Use the current working directory
-
-    check_dir(target_dir)
-
-    if folder:
-        print(f"Saving {data_name} to {folder}")
-    else:
-        print(f"Saving {data_name} to this folder")
+    if DEBUG_MODE:
+        if folder:
+            print(f"Saving {data_name} to {folder}")
+        else:
+            print(f"Saving {data_name} to this folder")
 
     # Define target dir and check if it exists
     target_dir = os.path.join(folder, data_name)
@@ -839,7 +838,7 @@ def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time,
     # Save data
     data.to_netcdf(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"))
 
-def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstruction_time, folder):
+def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstruction_time, folder, DEBUG_MODE=False):
     """
     Function to save GeoDataFrame to a folder
 
@@ -854,17 +853,11 @@ def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstructi
     :param folder:                folder
     :type folder:                 string
     """
-    if folder:
-        target_dir = os.path.join(folder, data_name)
-    else:
-        target_dir = os.path.join(os.getcwd(), data_name)  # Use the current working directory
-
-    check_dir(target_dir)
-
-    if folder:
-        print(f"Saving {data_name} to {folder}")
-    else:
-        print(f"Saving {data_name} to this folder")
+    if DEBUG_MODE:
+        if folder:
+            print(f"Saving {data_name} to {folder}")
+        else:
+            print(f"Saving {data_name} to this folder")
 
     # Define target dir and check if it exists
     target_dir = os.path.join(folder, data_name)
@@ -902,6 +895,7 @@ def load_data(
         plates = None,
         resolved_topologies = None,
         resolved_geometries = None,
+        DEBUG_MODE: Optional[bool] = False
     ):
     """
     Function to load DataFrames from a folder, or initialise new DataFrames
@@ -919,7 +913,7 @@ def load_data(
     :rtype:                       dict
     """
     # Loop through times
-    for reconstruction_time in reconstruction_times:
+    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} DataFrames", disable=DEBUG_MODE):
         
         # Initialise dictionary to store data for reconstruction time
         data[reconstruction_time] = {}
@@ -938,7 +932,8 @@ def load_data(
                     unavailable_cases.remove(case)
                     available_cases.append(case)
                 else:
-                    print(f"DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {case} not found, checking for similar cases...")
+                    if DEBUG_MODE:
+                        print(f"DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {case} not found, checking for similar cases...")
 
         # Copy dataframes for unavailable cases
         for unavailable_case in unavailable_cases:
@@ -963,8 +958,9 @@ def load_data(
                 
                 # Initialise new DataFrame if not found
                 if data[reconstruction_time][unavailable_case] is None:
-                    # Let the user know you're busy
-                    print(f"Initialising new DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {unavailable_case}...")
+                    if DEBUG_MODE:
+                        # Let the user know you're busy
+                        print(f"Initialising new DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {unavailable_case}...")
 
                     if type == "Plates":
                         data[reconstruction_time][unavailable_case] = get_plates(reconstruction.rotation_model, reconstruction_time, resolved_topologies[reconstruction_time], all_options[unavailable_case])
@@ -986,6 +982,7 @@ def load_grid(
         files_dir: str,
         points: Optional[dict] = None,
         seafloor_grid: Optional[_xarray.Dataset] = None,
+        DEBUG_MODE: Optional[bool] = False
     ):
     """
     Function to load grid from a folder.
@@ -1002,12 +999,16 @@ def load_grid(
     :type files_dir:               string
     :param points:                 points
     :type points:                  dict
+    :param seafloor_grid:          seafloor grid
+    :type seafloor_grid:           xarray.Dataset
+    :param DEBUG_MODE:                  Whether or not to run in debug mode
+    :type DEBUG_MODE:                   bool
 
     :return:                       grids
     :rtype:                        xarray.Dataset
     """
     # Loop through times
-    for reconstruction_time in reconstruction_times:
+    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} grids", disable=DEBUG_MODE):
         # Check if the grid for the reconstruction time is already in the dictionary
         if reconstruction_time in grid:
             continue
@@ -1019,14 +1020,16 @@ def load_grid(
         if grid[reconstruction_time] is None:
             # Download seafloor age grid from GPlately DataServer
             if type == "Seafloor":
-                print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, downloading from GPlately DataServer...")
+                if DEBUG_MODE:
+                    print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, downloading from GPlately DataServer...")
 
                 # Download seafloor grid
                 grid[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
 
             # Interpolate velocity grid from points
             if type == "Velocity":
-                print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
+                if DEBUG_MODE:
+                    print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
 
                 # Get the first key in the points dictionary. It doesn't matter which key is used, as the reconstructed velocities are the same for all points DataFrames.
                 key = list(points[reconstruction_time].keys())[0]
