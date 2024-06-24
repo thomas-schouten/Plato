@@ -79,7 +79,7 @@ class PlateForces():
         # If no seafloor age grids are provided, check if they are available on the GPLately DataServer
         supported_models = ["Seton2012", "Muller2016", "Muller2019", "Clennett2020"]
         if reconstruction_name not in supported_models and not seafloor_grids:
-            print(f"No seafloor grids for the {reconstruction_name} reconstruction are available from GPlately. Exiting now")
+            print(f"No seafloor grid provided, and no grids for the {reconstruction_name} reconstruction are available from GPlately. Exiting now...")
             sys.exit()
 
         # Set flag for debugging mode
@@ -133,8 +133,9 @@ class PlateForces():
         self.reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
         self.resolved_topologies, self.resolved_geometries = {}, {}
 
-        # Load or initialise geometries
-        for reconstruction_time in tqdm(self.times, desc="Loading geometries"):
+        # Load or initialise plate geometries
+        for reconstruction_time in tqdm(self.times, desc="Loading geometries", disable=self.DEBUG_MODE):
+            
             if os.path.exists(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp")):
                 if self.DEBUG_MODE:
                     print(f"Loading geometries for {reconstruction_time} Ma...")
@@ -198,10 +199,11 @@ class PlateForces():
         mantle_drag_options = ["Reconstructed motions", "Grid spacing"]
         self.mantle_drag_cases = setup.process_cases(self.cases, self.options, mantle_drag_options)
 
-        # Load or initialise dictionaries with DataFrames for plates, slabs, points.
+        # Load or initialise dictionaries with DataFrames for plates, slabs, points and torque information.
         self.plates = {}
         self.slabs = {}
         self.points = {}
+        self.torques = {}
         
         # Set up dictionaries for seafloor and velocity grids
         if not seafloor_grids:
@@ -820,7 +822,7 @@ class PlateForces():
 
         # Check if reference case is provided, otherwise default to first case in list
         if reference_case == None:
-            reference_case = reference_plates.keys[0]
+            reference_case = list(reference_plates.keys())[0]
     
         # Loop through all reconstruction times
         for reconstruction_time in tqdm(self.times, desc="Rotating torques", disable=self.DEBUG_MODE):
@@ -833,10 +835,11 @@ class PlateForces():
                         for plateID in self.plates[reconstruction_time][case].plateID.values:
                             self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].plateID == plateID, [torque + "_x", torque + "_y", torque + "_z"]] = functions_main.rotate_torque(
                                 plateID,
-                                torque,
+                                reference_plates[reconstruction_time][case].loc[reference_plates[reconstruction_time][case].plateID == plateID, [torque + "_x", torque + "_y", torque + "_z"]].copy(),
                                 reference_rotations,
                                 self.rotations,
-                                reconstruction_time
+                                reconstruction_time,
+                                self.constants,
                             )
         
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

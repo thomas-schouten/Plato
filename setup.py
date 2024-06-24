@@ -793,21 +793,28 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     :param DEBUG_MODE:                 whether to run in debug mode
     :type DEBUG_MODE:                  bool
     """
-    if folder:
-        target_dir = os.path.join(folder, data_name)
-    else:
-        target_dir = os.path.join(os.getcwd(), data_name)  # Use the current working directory
-
-    check_dir(target_dir)
-
     if DEBUG_MODE:
         if folder:
-            print(f"Saving {data_name} at {reconstruction_time} Ma to {folder}")
+            print(f"Saving {data_name} to {folder}/{data_name}")
         else:
-            print(f"Saving {data_name} at {reconstruction_time} Ma to this folder")
+            print(f"Saving {data_name} to {data_name}")
 
-    filename = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
-    data.to_csv(os.path.join(target_dir, filename), index=False)
+    # Determine the target directory
+    target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
+    
+    # Ensure the directory exists
+    check_dir(target_dir)
+    
+    # Make file name
+    file_name = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
+    file_path = os.path.join(target_dir, file_name)
+
+    # Delete old file if it exists to prevent "Permission denied" error
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Save the data to CSV
+    data.to_csv(file_path, index=False)
 
 def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, folder, DEBUG_MODE=False):
     """
@@ -824,30 +831,30 @@ def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time,
     :param folder:                folder
     :type folder:                 string
     """
-    if DEBUG_MODE:
-        if folder:
-            print(f"Saving {data_name} to {folder}")
-        else:
-            print(f"Saving {data_name} to this folder")
-
     # Determine the target directory
     target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
     
     # Ensure the directory exists
     check_dir(target_dir)
     
-    # File name
+    # Make file name
     file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"
     file_path = os.path.join(target_dir, file_name)
+
+    # Print target directory and file path if in debug mode
+    if DEBUG_MODE:
+        print(f"Target directory for {data_name}: {target_dir}")
+        print(f"File path for {data_name} at {reconstruction_time}: {file_path}")
 
     # Delete old file if it exists to prevent "Permission denied" error
     if os.path.exists(file_path):
         os.remove(file_path)
+        if DEBUG_MODE:
+            print(f"Deleted old file {file_path}")
 
     # Save the data to NetCDF
     data.to_netcdf(file_path)
-    print(f"Saved {data_name} to {file_path}")
-
+    
 def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstruction_time, folder, DEBUG_MODE=False):
     """
     Function to save GeoDataFrame to a folder
@@ -863,22 +870,30 @@ def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstructi
     :param folder:                folder
     :type folder:                 string
     """
-    if DEBUG_MODE:
-        if folder:
-            print(f"Saving {data_name} to {folder}")
-        else:
-            print(f"Saving {data_name} to this folder")
-
+    # Determine the target directory
+    target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
+    
     # Define target dir and check if it exists
     target_dir = os.path.join(folder, data_name)
     check_dir(target_dir)
 
-    # Delete old file to prevent "Permission denied error"
-    if os.path.exists(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp")):
-        os.remove(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp"))
+    # Make file name
+    file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp"
+    file_path = os.path.join(target_dir, file_name)
 
-    # Save data
-    data.to_file(os.path.join(target_dir, f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp"))
+    # Print target directory and file path if in debug mode
+    if DEBUG_MODE:
+        print(f"Target directory for {data_name}: {target_dir}")
+        print(f"File path for {data_name} at {reconstruction_time}: {file_path}")
+
+    # Delete old file if it exists to prevent "Permission denied" error
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        if DEBUG_MODE:
+            print(f"Deleted old file {file_path}")
+
+    # Save the data to a shapefile
+    data.to_file(file_path)
 
 def check_dir(target_dir):
     """
@@ -1117,6 +1132,40 @@ def Dataset_from_netCDF(
     if os.path.exists(target_file):
         # Load data
         data = _xarray.open_dataset(os.path.join(target_file), cache=False)
+
+        return data
+    else:
+        return None
+    
+def GeoDataFrame_from_shapefile(
+        folder: str,
+        type: str,
+        reconstruction_time: int,
+        reconstruction_name: str,
+    ):
+    """
+    Function to load GeoDataFrame from a folder
+
+    :param folder:               folder
+    :type folder:                string
+    :param reconstruction_times: reconstruction times
+    :type reconstruction_times:  list or numpy.array
+    :param reconstruction_name:  name of reconstruction
+    :type reconstruction_name:   string
+
+    :return:                     data
+    :rtype:                      geopandas.GeoDataFrame
+    """
+    # Get target folder
+    if folder:
+        target_file = os.path.join(folder, type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.shp")
+    else:
+        target_file = os.getcwd(type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.shp")  # Use the current working directory
+    
+    # Check if target folder exists
+    if os.path.exists(target_file):
+        # Load data
+        data = _geopandas.read_file(os.path.join(target_file))
 
         return data
     else:

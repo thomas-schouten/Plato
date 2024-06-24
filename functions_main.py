@@ -1031,7 +1031,7 @@ def xyz2mag(x, y, z):
     """
     return _numpy.sqrt(x**2 + y**2 + z**2)
 
-def rotate_torque(plateID, torque, rotations_a, rotations_b, reconstruction_time):
+def rotate_torque(plateID, torque, rotations_a, rotations_b, reconstruction_time, constants):
     """
     Function to rotate a torque vector in Cartesian coordinates between two reference frames.
 
@@ -1053,7 +1053,7 @@ def rotate_torque(plateID, torque, rotations_a, rotations_b, reconstruction_time
     relative_rotation_pole = get_relative_rotaton_pole(plateID, rotations_a, rotations_b, reconstruction_time)
 
     # Rotate torque vector
-    rotated_torque = rotate_vector(torque, relative_rotation_pole)
+    rotated_torque = rotate_vector(torque, relative_rotation_pole, constants)
 
     return rotated_torque
 
@@ -1089,7 +1089,7 @@ def get_relative_rotaton_pole(plateID, rotations_a, rotations_b, reconstruction_
 
     return relative_rotation_pole.get_lat_lon_euler_pole_and_angle_degrees()
 
-def rotate_vector(vector, rotation):
+def rotate_vector(vector, rotation, constants):
     """
     Function to rotate a vector in Cartesian coordinates with a given Euler rotation.
 
@@ -1102,7 +1102,7 @@ def rotate_vector(vector, rotation):
     :rtype:             numpy.array
     """
     # Convert rotation axis to Cartesian coordinates
-    rotation_axis = lat_lon2xyz(rotation[0], rotation[1])
+    rotation_axis = lat_lon2xyz(rotation[0], rotation[1], constants)
 
     # Convert to unit vector
     rotation_axis = rotation_axis / _numpy.linalg.norm(rotation_axis)
@@ -1125,6 +1125,6 @@ def rotate_vector(vector, rotation):
     ])
 
     # Rotate vector
-    rotated_vector = _numpy.dot(rotation_matrix, vector)
+    rotated_vector = _numpy.dot(rotation_matrix, vector.values.T)
 
-    return rotated_vector
+    return rotated_vector.T
