@@ -48,6 +48,7 @@ class PlateForces():
             polygon_file: Optional[List[str]] = None,
             coastline_file: Optional[str] = None,
             seafloor_grids: Optional[dict] = None,
+            plates_of_interest: Optional[List[int]] = None,
             DEBUG_MODE: Optional[bool] = False,
         ):
         """
@@ -103,6 +104,7 @@ class PlateForces():
 
         # Download reconstruction files if rotation or topology file not provided
         if not rotation_file or not topology_file or not polygon_file:
+            print(f"Downloading {reconstruction_name} reconstruction files from the GPlately DataServer...")
             reconstruction_files = gdownload.get_plate_reconstruction_files()
         
         # Initialise or download RotationModel object
@@ -136,29 +138,44 @@ class PlateForces():
         # Load or initialise plate geometries
         for reconstruction_time in tqdm(self.times, desc="Loading geometries", disable=self.DEBUG_MODE):
             
-            if os.path.exists(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp")):
-                if self.DEBUG_MODE:
-                    print(f"Loading geometries for {reconstruction_time} Ma...")
+            # Load resolved geometries if they are available
+            self.resolved_geometries[reconstruction_time] = setup.GeoDataFrame_from_shapefile(
+                self.dir_path,
+                "Geometries",
+                reconstruction_time,
+                self.name,
+            )
 
-                self.resolved_geometries[reconstruction_time] = _gpd.read_file(os.path.join(files_dir, f"Geometries_{reconstruction_time}.shp"))
-            else:
+            # Get new topologies if they are unavailable
+            if self.resolved_geometries[reconstruction_time] is None:
                 self.resolved_geometries[reconstruction_time] = setup.get_topology_geometries(
-                                self.reconstruction, reconstruction_time, anchor_plateID=0
-                            )
+                    self.reconstruction, reconstruction_time, anchor_plateID=0
+                )
             
             # Resolve topologies to use to get plates
             # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
             #       This step could be sped up by extracting all information from the resolved geometries
-            self.resolved_topologies[reconstruction_time] = []
-            _pygplates.resolve_topologies(
-                self.topologies,
-                self.rotations, 
-                self.resolved_topologies[reconstruction_time], 
-                reconstruction_time, 
-                anchor_plate_id=0
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    action="ignore",
+                    message="Normalized/laundered field name:"
+                )
+                self.resolved_topologies[reconstruction_time] = []
+                _pygplates.resolve_topologies(
+                    self.topologies,
+                    self.rotations, 
+                    self.resolved_topologies[reconstruction_time], 
+                    reconstruction_time, 
+                    anchor_plate_id=0
+                )
             
         print("Plate reconstruction ready!")
+
+        # Set plates of interest
+        if plates_of_interest:
+            self.plates_of_interest = plates_of_interest
+        else:
+            self.plates_of_interest = [101, 201, 301, 501, 511, 801, 901, 909, 911, 918, 926, 902]
 
         # Store cases and case options
         self.cases, self.options = setup.get_options(cases_file, cases_sheet)
@@ -260,6 +277,16 @@ class PlateForces():
             DEBUG_MODE = self.DEBUG_MODE,
         )
 
+        # Load torques
+        self.torques = setup.load_torques(
+            self.torques,
+            self.times,
+            self.cases,
+            self.plates,
+            self.plates_of_interest,
+            DEBUG_MODE = self.DEBUG_MODE,
+        )
+
         # Load or initialise seafloor
         self.seafloor = setup.load_grid(
             self.seafloor,
@@ -277,8 +304,9 @@ class PlateForces():
             self.times,
             "Velocity",
             files_dir,
-            points=self.points,
-            seafloor_grid=self.seafloor,
+            points = self.points,
+            seafloor_grid = self.seafloor,
+            cases = self.cases,
             DEBUG_MODE = self.DEBUG_MODE,
         )
 
@@ -471,7 +499,7 @@ class PlateForces():
                         "upper plate",
                         sediment_thickness=self.slabs[reconstruction_time][key].sediment_thickness,
                     )
-                else:
+                elif self.options[key]["Sediment subduction"]:
                     # Sample age and arc type of upper plate from seafloor
                     self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"] = functions_main.sample_slabs_from_seafloor(
                         self.slabs[reconstruction_time][key].lat, 
@@ -481,10 +509,14 @@ class PlateForces():
                         self.options[key],
                         "upper plate",
                     )
+                
+                # Copy DataFrames to other cases
                 for entry in entries[1:]:
                     self.slabs[reconstruction_time][entry]["upper_plate_age"] = self.slabs[reconstruction_time][key]["upper_plate_age"]
                     self.slabs[reconstruction_time][entry]["continental_arc"] = self.slabs[reconstruction_time][key]["continental_arc"]
-                    self.slabs[reconstruction_time][entry]["erosion_rate"] = self.slabs[reconstruction_time][key]["erosion_rate"]
+                    if self.options[key]["Sample erosion grid"]:
+                        self.slabs[reconstruction_time][entry]["erosion_rate"] = self.slabs[reconstruction_time][key]["erosion_rate"]
+                        self.slabs[reconstruction_time][entry]["sediment_thickness"] = self.slabs[reconstruction_time][key]["sediment_thickness"]
         
         self.sampled_upper_plates = True
 
@@ -588,6 +620,20 @@ class PlateForces():
                             {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
+                    # Enter computed slab pull values into torque dictionary
+                    for plate in self.plates_of_interest:
+                        if self.DEBUG_MODE:
+                            print(f"Updating torques for plate {plate}")
+
+                        # Check if plate is in DataFrame
+                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
+                            if self.DEBUG_MODE:
+                                print(f"Plate {plate} is in DataFrame!")
+
+                            # Enter data into DataFrame
+                            self.torques[key][plate].loc[i, "slab_pull_torque"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_mag"].values[0]
+                            self.torques[key][plate].loc[i, "slab_pull_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_opt_mag"].values[0]
+
     def compute_slab_bend_torque(self):
         """
         Compute slab bend torque
@@ -631,6 +677,19 @@ class PlateForces():
                             {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
 
+                    # Enter computed slab pull values into torque dictionary
+                    for plate in self.plates_of_interest:
+                        if self.DEBUG_MODE:
+                            print(f"Updating torques for plate {plate}")
+
+                        # Check if plate is in DataFrame
+                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
+                            if self.DEBUG_MODE:
+                                print(f"Plate {plate} is in DataFrame!")
+
+                            # Enter data into DataFrame
+                            self.torques[key][plate].loc[i, "slab_bend_torque"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_bend_torque_mag"].values[0]
+
     def compute_gpe_torque(self):
         """
         Function to compute gravitational potential energy (GPE) torque
@@ -673,6 +732,19 @@ class PlateForces():
                         [[self.plates[reconstruction_time][entry].update(
                             {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+
+                    # Enter computed slab pull values into torque dictionary
+                    for plate in self.plates_of_interest:
+                        if self.DEBUG_MODE:
+                            print(f"Updating torques for plate {plate}")
+
+                        # Check if plate is in DataFrame
+                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
+                            if self.DEBUG_MODE:
+                                print(f"Plate {plate} is in DataFrame!")
+
+                            # Enter data into DataFrame
+                            self.torques[key][plate].loc[i, "GPE_torque"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["GPE_torque_mag"].values[0]
 
     def compute_mantle_drag_torque(self):
         """
@@ -720,7 +792,21 @@ class PlateForces():
                             [[self.plates[reconstruction_time][entry].update(
                                 {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
                             ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                
+
+                        # Enter computed slab pull values into torque dictionary
+                        for plate in self.plates_of_interest:
+                            if self.DEBUG_MODE:
+                                print(f"Updating torques for plate {plate}")
+
+                            # Check if plate is in DataFrame
+                            if float(plate) in self.plates[reconstruction_time][key].plateID.values:
+                                if self.DEBUG_MODE:
+                                    print(f"Plate {plate} is in DataFrame!")
+
+                                # Enter data into DataFrame
+                                self.torques[key][plate].loc[i, "mantle_drag_torque"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
+                                self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
+
             # Loop through all cases
             for case in self.cases:
                 if not self.options[case]["Reconstructed motions"]:
@@ -749,6 +835,70 @@ class PlateForces():
                             torque_variable="mantle_drag_torque"
                         )
 
+                        # Compute velocity grid
+                        self.velocity[reconstruction_time][case] = setup.get_velocity_grid(self.points[reconstruction_time][case], self.seafloor[reconstruction_time])
+
+                        # Enter computed slab pull values into torque dictionary
+                        for plate in self.plates_of_interest:
+                            if self.DEBUG_MODE:
+                                print(f"Updating torques for plate {plate}")
+
+                            # Check if plate is in DataFrame
+                            if float(plate) in self.plates[reconstruction_time][key].plateID.values:
+                                if self.DEBUG_MODE:
+                                    print(f"Plate {plate} is in DataFrame!")
+
+                                # Enter data into DataFrame
+                                self.torques[key][plate].loc[i, "mantle_drag_torque"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
+                                self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
+
+    def compute_driving_torque(self):
+        """
+        Function to calculate driving torque
+        """
+        # Loop through reconstruction times
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing driving torques", disable=self.DEBUG_MODE):
+            if self.DEBUG_MODE:
+                print(f"Computing driving torques at {reconstruction_time} Ma")
+
+            for case in self.cases:
+                # Select cases that require driving torque computation
+                if self.options[case]["Reconstructed motions"]:
+                    # Calculate driving torque
+                    self.plates[reconstruction_time][case] = functions_main.compute_residual_torque(self.plates[reconstruction_time][case])
+
+                    # Enter computed slab pull values into torque dictionary
+                    for plate in self.plates_of_interest:
+                        if self.DEBUG_MODE:
+                            print(f"Updating driving torques for plate {plate}")
+
+                        # Check if plate is in DataFrame
+                        if float(plate) in self.plates[reconstruction_time][case].plateID.values:
+                            if self.DEBUG_MODE:
+                                print(f"Plate {plate} is in DataFrame!")
+                                print(self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["driving_torque_mag"].values[0])
+
+                            # Enter data into DataFrame
+                            self.torques[case][plate].loc[i, "driving_torque"] = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["residual_torque_mag"].values[0]
+
+                else:
+                    # Set residual torque to zero
+                    for coord in ["x", "y", "z", "mag"]:
+                        self.plates[reconstruction_time][case]["residual_torque_" + coord] = 
+
+                    # Enter computed slab pull values into torque dictionary
+                    for plate in self.plates_of_interest:
+                        if self.DEBUG_MODE:
+                            print(f"Updating residual torques for plate {plate}")
+
+                        # Check if plate is in DataFrame
+                        if float(plate) in self.plates[reconstruction_time][case].plateID.values:
+                            if self.DEBUG_MODE:
+                                print(f"Plate {plate} is in DataFrame!")
+
+                            # Enter data into DataFrame
+                            self.torques[case][plate].loc[i, "residual_torque"] = 0
+                            
     def compute_residual_torque(self):
         """
         Function to calculate residual torque
@@ -758,14 +908,43 @@ class PlateForces():
             if self.DEBUG_MODE:
                 print(f"Computing residual torques at {reconstruction_time} Ma")
 
-            # Loop through all reconstruction times
-            for reconstruction_time in self.times:
-                # Loop through all cases
-                for case in self.cases:
-                    # Select cases that require residual torque computation
-                    if self.options[case]["Reconstructed motions"]:
-                        # Calculate residual torque
-                        self.plates[reconstruction_time][case] = functions_main.compute_residual_torque(self.plates[reconstruction_time][case])
+            for case in self.cases:
+                # Select cases that require residual torque computation
+                if self.options[case]["Reconstructed motions"]:
+                    # Calculate residual torque
+                    self.plates[reconstruction_time][case] = functions_main.compute_residual_torque(self.plates[reconstruction_time][case])
+
+                    # Enter computed slab pull values into torque dictionary
+                    for plate in self.plates_of_interest:
+                        if self.DEBUG_MODE:
+                            print(f"Updating residual torques for plate {plate}")
+
+                        # Check if plate is in DataFrame
+                        if float(plate) in self.plates[reconstruction_time][case].plateID.values:
+                            if self.DEBUG_MODE:
+                                print(f"Plate {plate} is in DataFrame!")
+                                print(self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["residual_torque_mag"].values[0])
+
+                            # Enter data into DataFrame
+                            self.torques[case][plate].loc[i, "residual_torque"] = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["residual_torque_mag"].values[0]
+
+                else:
+                    # Set residual torque to zero
+                    for coord in ["x", "y", "z", "mag"]:
+                        self.plates[reconstruction_time][case]["residual_torque_" + coord] = 0
+
+                    # Enter computed slab pull values into torque dictionary
+                    for plate in self.plates_of_interest:
+                        if self.DEBUG_MODE:
+                            print(f"Updating residual torques for plate {plate}")
+
+                        # Check if plate is in DataFrame
+                        if float(plate) in self.plates[reconstruction_time][case].plateID.values:
+                            if self.DEBUG_MODE:
+                                print(f"Plate {plate} is in DataFrame!")
+
+                            # Enter data into DataFrame
+                            self.torques[case][plate].loc[i, "residual_torque"] = 0
 
     def compute_all_torques(self):
         """
@@ -811,7 +990,7 @@ class PlateForces():
         :type case:                     str or None
         """
         # Check if the torque is valid
-        if torque not in ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]:
+        if torque not in ["slab_pull_torque", "slab_pull_torque_opt", "GPE_torque", "slab_bend_torque", "mantle_drag_torque", "mantle_drag_torque_opt"]:
             raise ValueError(f"Invalid torque '{torque}' Please select one of slab_pull_torque, GPE_torque, slab_bend_torque or mantle_drag_torque.")
         
         # Check for which cases to rotate the torques
@@ -825,7 +1004,7 @@ class PlateForces():
             reference_case = list(reference_plates.keys())[0]
     
         # Loop through all reconstruction times
-        for reconstruction_time in tqdm(self.times, desc="Rotating torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Rotating torques", disable=self.DEBUG_MODE):
             # Check if times in reference_plates dictionary
             if reference_case in reference_plates.keys():
                 # Loop through all cases
@@ -833,6 +1012,7 @@ class PlateForces():
                     # Select cases that require rotation
                     if self.options[case]["Reconstructed motions"] and self.options[case]["Mantle drag torque"]:
                         for plateID in self.plates[reconstruction_time][case].plateID.values:
+                            # Rotate x, y, and z components of torque
                             self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].plateID == plateID, [torque + "_x", torque + "_y", torque + "_z"]] = functions_main.rotate_torque(
                                 plateID,
                                 reference_plates[reconstruction_time][case].loc[reference_plates[reconstruction_time][case].plateID == plateID, [torque + "_x", torque + "_y", torque + "_z"]].copy(),
@@ -841,6 +1021,18 @@ class PlateForces():
                                 reconstruction_time,
                                 self.constants,
                             )
+
+                            # Copy magnitude of torque
+                            self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].plateID == plateID, torque + "_mag"] = reference_plates[reconstruction_time][case].loc[reference_plates[reconstruction_time][case].plateID == plateID, torque + "_mag"].values[0]
+
+                            if int(plateID) in self.torques[case].keys():
+                                # Print if plateID is in torques dictionary
+                                if self.DEBUG_MODE:
+                                    print(f"{plateID} is in torques dictionary")
+                                    print(self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == plateID][f"{torque}_mag"].values[0])
+
+                                # Enter data into DataFrame
+                                self.torques[case][int(plateID)].loc[i, torque] = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == plateID][f"{torque}_mag"].values[0]
         
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OPTIMISATION 
@@ -971,7 +1163,7 @@ class PlateForces():
         # Plot
         if plot == True:
             fig, ax = plt.subplots(figsize=(15*self.constants.cm2in, 12*self.constants.cm2in))
-            im = ax.imshow(self.residual_torque_normalised[opt_time][opt_case], cmap="cmc.lapaz_r", vmin=-2, vmax=2)
+            im = ax.imshow(self.residual_torque_normalised[opt_time][opt_case], cmap="cmc.lapaz_r", vmin=-1.5, vmax=1.5)
             ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
             ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
             ax.set_xticklabels(["{:.2e}".format(visc) for visc in _numpy.linspace(visc_range[0], visc_range[1], 5)])
@@ -1343,7 +1535,6 @@ class PlateForces():
     def plot_age_map(
             self,
             ax,
-            fig,
             reconstruction_time: int,
             plotting_options: dict
         ):
@@ -1374,9 +1565,9 @@ class PlateForces():
         gl.right_labels = False
 
         # Plot age
-        ages = ax.imshow(
+        im = ax.imshow(
             self.seafloor[reconstruction_time].seafloor_age.values,
-            cmap = plotting_options["age cmap"],
+            cmap=plotting_options["age cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
             vmin=0, 
@@ -1387,16 +1578,11 @@ class PlateForces():
         # Plot plates and coastlines
         self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="fill")
 
-        # Colourbar
-        if plotting_options["cbar"] is True:
-            fig.colorbar(ages, ax=ax, label="Seafloor age [Ma]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
-
-        return ax, ages
+        return im
 
     def plot_sediment_map(
             self,
             ax,
-            fig,
             reconstruction_time: int,
             case,
             plotting_options: dict,
@@ -1437,9 +1623,9 @@ class PlateForces():
             raster = _numpy.log10(raster + 1)
 
         # Plot sediment
-        seds = ax.imshow(
+        im = ax.imshow(
             raster,
-            cmap = plotting_options["sediment cmap"],
+            cmap=plotting_options["sediment cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
             vmin=plotting_options["sediment vmin"], 
@@ -1466,19 +1652,13 @@ class PlateForces():
 
         # Plot plates and coastlines
         self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True)
-
-        # Colourbar
-        if plotting_options["cbar"] is True:
-            fig.colorbar(seds, ax=ax, label="Sediment thickness [m]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
             
-        return ax, seds
+        return im
     
-    def plot_erosion_map(
+    def plot_erosion_rate_map(
             self,
             ax,
-            fig,
             reconstruction_time: int,
-            case,
             plotting_options: dict
         ):
         """
@@ -1496,7 +1676,7 @@ class PlateForces():
         # Plot sediment
         im = ax.imshow(
             self.seafloor[reconstruction_time].erosion_rate.values,
-            cmap = plotting_options["erosion cmap"],
+            cmap=plotting_options["erosion cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
             vmin=0, 
@@ -1506,14 +1686,10 @@ class PlateForces():
 
         # Plot plates and coastlines
         ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines=False)
-
-        # Colourbar
-        if plotting_options["cbar"] is True:
-            fig.colorbar(im, ax=ax, label="Erosion rate [m/Ma]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
             
-        return ax, im
+        return im
     
-    def plot_velocity_map_v2(
+    def plot_velocity_map(
             self,
             ax,
             reconstruction_time,
@@ -1575,90 +1751,32 @@ class PlateForces():
 
         return im, qu
 
-    def plot_velocity_map(
+    def plot_velocity_difference_map(
             self,
             ax,
-            fig,
             reconstruction_time,
-            case,
+            case1,
+            case2,
             plotting_options
         ):
         """
-        Function to create subplot with plate velocities
-            ax:                     axes object
-            fig:                    figure
-            reconstruction_time:    the time for which to display the map
-            case:                   case for which to plot the sediments
-            plotting_options:       dictionary with options for plotting
-        """
-        # Check if reconstruction time is in valid times
-        if reconstruction_time not in self.times:
-            return print("Invalid reconstruction time")
-        
-        # Set basemap
-        ax, gl = self.plot_basemap(ax)
-
-        # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=False)
-
-        # Get data
-        plate_vectors = self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].area >= self.options[case]["Minimum plate area"]]
-        slab_data = self.slabs[reconstruction_time][case].loc[self.slabs[reconstruction_time][case].lower_plateID.isin(plate_vectors.plateID)]
-        slab_vectors = slab_data.iloc[::5]
-
-        # Plot velocity magnitude at trenches
-        vels = ax.scatter(
-            slab_data.lon,
-            slab_data.lat,
-            c=slab_data.v_lower_plate_mag,
-            s=plotting_options["marker size"],
-            transform=ccrs.PlateCarree(),
-            cmap=plotting_options["velocity magnitude cmap"],
-            vmin=0,
-            vmax=plotting_options["velocity max"]
-        )
-
-        # Plot velocity at subduction zones
-        slab_vectors = ax.quiver(
-            x=slab_vectors.lon,
-            y=slab_vectors.lat,
-            u=slab_vectors.v_lower_plate_lon,
-            v=slab_vectors.v_lower_plate_lat,
-            transform=ccrs.PlateCarree(),
-            # label=vector.capitalize(),
-            width=2e-3,
-            scale=3e2,
-            zorder=4,
-            color='black'
-        )
-
-        # Plot velocity at centroid
-        centroid_vectors = ax.quiver(
-            x=plate_vectors.centroid_lon,
-            y=plate_vectors.centroid_lat,
-            u=plate_vectors.centroid_v_lon,
-            v=plate_vectors.centroid_v_lat,
-            transform=ccrs.PlateCarree(),
-            # label=vector.capitalize(),
-            width=5e-3,
-            scale=3e2,
-            zorder=4,
-            color='white',
-            edgecolor='black',
-            linewidth=1
-        )
-
-        # Colourbar
-        if plotting_options["cbar"] is True:
-            fig.colorbar(vels, ax=ax, label="Velocity [cm/a]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
-    
-        return ax, vels, centroid_vectors, slab_vectors
-
-    def plot_velocity_difference_map(self, ax, fig, reconstruction_time, case1, case2, plotting_options):
-        """
         Function to create subplot with difference between plate velocity at trenches between two cases
-            case:               case for which to plot the sediments
-            plotting_options:   dictionary with options for plotting
+        
+        :param ax:                  axes object
+        :type ax:                   matplotlib.axes.Axes
+        :param fig:                 figure
+        :type fig:                  matplotlib.figure.Figure
+        :param reconstruction_time: the time for which to display the map
+        :type reconstruction_time:  int
+        :param case1:               case 1 for which to use the velocities
+        :type case1:                str
+        :param case2:               case 2 to subtract from case 1
+        :type case2:                str
+        :param plotting_options:    dictionary with options for plotting
+        :type plotting_options:     dict
+
+        :return:                    image object and quiver object
+        :rtype:                     matplotlib.image.AxesImage and matplotlib.quiver.Quiver
         """
 
         # Check if reconstruction time is in valid times
@@ -1668,65 +1786,41 @@ class PlateForces():
         # Set basemap
         ax, gl = self.plot_basemap(ax)
 
+        # Plot velocity grid
+        im = ax.imshow(
+            self.velocity[reconstruction_time][case1].velocity_magnitude.values-self.velocity[reconstruction_time][case2].velocity_magnitude.values ,
+            cmap = plotting_options["velocity cmap"],
+            transform=ccrs.PlateCarree(), 
+            zorder=1, 
+            vmin=0, 
+            vmax=plotting_options["velocity max"], 
+            origin="lower"
+        )
+
+        # Subsample velocity vectors
+        velocity_vectors1 = self.points[reconstruction_time][case1].iloc[::209].copy()
+        velocity_vectors2 = self.points[reconstruction_time][case2].iloc[::209].copy()
+
+        # Plot velocity vectors
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            qu = ax.quiver(
+                x=velocity_vectors1.lon,
+                y=velocity_vectors1.lat,
+                u=velocity_vectors1.v_lon-velocity_vectors2.v_lon,
+                v=velocity_vectors1.v_lat-velocity_vectors2.v_lat,
+                transform=ccrs.PlateCarree(),
+                width=4e-3,
+                scale=3e2,
+                zorder=4,
+                color="k",
+                alpha=0.5
+            )
+
         # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=False)
+        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge")
 
-        # Get data
-        plate_vectors = {}
-        slab_data = {}
-        slab_vectors = {}
-        for case in [case1, case2]:
-            plate_vectors[case] = self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].area >= self.options[case]["Minimum plate area"]]
-            slab_data[case] = self.slabs[reconstruction_time][case].loc[self.slabs[reconstruction_time][case].lower_plateID.isin(plate_vectors[case].plateID)]
-            slab_vectors[case] = slab_data[case].iloc[::5]
-        
-        # Plot velocity magnitude at trenches
-        vels = ax.scatter(
-            slab_data[case1].lon,
-            slab_data[case1].lat,
-            c=slab_data[case1].v_lower_plate_mag - slab_data[case2].v_lower_plate_mag,
-            s=plotting_options["marker size"],
-            transform=ccrs.PlateCarree(),
-            cmap=plotting_options["velocity difference cmap"],
-            vmin=-plotting_options["velocity max"]/2,
-            vmax=plotting_options["velocity max"]/2
-        )
-
-        # Plot velocity at subduction zones
-        slab_vectors = ax.quiver(
-            x=slab_vectors[case1].lon,
-            y=slab_vectors[case1].lat,
-            u=slab_vectors[case1].v_lower_plate_lon - slab_vectors[case2].v_lower_plate_lon,
-            v=slab_vectors[case1].v_lower_plate_lat - slab_vectors[case2].v_lower_plate_lat,
-            transform=ccrs.PlateCarree(),
-            # label=vector.capitalize(),
-            width=2e-3,
-            scale=3e2,
-            zorder=4,
-            color='black'
-        )
-
-        # Plot velocity at centroid
-        centroid_vectors = ax.quiver(
-            x=plate_vectors[case1].centroid_lon,
-            y=plate_vectors[case1].centroid_lat,
-            u=plate_vectors[case1].centroid_v_lon - plate_vectors[case2].centroid_v_lon,
-            v=plate_vectors[case1].centroid_v_lat - plate_vectors[case2].centroid_v_lat,
-            transform=ccrs.PlateCarree(),
-            # label=vector.capitalize(),
-            width=5e-3,
-            scale=3e2,
-            zorder=4,
-            color='white',
-            edgecolor='black',
-            linewidth=1
-        )
-
-        # Colourbar
-        if plotting_options["cbar"] is True:
-            fig.colorbar(vels, ax=ax, label="Velocity difference [cm/a]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
-    
-        return ax, vels, slab_vectors, centroid_vectors
+        return im, qu
     
     def plot_relative_velocity_difference_map(self, ax, fig, reconstruction_time, case1, case2, plotting_options):
         """
@@ -1742,70 +1836,53 @@ class PlateForces():
         # Set basemap
         ax, gl = self.plot_basemap(ax)
 
+        # Plot velocity grid
+        im = ax.imshow(
+            _numpy.where(
+                self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0,
+                0,
+                self.velocity[reconstruction_time][case1].velocity_magnitude.values/self.velocity[reconstruction_time][case2].velocity_magnitude.values,
+            ),
+            cmap = plotting_options["velocity cmap"],
+            transform=ccrs.PlateCarree(), 
+            zorder=1, 
+            vmin=0, 
+            vmax=plotting_options["velocity max"], 
+            origin="lower"
+        )
+
+        # Subsample velocity vectors
+        velocity_vectors1 = self.points[reconstruction_time][case1].iloc[::209].copy()
+        velocity_vectors2 = self.points[reconstruction_time][case2].iloc[::209].copy()
+
+        # Plot velocity vectors
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            qu = ax.quiver(
+                x=velocity_vectors1.lon,
+                y=velocity_vectors1.lat,
+                u=_numpy.where(
+                    velocity_vectors2.v_lon.values == 0,
+                    0,
+                    velocity_vectors1.v_lon.values/velocity_vectors2.v_lon.values,
+                ),
+                v=_numpy.where(
+                    velocity_vectors2.v_lat.values == 0,
+                    0,
+                    velocity_vectors1.v_lat.values/velocity_vectors2.v_lat.values,
+                ),
+                transform=ccrs.PlateCarree(),
+                width=4e-3,
+                scale=3e2,
+                zorder=4,
+                color="k",
+                alpha=0.5
+            )
+
         # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=False)
+        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge")
 
-        # Get data
-        plate_vectors = {}
-        slab_data = {}
-        slab_vectors = {}
-        for case in [case1, case2]:
-            plate_vectors[case] = self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].area >= self.options[case]["Minimum plate area"]]
-            slab_data[case] = self.slabs[reconstruction_time][case].loc[self.slabs[reconstruction_time][case].lower_plateID.isin(plate_vectors[case].plateID)]
-            slab_vectors[case] = slab_data[case].iloc[::5]
-        
-        # Remove slab vectors that are zero in any of the two cases
-        # for case in [case1, case2]:
-        #     slab_vectors[case] = slab_vectors[case].loc[(slab_vectors[case1].v_lower_plate_mag != 0) & (slab_vectors[case2].v_lower_plate_mag != 0)]
-        
-        # Plot velocity magnitude at trenches
-        vels = ax.scatter(
-            slab_data[case1].lon,
-            slab_data[case1].lat,
-            c=slab_data[case1].v_lower_plate_mag / slab_data[case2].v_lower_plate_mag,
-            s=plotting_options["marker size"],
-            transform=ccrs.PlateCarree(),
-            cmap=plotting_options["relative velocity difference cmap"],
-            vmin=1,
-            vmax=plotting_options["relative velocity max"]
-        )
-
-        # Plot velocity at subduction zones
-        slab_vectors = ax.quiver(
-            x=slab_vectors[case1].lon,
-            y=slab_vectors[case1].lat,
-            u=(slab_vectors[case1].v_lower_plate_lon - slab_vectors[case2].v_lower_plate_lon) / slab_vectors[case2].v_lower_plate_mag * 10,
-            v=(slab_vectors[case1].v_lower_plate_lat - slab_vectors[case2].v_lower_plate_lat) / slab_vectors[case2].v_lower_plate_mag * 10,
-            transform=ccrs.PlateCarree(),
-            # label=vector.capitalize(),
-            width=2e-3,
-            scale=3e2,
-            zorder=4,
-            color='black'
-        )
-
-        # Plot velocity at centroid
-        centroid_vectors = ax.quiver(
-            x=plate_vectors[case1].centroid_lon,
-            y=plate_vectors[case1].centroid_lat,
-            u=(plate_vectors[case1].centroid_v_lon - plate_vectors[case2].centroid_v_lon) / plate_vectors[case2].centroid_v_mag * 10,
-            v=(plate_vectors[case1].centroid_v_lat - plate_vectors[case2].centroid_v_lat) / plate_vectors[case2].centroid_v_mag * 10,
-            transform=ccrs.PlateCarree(),
-            # label=vector.capitalize(),
-            width=5e-3,
-            scale=3e2,
-            zorder=4,
-            color="white", #plate_vectors[case1].centroid_v_mag / plate_vectors[case2].centroid_v_mag,
-            edgecolor="black",
-            linewidth=1,
-            cmap=plotting_options["relative velocity difference cmap"]
-        )
-
-        # Colourbar
-        if plotting_options["cbar"] is True:
-            fig.colorbar(vels, ax=ax, label="Relative velocity difference", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
-    
-        return ax, vels, slab_vectors, centroid_vectors
+        return im, qu
 
     def plot_basemap(self, ax):
         # Set labels
@@ -1888,36 +1965,53 @@ class PlateForces():
         if plates and trenches:
             gplot.plot_subduction_teeth(ax, zorder=4)
 
-        # Plot velocities
-        if velocities != None:
-            gplot.plot_plate_motion_vectors(
-                ax,
-                spacingX=plotting_options["vector spacing"],
-                spacingY=plotting_options["vector spacing"],
-                normalise=plotting_options["normalise vectors"],
-                alpha=0.5,
-                zorder=5,
-            )
-
         return ax
     
-    def plot_plate_motions(self, ax, reconstruction_time: int, plotting_options: dict, coastlines=True, plates=True, trenches=True):
+    def plot_torque_through_time(
+            self,
+            ax,
+            torque: str,
+            plate: int,
+            case: Optional[str] = None,
+            **kwargs,
+        ):
+        """
+        Function to plot torque through time
 
-        # Plot the reconstruction
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True)
+        :param ax:                  axes object
+        :type ax:                   matplotlib.axes.Axes
+        :param torque:              torque to plot
+        :type torque:               str
+        :param plate:               plate for which to plot the torque
+        :type plate:                int
+        :param case:                case for which to plot the torque
+        :type case:                 str
+        :param kwargs:              additional keyword arguments
+        :type kwargs:               dict
 
-        # Add plate motion vectors
+        :return:                    axes object with plotted torque
+        :rtype:                     matplotlib.axes.Axes
+        """
+        # If case is not provided, just use the first case
+        if case is None:
+            case = self.cases[0]
 
-    
-    def plot_torque_through_time(self, ax, selected_case=None, selected_times=None):
+        # Check if plate is in torques dictionary
+        if plate not in self.torques[case].keys():
+            return print("Plate not in torques dictionary")
         
-        # Get times
-        if selected_times == None:
-            selected_times = self.reconstruction_times
-
-        # Get cases
-        if selected_cases == None:
-            selected_cases = self.cases
+        # Check if torque is in columns
+        if torque not in self.torques[case][plate].columns:
+            return print("Torque not in columns, please choose from: ", ", ".join(self.torques[case][plate].columns))
+        
+        # Plot torque
+        pl = ax.plot(
+            self.times,
+            self.torques[case][plate][torque].values,
+            **kwargs,
+        )
+        
+        return pl
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # RANDOMISATION

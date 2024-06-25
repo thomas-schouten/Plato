@@ -661,18 +661,18 @@ def compute_residual_torque(torques):
     :rtype:                         pandas.DataFrame, pandas.DataFrame
     """
     # Calculate residual torque in Cartesian coordinates
-    for j, axis in enumerate(["_x", "_y", "_z"]):
+    for axis in ["_x", "_y", "_z"]:
         torques["residual_torque" + axis] = (
-            torques["slab_pull_torque" + axis] + 
-            torques["GPE_torque" + axis] + 
-            torques["slab_bend_torque" + axis] + 
-            torques["mantle_drag_torque" + axis]
+            _numpy.nan_to_num(torques["slab_pull_torque" + axis]) + 
+            _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
+            _numpy.nan_to_num(torques["slab_bend_torque" + axis]) + 
+            _numpy.nan_to_num(torques["mantle_drag_torque" + axis])
         )
         torques["residual_torque_opt" + axis] = (
-            torques["slab_pull_torque" + axis] + 
-            torques["GPE_torque" + axis] + 
-            torques["slab_bend_torque" + axis] + 
-            torques["mantle_drag_torque" + axis]
+            _numpy.nan_to_num(torques["slab_pull_torque" + axis]) + 
+            _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
+            _numpy.nan_to_num(torques["slab_bend_torque" + axis]) + 
+            _numpy.nan_to_num(torques["mantle_drag_torque" + axis])
         )
     
     # Calculate residual torque magnitude
@@ -801,6 +801,9 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     data[torque_variable + "_x"] = torques_cartesian[0]
     data[torque_variable + "_y"] = torques_cartesian[1]
     data[torque_variable + "_z"] = torques_cartesian[2]
+    data[torque_variable + "_mag"] = _numpy.sqrt(
+        torques_cartesian[0] ** 2 + torques_cartesian[1] ** 2 + torques_cartesian[2] ** 2
+    )
 
     # Sum components of plates based on plateID
     summed_data = data.groupby("plateID", as_index=True).sum().fillna(0)

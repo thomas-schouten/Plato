@@ -125,14 +125,16 @@ def get_plates(
     merged_plates = merged_plates.reset_index(drop=True)
 
     # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
-    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "residual"]
+    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "driving", "residual"]
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
     merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[_numpy.nan] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
     merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[_numpy.nan] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[_numpy.nan] * len(axes) for _ in range(len(merged_plates.plateID))]
     merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[_numpy.nan] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
     merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[_numpy.nan] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[_numpy.nan] * len(coords) for _ in range(len(merged_plates.plateID))]
 
     return merged_plates
 
@@ -375,8 +377,14 @@ def get_plateIDs(
 
     # Loop through points to get plateIDs
     for topology_geometry, topology_plateID in zip(topology_geometries.geometry, topology_geometries.PLATEID1):
-        inside_points = grid[grid.geometry.within(topology_geometry)]
-        plateIDs[inside_points.index] = topology_plateID
+        # Try to get plateIDs for points within topology geometries
+        try:
+            inside_points = grid[grid.geometry.within(topology_geometry)]
+            plateIDs[inside_points.index] = topology_plateID
+            
+        # If there are no points within the topology geometry or this throws an error, pass
+        except:
+            pass
 
     # Get plateIDs for points for which no plateID was found
     no_plateID = _numpy.where(plateIDs == 0)
@@ -456,22 +464,31 @@ def get_topology_geometries(
     Function to resolve topologies and get geometries as a GeoDataFrame
 
     :param reconstruction:        reconstruction
-    :type reconstruction:         _gplately.PlateReconstruction
+    :type reconstruction:         gplately.PlateReconstruction
     :param reconstruction_time:   reconstruction time
     :type reconstruction_time:    integer
     :param anchor_plateID:        anchor plate ID
     :type anchor_plateID:         integer
     :return:                      resolved_topologies
-    :rtype:                       _geopandas.GeoDataFrame
+    :rtype:                       geopandas.GeoDataFrame
     """
     # Make temporary directory to hold shapefiles
     temp_dir = tempfile.mkdtemp()
 
-    # Resolve topological networks and load as GeopandasDataFrame
+    # Resolve topological networks and load as GeoDataFrame
     topology_file = os.path.join(temp_dir, "topologies.shp")
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        _pygplates.resolve_topologies(reconstruction.topology_features, reconstruction.rotation_model, topology_file, reconstruction_time, anchor_plate_id = anchor_plateID)
+        warnings.filterwarnings(
+            action="ignore",
+            message="Normalized/laundered field name:"
+        )
+        _pygplates.resolve_topologies(
+            reconstruction.topology_features, 
+            reconstruction.rotation_model, 
+            topology_file, 
+            reconstruction_time, 
+            anchor_plate_id=anchor_plateID
+        )
         if os.path.exists(topology_file):
             topology_geometries = _geopandas.read_file(topology_file)
 
@@ -479,7 +496,6 @@ def get_topology_geometries(
     shutil.rmtree(temp_dir)
 
     return topology_geometries
-
 def get_plate_names(
         plate_id_list: Union[list or _numpy.array],
     ):
@@ -667,14 +683,19 @@ def get_seafloor_grid(
         with contextlib.redirect_stdout(io.StringIO()):
             age_raster = gdownload.get_age_grid(time=reconstruction_time)
 
-    seafloor_ages = age_raster.data
+    # Convert the data to a masked array
+    seafloor_ages_ma = _numpy.ma.masked_invalid(age_raster.data)
+    
+    # Convert the masked array to a regular numpy array with NaN for masked values
+    seafloor_ages = seafloor_ages_ma.filled(_numpy.nan)
+
     lon = age_raster.lons
     lat = age_raster.lats
 
     # Create a xarray dataset
     age_grid = _xarray.Dataset(
         {
-            "seafloor_age": (["latitude", "longitude"], seafloor_ages),
+            "seafloor_age": (["latitude", "longitude"], seafloor_ages.astype(_numpy.float64)),
         },
         coords={
             "latitude": lat,
@@ -999,6 +1020,96 @@ def load_data(
 
     return data
 
+def load_torques(
+        torques: dict,
+        reconstruction_times: list,
+        cases: list,
+        plates: dict,
+        plates_of_interest: list,
+        DEBUG_MODE: Optional[bool] = False
+    ):
+    """
+    Function to load torques DataFrames.
+
+    :param torques:                 dictionary to store the torques DataFrames.
+    :type torques:                  dict
+    :param reconstruction_times:    reconstruction times.
+    :type reconstruction_times:     list or numpy.array of ints
+    :param cases:                   list of cases to process.
+    :type cases:                    list of str
+    :param plates:                  dictionary of plates DataFrames indexed by reconstruction time and case.
+    :type plates:                   dict
+    :param plates_of_interest:      plates to process.
+    :type plates_of_interest:       list of int
+    :param DEBUG_MODE:              whether or not to run in debug mode
+    :type DEBUG_MODE:               bool
+
+    :return:                        dictionary containing the torques DataFrames.
+    :rtype:                         dict
+
+    This function always reinitialises the torques DataFrames, as the information in them is also stored in the Plates DataFrames and can be recalculated from there.
+    """
+    # Define torque types
+    torque_types = [
+        "slab_pull_torque_mag", 
+        "slab_pull_torque_opt_mag", 
+        "GPE_torque_mag", 
+        "slab_bend_torque_mag", 
+        "mantle_drag_torque_mag", 
+        "mantle_drag_torque_opt_mag", 
+        "driving_torque_mag", 
+        "residual_torque_mag"
+    ]
+
+    # Loop through cases
+    for case in tqdm(cases, desc="Loading torques", disable=not DEBUG_MODE):
+        if DEBUG_MODE:
+            print(f"Loading torques for case: {case}")
+
+        # Initialise dictionary to store torques for case
+        torques[case] = {}
+
+        # Loop through plates of interest
+        for plate in plates_of_interest:
+            if DEBUG_MODE:
+                print(f"Loading torques for plate: {plate}")
+
+            # Initialise array to store torques for plate
+            torque_data = _numpy.empty((len(reconstruction_times), 9))
+
+            # Loop through reconstruction times
+            for i, reconstruction_time in enumerate(reconstruction_times):
+                if DEBUG_MODE:
+                    print(f"Loading torques for {reconstruction_time} Ma...")
+
+                # Store reconstruction time in first column of array
+                torque_data[i, 0] = reconstruction_time
+
+                # Check if plate is in plates DataFrame
+                if plate in plates[reconstruction_time][case].plateID.values:
+                    torque_data[i, 1:9] = plates[reconstruction_time][case].loc[
+                        plates[reconstruction_time][case].plateID == plate, 
+                        torque_types
+                    ].values[0]
+
+            # Convert to pandas DataFrame
+            torques[case][plate] = _pandas.DataFrame(
+                torque_data, 
+                columns=[
+                    "age", 
+                    "slab_pull_torque", 
+                    "slab_pull_torque_opt", 
+                    "GPE_torque", 
+                    "slab_bend_torque", 
+                    "mantle_drag_torque", 
+                    "mantle_drag_torque_opt", 
+                    "driving_torque", 
+                    "residual_torque"
+                ]
+            )
+
+    return torques
+
 def load_grid(
         grid: dict,
         reconstruction_name: str,
@@ -1007,6 +1118,7 @@ def load_grid(
         files_dir: str,
         points: Optional[dict] = None,
         seafloor_grid: Optional[_xarray.Dataset] = None,
+        cases: Optional[list] = None,
         DEBUG_MODE: Optional[bool] = False
     ):
     """
@@ -1026,8 +1138,10 @@ def load_grid(
     :type points:                  dict
     :param seafloor_grid:          seafloor grid
     :type seafloor_grid:           xarray.Dataset
-    :param DEBUG_MODE:                  Whether or not to run in debug mode
-    :type DEBUG_MODE:                   bool
+    :param cases:                  cases
+    :type cases:                   list
+    :param DEBUG_MODE:             whether or not to run in debug mode
+    :type DEBUG_MODE:              bool
 
     :return:                       grids
     :rtype:                        xarray.Dataset
@@ -1036,10 +1150,30 @@ def load_grid(
     for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} grids", disable=DEBUG_MODE):
         # Check if the grid for the reconstruction time is already in the dictionary
         if reconstruction_time in grid:
+            # Rename variables and coordinates in seafloor age grid for clarity
+            if type == "Seafloor":
+                if "z" in grid[reconstruction_time].data_vars:
+                    grid[reconstruction_time] = grid[reconstruction_time].rename({"z": "seafloor_age"})
+                if "lat" in grid[reconstruction_time].coords:
+                    grid[reconstruction_time] = grid[reconstruction_time].rename({"lat": "latitude"})
+                if "lon" in grid[reconstruction_time].coords:
+                    grid[reconstruction_time] = grid[reconstruction_time].rename({"lon": "longitude"})
+
             continue
 
         # Load grid if found
-        grid[reconstruction_time] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name)
+        if type == "Seafloor":
+            # Load grid if found
+            grid[reconstruction_time] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name)
+
+        elif type == "Velocity" and cases:
+            # Initialise dictionary to store velocity grids for cases
+            grid[reconstruction_time] = {}
+
+            # Loop through cases
+            for case in cases:
+                # Load grid if found
+                grid[reconstruction_time][case] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name, case=case)
 
         # If not found, initialise a new grid
         if grid[reconstruction_time] is None:
@@ -1053,14 +1187,12 @@ def load_grid(
 
             # Interpolate velocity grid from points
             if type == "Velocity":
-                if DEBUG_MODE:
-                    print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
+                for case in cases:
+                    if DEBUG_MODE:
+                        print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
 
-                # Get the first key in the points dictionary. It doesn't matter which key is used, as the reconstructed velocities are the same for all points DataFrames.
-                key = list(points[reconstruction_time].keys())[0]
-
-                # Get velocity grid
-                grid[reconstruction_time] = get_velocity_grid(points[reconstruction_time][key], seafloor_grid[reconstruction_time])
+                    # Get velocity grid
+                    grid[reconstruction_time][case] = get_velocity_grid(points[reconstruction_time][case], seafloor_grid[reconstruction_time])
 
     return grid
 
@@ -1075,15 +1207,15 @@ def DataFrame_from_csv(
     Function to load DataFrames from a folder
 
     :param folder:               folder
-    :type folder:                string
+    :type folder:                str
     :param type:                 type of data
-    :type type:                  string
+    :type type:                  str
     :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   string
+    :type reconstruction_name:   str
     :param case:                 case
-    :type case:                  string
+    :type case:                  str
     :param reconstruction_time:  reconstruction time
-    :type reconstruction_time:   integer
+    :type reconstruction_time:   inte
     
     :return:                     data
     :rtype:                      pandas.DataFrame
@@ -1108,6 +1240,7 @@ def Dataset_from_netCDF(
         type: str,
         reconstruction_time: int,
         reconstruction_name: str,
+        case: Optional[str] = None,
     ):
     """
     Function to load xarray Dataset from a folder
@@ -1117,16 +1250,21 @@ def Dataset_from_netCDF(
     :param reconstruction_times: reconstruction times
     :type reconstruction_times:  list or numpy.array
     :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   string
+    :type reconstruction_name:   str
+    :param case:                 case
+    :type case:                  str
 
     :return:                     data
     :rtype:                      xarray.Dataset
     """
-    # Get target folder
-    if folder:
-        target_file = os.path.join(folder, type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.nc")
+    # Make file name
+    if case:
+        file_name = f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.nc"
     else:
-        target_file = os.getcwd(type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.nc")  # Use the current working directory
+        file_name = f"{type}_{reconstruction_name}_{reconstruction_time}Ma.nc"
+
+    # Get target file
+    target_file = os.path.join(folder if folder else os.getcwd(), type, file_name)
 
     # Check if target folder exists
     if os.path.exists(target_file):
