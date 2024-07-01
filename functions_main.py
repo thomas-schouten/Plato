@@ -138,8 +138,8 @@ def compute_interface_term(slabs, options):
             slabs["shear_zone_width"] = options["Shear zone width"]
 
         # Calculate sediment fraction using sediment thickness and shear zone width
-        slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, slabs["sediment_thickness"] / slabs["shear_zone_width"])
-        slabs["sediment_fraction"] = _numpy.where(slabs["sediment_thickness"] <= slabs["shear_zone_width"], slabs["sediment_fraction"],  1)
+        slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, _numpy.nan_to_num(slabs["sediment_thickness"]) / slabs["shear_zone_width"])
+        slabs["sediment_fraction"] = _numpy.where(slabs["sediment_fraction"] <= 1, slabs["sediment_fraction"],  1)
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
     # Old implementation of interface term
@@ -544,13 +544,16 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
     # Get velocities at points
     if options["Reconstructed motions"]:
         # Calculate mantle drag force
-        points["mantle_drag_force_lat"] = -1 * points.v_lat * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
-        points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        points["mantle_drag_force_lat"] = -1 * points.v_lat * constants.cm_a2m_s #* options["Mantle viscosity"] / mech.La
+        points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s #* options["Mantle viscosity"] / mech.La
 
     else:
         # Calculate residual torque
         for axis in ["_x", "_y", "_z"]:
-            torques["mantle_drag_torque" + axis] = (torques["slab_pull_torque_opt" + axis] + torques["GPE_torque" + axis] + torques["slab_bend_torque" + axis]) * -1
+            torques["mantle_drag_torque" + axis] = (
+                _numpy.nan_to_num(torques["slab_pull_torque_opt" + axis]) + 
+                _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
+                _numpy.nan_to_num(torques["slab_bend_torque" + axis])) * -1
         torques["mantle_drag_torque_opt_mag"] = xyz2mag(torques["mantle_drag_torque_x"], torques["mantle_drag_torque_y"], torques["mantle_drag_torque_z"])
         
         # Convert to centroid
@@ -573,19 +576,19 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
         torques["centroid_v_lat"] *= constants.m_s2cm_a; torques["centroid_v_lon"] *= constants.m_s2cm_a; torques["centroid_v_mag"] *= constants.m_s2cm_a
 
         # Get velocity of upper and lower plates
-        plates = ["upper_", "lower_"]
+        plates = ["upper", "lower"]
         for plate in plates:
             slab_velocities = compute_velocities(
                 slabs.lat,
                 slabs.lon,
-                points[f"{plate}_plateID"],
+                slabs[f"{plate}_plateID"],
                 torques,
                 summed_torques_cartesian_normalised,
                 options,
                 constants
             )
 
-            slabs[f"v_{plate}plate_lat"], points[f"v_{plate}plate_lon"], points[f"v_{plate}plate_mag"], points[f"v_{plate}plate_azi"] = slab_velocities
+            slabs[f"v_{plate}_plate_lat"], slabs[f"v_{plate}_plate_lon"], slabs[f"v_{plate}_plate_mag"], slabs[f"v_{plate}_plate_azi"] = slab_velocities
 
         # Get velocity at points
         point_velocities = compute_velocities(
@@ -599,30 +602,37 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
         )
 
         points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"] = point_velocities
+
+        print(points["v_mag"].mean())
         
     return torques, points, slabs
 
 def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants):
     # Initialise arrays to store velocities
-    v_lats = _numpy.empty_like(lat); v_lons = _numpy.empty_like(lat)
-    v_mags = _numpy.empty_like(lat); v_azis = _numpy.empty_like(lat)
+    v_lats = _numpy.empty_like(lats); v_lons = _numpy.empty_like(lats)
+    v_mags = _numpy.empty_like(lats); v_azis = _numpy.empty_like(lats)
 
     # Loop through points
     for lat, lon, plateID, v_lat, v_lon, v_mag, v_azi in zip(lats, lons, plateIDs, v_lats, v_lons, v_mags, v_azis):
         # Check if upper plate is in torques
         if plateID in torques.plateID.values:
             # Get the index of the lower plate in the torques DataFrame
-            n = _numpy.where(torques.plateID.values == plateID[0][0])
+            n = _numpy.where(torques.plateID.values == plateID)
+            velocity_xyz = -1 * _numpy.array([
+                summed_torques_cartesian_normalised[:,n][0][0][0],
+                summed_torques_cartesian_normalised[:,n][1][0][0],
+                summed_torques_cartesian_normalised[:,n][2][0][0]
+            ])
 
             # Check if the area condition is satisfied
-            if torques.area.values[n] >= options["Minimum plate area"]:
+            if torques.area.values[n] >= options["Minimum plate area"] and summed_torques_cartesian_normalised[:,n][0][0] != _numpy.nan:
                 # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
                 point_velocity = vector_xyz2lat_lon(
                     [lat],
                     [lon],
                     _numpy.array(
                         [_numpy.cross(
-                        -1 * summed_torques_cartesian_normalised[:,n], lat_lon2xyz(
+                        velocity_xyz, lat_lon2xyz(
                             lat, lon, constants
                             ) / constants.mean_Earth_radius_m,
                         axis=0
@@ -643,12 +653,50 @@ def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_n
     return v_lats, v_lons, v_mags, v_azis
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# RESIDUALS
+# DRIVING AND RESIDUAL TORQUES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def compute_driving_torque(torques):
+    """
+    Function to calculate driving torque on plates.
+
+    :param torques:                 pandas.DataFrame containing
+    :type torques:                  pandas.DataFrame
+    :param mech:                    mechanical parameters used in calculations
+    :type mech:                     class
+    :param constants:               constants used in calculations
+    :type constants:                class
+
+    :return:                        torques, points
+    :rtype:                         pandas.DataFrame, pandas.DataFrame
+    """
+    # Calculate residual torque in Cartesian coordinates
+    for axis in ["_x", "_y", "_z"]:
+        torques["driving_torque" + axis] = (
+            _numpy.nan_to_num(torques["slab_pull_torque" + axis]) + 
+            _numpy.nan_to_num(torques["GPE_torque" + axis])
+        )
+        torques["driving_torque_opt" + axis] = (
+            _numpy.nan_to_num(torques["slab_pull_torque_opt" + axis]) + 
+            _numpy.nan_to_num(torques["GPE_torque" + axis])
+        )
+    
+    # Calculate residual torque magnitude
+    torques["driving_torque_mag"] = xyz2mag(torques["driving_torque_x"], torques["driving_torque_y"], torques["driving_torque_z"])
+    torques["driving_torque_opt_mag"] = xyz2mag(torques["driving_torque_opt_x"], torques["driving_torque_opt_y"], torques["driving_torque_opt_z"])
+
+    # Set zeros to NaN values
+    torques[f"driving_torque_mag"] = _numpy.where(
+        torques["driving_torque_x"] == _numpy.nan,
+        _numpy.nan,
+        torques["driving_torque_mag"]
+    )
+
+    return torques
 
 def compute_residual_torque(torques):
     """
-    Function to calculate residual torque on a plate
+    Function to calculate residual torque on plates.
 
     :param torques:                 pandas.DataFrame containing
     :type torques:                  pandas.DataFrame
@@ -669,15 +717,42 @@ def compute_residual_torque(torques):
             _numpy.nan_to_num(torques["mantle_drag_torque" + axis])
         )
         torques["residual_torque_opt" + axis] = (
-            _numpy.nan_to_num(torques["slab_pull_torque" + axis]) + 
+            _numpy.nan_to_num(torques["slab_pull_torque_opt" + axis]) + 
             _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
             _numpy.nan_to_num(torques["slab_bend_torque" + axis]) + 
-            _numpy.nan_to_num(torques["mantle_drag_torque" + axis])
+            _numpy.nan_to_num(torques["mantle_drag_torque_opt" + axis])
         )
     
     # Calculate residual torque magnitude
     torques["residual_torque_mag"] = xyz2mag(torques["residual_torque_x"], torques["residual_torque_y"], torques["residual_torque_z"])
     torques["residual_torque_opt_mag"] = xyz2mag(torques["residual_torque_opt_x"], torques["residual_torque_opt_y"], torques["residual_torque_opt_z"])
+
+    # Set zeros to NaN values
+    torques[f"residual_torque_mag"] = _numpy.where(
+        torques[f"residual_torque_x"] == _numpy.nan,
+        _numpy.nan,
+        torques[f"residual_torque_mag"]
+    )
+
+    return torques
+
+def optimise_torques(torques, mech, options):
+    """
+    Function to optimise torques
+
+    :param torques:                 pandas.DataFrame containing
+    :type torques:                  pandas.DataFrame
+    :param mech:                    mechanical parameters used in calculations
+    :type mech:                     class
+    :param options:                 dictionary with options
+    :type options:                  dict
+
+    :return:                        torques
+    :rtype:                         pandas.DataFrame
+    """
+    for axis in ["_x", "_y", "_z", "_mag"]:
+        torques["slab_pull_torque_opt" + axis] = torques["slab_pull_torque" + axis].values * options["Slab pull constant"]
+        torques["mantle_drag_torque_opt" + axis] = torques["mantle_drag_torque" + axis].values * options["Mantle viscosity"] / mech.La
 
     return torques
 

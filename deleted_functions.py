@@ -76,3 +76,36 @@ def plot_velocity_map(
             fig.colorbar(vels, ax=ax, label="Velocity [cm/a]", orientation=plotting_options["orientation cbar"], shrink=0.75, aspect=20)
     
         return ax, vels, centroid_vectors, slab_vectors
+
+
+def optimise_torques(self, sediments=True):
+        """
+        Function to apply optimised parameters to torques
+        Arguments:
+            opt_visc
+            opt_sp_const
+        """
+        # Apply to each torque in DataFrame
+        axes = ["_x", "_y", "_z", "_mag"]
+        for case in self.cases:
+            for axis in axes:
+                self.plates[case]["slab_pull_torque_opt" + axis] = self.options[case]["Slab pull constant"] * self.plates[case]["slab_pull_torque" + axis]
+                if self.options[case]["Reconstructed motions"]:
+                    self.plates[case]["mantle_drag_torque_opt" + axis] = self.options[case]["Mantle viscosity"] * self.plates[case]["mantle_drag_torque" + axis]
+                
+                for reconstruction_time in self.times:
+                    if sediments == True:
+                        self.plates[reconstruction_time][case]["slab_pull_torque_opt" + axis] = self.options[case]["Slab pull constant"] * self.plates[reconstruction_time][case]["slab_pull_torque" + axis]
+                    if self.options[case]["Reconstructed motions"]:
+                        self.plates[reconstruction_time][case]["mantle_drag_torque_opt" + axis] = self.options[case]["Mantle viscosity"] * self.plates[reconstruction_time][case]["mantle_drag_torque" + axis]
+
+        # Apply to forces at centroid
+        coords = ["lon", "lat"]
+        for reconstruction_time in self.times:
+            for case in self.cases:
+                for coord in coords:
+                    self.plates[reconstruction_time][case]["slab_pull_force_opt" + coord] = self.options[case]["Slab pull constant"] * self.plates[reconstruction_time][case]["slab_pull_force" + coord]
+                    if self.options[case]["Reconstructed motions"]:
+                        self.plates[reconstruction_time][case]["mantle_drag_force_opt" + coord] = self.options[case]["Mantle viscosity"] * self.plates[reconstruction_time][case]["slab_pull_force" + coord]
+
+        self.optimised_torques = True

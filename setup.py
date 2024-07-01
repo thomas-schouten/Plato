@@ -129,12 +129,16 @@ def get_plates(
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
-    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[_numpy.nan] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[_numpy.nan] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[_numpy.nan] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[_numpy.nan] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[_numpy.nan] * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[_numpy.nan] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["driving_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["residual_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["driving_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["residual_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
 
     return merged_plates
 
@@ -219,22 +223,22 @@ def get_slabs(
 
     # Initialise other columns to store seafloor ages and forces
     # Upper plate
-    slabs["upper_plate_thickness"] = _numpy.nan
-    slabs["upper_plate_age"] = _numpy.nan   
+    slabs["upper_plate_thickness"] = 0
+    slabs["upper_plate_age"] = 0   
     slabs["continental_arc"] = False
-    slabs["erosion_rate"] = _numpy.nan
+    slabs["erosion_rate"] = 0
 
     # Lower plate
-    slabs["lower_plate_age"] = _numpy.nan
-    slabs["lower_plate_thickness"] = _numpy.nan
-    slabs["sediment_thickness"] = _numpy.nan
+    slabs["lower_plate_age"] = 0
+    slabs["lower_plate_thickness"] = 0
+    slabs["sediment_thickness"] = 0
     slabs["sediment_fraction"] = 0.
     slabs["slab_length"] = options["Slab length"]
 
     # Forces
     forces = ["slab_pull", "slab_bend"]
     coords = ["mag", "lat", "lon"]
-    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[_numpy.nan] * 6 for _ in range(len(slabs))] 
+    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 6 for _ in range(len(slabs))] 
 
     # Make sure all the columns are floats
     slabs = slabs.astype(float)
@@ -280,8 +284,8 @@ def get_points(
     plateIDs = get_plateIDs(reconstruction, topology_geometries, lat_grid, lon_grid, reconstruction_time)
 
     # Initialise empty array to store velocities
-    velocity_lat, velocity_lon = _numpy.empty_like(lat_grid), _numpy.empty_like(lat_grid)
-    velocity_mag, velocity_azi = _numpy.empty_like(lat_grid), _numpy.empty_like(lat_grid)
+    velocity_lat, velocity_lon = _numpy.zeros_like(lat_grid), _numpy.zeros_like(lat_grid)
+    velocity_mag, velocity_azi = _numpy.zeros_like(lat_grid), _numpy.zeros_like(lat_grid)
 
     # Loop through plateIDs to get velocities
     for plateID in _numpy.unique(plateIDs):
@@ -329,15 +333,15 @@ def get_points(
                         )
 
     # Add additional columns to store seafloor ages and forces
-    points["seafloor_age"] = _numpy.nan
-    points["lithospheric_thickness"] = _numpy.nan
-    points["crustal_thickness"] = _numpy.nan
-    points["water_depth"] = _numpy.nan
-    points["U"] = _numpy.nan
+    points["seafloor_age"] = 0
+    points["lithospheric_thickness"] = 0
+    points["crustal_thickness"] = 0
+    points["water_depth"] = 0
+    points["U"] = 0
     forces = ["GPE", "mantle_drag"]
     coords = ["lat", "lon", "mag"]
 
-    points[[force + "_force_" + coord for force in forces for coord in coords]] = [[_numpy.nan] * len(forces) * len(coords) for _ in range(len(points))]
+    points[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * len(forces) * len(coords) for _ in range(len(points))]
     
     return points
 
@@ -1057,12 +1061,14 @@ def load_torques(
         "slab_bend_torque_mag", 
         "mantle_drag_torque_mag", 
         "mantle_drag_torque_opt_mag", 
-        "driving_torque_mag", 
-        "residual_torque_mag"
+        "driving_torque_mag",
+        "driving_torque_opt_mag",
+        "residual_torque_mag",
+        "residual_torque_opt_mag",
     ]
 
     # Loop through cases
-    for case in tqdm(cases, desc="Loading torques", disable=not DEBUG_MODE):
+    for case in tqdm(cases, desc="Loading torques", disable=DEBUG_MODE):
         if DEBUG_MODE:
             print(f"Loading torques for case: {case}")
 
@@ -1075,7 +1081,7 @@ def load_torques(
                 print(f"Loading torques for plate: {plate}")
 
             # Initialise array to store torques for plate
-            torque_data = _numpy.empty((len(reconstruction_times), 9))
+            torque_data = _numpy.zeros((len(reconstruction_times), 11))
 
             # Loop through reconstruction times
             for i, reconstruction_time in enumerate(reconstruction_times):
@@ -1087,7 +1093,7 @@ def load_torques(
 
                 # Check if plate is in plates DataFrame
                 if plate in plates[reconstruction_time][case].plateID.values:
-                    torque_data[i, 1:9] = plates[reconstruction_time][case].loc[
+                    torque_data[i, 1:11] = plates[reconstruction_time][case].loc[
                         plates[reconstruction_time][case].plateID == plate, 
                         torque_types
                     ].values[0]
@@ -1103,8 +1109,10 @@ def load_torques(
                     "slab_bend_torque", 
                     "mantle_drag_torque", 
                     "mantle_drag_torque_opt", 
-                    "driving_torque", 
-                    "residual_torque"
+                    "driving_torque",
+                    "driving_torque_opt",
+                    "residual_torque",
+                    "residual_torque_opt"
                 ]
             )
 
@@ -1166,6 +1174,9 @@ def load_grid(
             # Load grid if found
             grid[reconstruction_time] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name)
 
+            # Download seafloor age grid from GPlately DataServer
+            grid[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
+
         elif type == "Velocity" and cases:
             # Initialise dictionary to store velocity grids for cases
             grid[reconstruction_time] = {}
@@ -1175,24 +1186,17 @@ def load_grid(
                 # Load grid if found
                 grid[reconstruction_time][case] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name, case=case)
 
-        # If not found, initialise a new grid
-        if grid[reconstruction_time] is None:
-            # Download seafloor age grid from GPlately DataServer
-            if type == "Seafloor":
-                if DEBUG_MODE:
-                    print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, downloading from GPlately DataServer...")
+            # If not found, initialise a new grid
+            if grid[reconstruction_time][case] is None:
+                
+                # Interpolate velocity grid from points
+                if type == "Velocity":
+                    for case in cases:
+                        if DEBUG_MODE:
+                            print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
 
-                # Download seafloor grid
-                grid[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
-
-            # Interpolate velocity grid from points
-            if type == "Velocity":
-                for case in cases:
-                    if DEBUG_MODE:
-                        print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
-
-                    # Get velocity grid
-                    grid[reconstruction_time][case] = get_velocity_grid(points[reconstruction_time][case], seafloor_grid[reconstruction_time])
+                        # Get velocity grid
+                        grid[reconstruction_time][case] = get_velocity_grid(points[reconstruction_time][case], seafloor_grid[reconstruction_time])
 
     return grid
 
