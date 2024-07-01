@@ -685,13 +685,6 @@ def compute_driving_torque(torques):
     torques["driving_torque_mag"] = xyz2mag(torques["driving_torque_x"], torques["driving_torque_y"], torques["driving_torque_z"])
     torques["driving_torque_opt_mag"] = xyz2mag(torques["driving_torque_opt_x"], torques["driving_torque_opt_y"], torques["driving_torque_opt_z"])
 
-    # Set zeros to NaN values
-    torques[f"driving_torque_mag"] = _numpy.where(
-        torques["driving_torque_x"] == _numpy.nan,
-        _numpy.nan,
-        torques["driving_torque_mag"]
-    )
-
     return torques
 
 def compute_residual_torque(torques):
@@ -726,13 +719,6 @@ def compute_residual_torque(torques):
     # Calculate residual torque magnitude
     torques["residual_torque_mag"] = xyz2mag(torques["residual_torque_x"], torques["residual_torque_y"], torques["residual_torque_z"])
     torques["residual_torque_opt_mag"] = xyz2mag(torques["residual_torque_opt_x"], torques["residual_torque_opt_y"], torques["residual_torque_opt_z"])
-
-    # Set zeros to NaN values
-    torques[f"residual_torque_mag"] = _numpy.where(
-        torques[f"residual_torque_x"] == _numpy.nan,
-        _numpy.nan,
-        torques[f"residual_torque_mag"]
-    )
 
     return torques
 
@@ -806,7 +792,7 @@ def compute_thicknesses(ages, options, crust=True, water=True):
             
         if water:
             water_depth = _numpy.where(_numpy.isnan(ages), 
-                                0,
+                                0.,
                                 (lithospheric_mantle_thickness * ((mech.rho_a - mech.rho_l) / (mech.rho_sw - mech.rho_a))) + 2600)
         else:
             water_depth = _numpy.nan

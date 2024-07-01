@@ -129,16 +129,16 @@ def get_plates(
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
-    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["driving_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["residual_torque_opt_" + axis for axis in axes]] = [[0] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["driving_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["residual_force_opt_" + coord for coord in coords]] = [[0] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0.] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["driving_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["residual_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0.] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["driving_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["residual_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
 
     return merged_plates
 
@@ -341,7 +341,7 @@ def get_points(
     forces = ["GPE", "mantle_drag"]
     coords = ["lat", "lon", "mag"]
 
-    points[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * len(forces) * len(coords) for _ in range(len(points))]
+    points[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(forces) * len(coords) for _ in range(len(points))]
     
     return points
 
@@ -815,8 +815,8 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     :type case:                   string
     :param folder:                folder
     :type folder:                 string
-    :param DEBUG_MODE:                 whether to run in debug mode
-    :type DEBUG_MODE:                  bool
+    :param DEBUG_MODE:            whether to run in debug mode
+    :type DEBUG_MODE:             bool
     """
     if DEBUG_MODE:
         if folder:

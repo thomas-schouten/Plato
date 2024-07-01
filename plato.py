@@ -628,12 +628,12 @@ class PlateForces():
                         # Check if plate is in DataFrame
                         if float(plate) in self.plates[reconstruction_time][key].plateID.values:
                             # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_bend_torque_mag"].values[0]
+                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_mag"].values[0]
 
                             if self.DEBUG_MODE:
-                                    print(f"Torque value for {plate} is {torque_value}!")
+                                    print(f"Spull torque value for {plate} is {torque_value}!")
 
-                            if torque_value != 0 and torque_value != _numpy.nan:
+                            if torque_value != 0. and torque_value != _numpy.nan:
                                 # Enter data into DataFrame
                                 self.torques[key][plate].loc[i, "slab_pull_torque"] = torque_value
                                 self.torques[key][plate].loc[i, "slab_pull_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_opt_mag"].values[0]
@@ -692,9 +692,9 @@ class PlateForces():
                             torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_bend_torque_mag"].values[0]
 
                             if self.DEBUG_MODE:
-                                    print(f"Torque value for {plate} is {torque_value}!")
+                                    print(f"Slab bend torque value for {plate} is {torque_value}!")
 
-                            if torque_value != 0 and torque_value != _numpy.nan:
+                            if torque_value != 0. and torque_value != _numpy.nan:
                                 # Enter data into DataFrame
                                 self.torques[key][plate].loc[i, "slab_bend_torque"] = torque_value
 
@@ -735,9 +735,6 @@ class PlateForces():
                             {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
                         ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
                         [[self.plates[reconstruction_time][entry].update(
-                            {"GPE_force_" + coord: self.plates[reconstruction_time][key]["GPE_force_" + coord]}
-                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                        [[self.plates[reconstruction_time][entry].update(
                             {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
@@ -752,9 +749,9 @@ class PlateForces():
                             torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["GPE_torque_mag"].values[0]
 
                             if self.DEBUG_MODE:
-                                    print(f"Torque value for {plate} is {torque_value}!")
+                                    print(f"GPE torque value for {plate} is {torque_value}!")
 
-                            if torque_value != 0 and torque_value != _numpy.nan:
+                            if torque_value != 0. and torque_value != _numpy.nan:
                                 # Enter data into DataFrame
                                 self.torques[key][plate].loc[i, "GPE_torque"] = torque_value
 
@@ -802,8 +799,8 @@ class PlateForces():
                                 {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
                             ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
                             [[self.plates[reconstruction_time][entry].update(
-                                {"mantle_drag_force_" + coord: self.plates[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                            ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                                {"mantle_drag_torque_" + coord: self.plates[reconstruction_time][key]["mantle_drag_torque_" + coord]}
+                            ) for coord in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
                         # Enter computed slab pull values into torque dictionary
                         for plate in self.plates_of_interest:
@@ -818,7 +815,7 @@ class PlateForces():
                                 if self.DEBUG_MODE:
                                     print(f"Torque value for {plate} is {torque_value}!")
 
-                                if torque_value != 0 or torque_value != _numpy.nan:
+                                if torque_value != 0. or torque_value != _numpy.nan:
                                     # Enter data into DataFrame
                                     self.torques[key][plate].loc[i, "mantle_drag_torque"] = torque_value
 
@@ -861,7 +858,7 @@ class PlateForces():
                             # Check if plate is in DataFrame
                             if float(plate) in self.plates[reconstruction_time][key].plateID.values:
                                 # Check if value is not NaN
-                                torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["GPE_torque_mag"].values[0]
+                                torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
 
                                 if self.DEBUG_MODE:
                                     print(f"Mantle drag torque value is {torque_value}!")
@@ -871,6 +868,9 @@ class PlateForces():
                                 self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
 
     def optimise_torques(self):
+        """
+        Function to optimise torques
+        """
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Optimising torques", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
                 print(f"Optimising torques at {reconstruction_time} Ma")
@@ -900,7 +900,7 @@ class PlateForces():
                             torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_opt_mag"].values[0]
 
                             if self.DEBUG_MODE:
-                                    print(f"Optimised slab pull torque value for {plate} is {torque_value}!")
+                                print(f"Optimised slab pull torque value for {plate} is {torque_value}!")
 
                             if torque_value != 0 or torque_value != _numpy.nan:
                                 # Enter data into DataFrame
@@ -910,12 +910,13 @@ class PlateForces():
                             torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
 
                             if self.DEBUG_MODE:
-                                    print(f"Optimised mantle drag torque value for {plate} is {torque_value}!")
+                                print(f"Optimised mantle drag torque value for {plate} is {torque_value}!")
 
                             if torque_value != 0 and torque_value != _numpy.nan:
                                 # Enter data into DataFrame
                                 self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = torque_value
             
+            # Copy torques to other cases
             for key, entries in self.mantle_drag_cases.items():
                 if self.options[key]["Mantle drag torque"]:
                     self.plates[reconstruction_time][key] = functions_main.optimise_torques(
@@ -938,7 +939,7 @@ class PlateForces():
                         # Check if plate is in DataFrame
                         if float(plate) in self.plates[reconstruction_time][key].plateID.values:
                             # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
+                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
 
                             if self.DEBUG_MODE:
                                 print(f"Mantle drag torque magnitude for {plate} is {torque_value}!")
@@ -967,7 +968,6 @@ class PlateForces():
 
                     # Check if plate is in DataFrame
                     if float(plate) in self.plates[reconstruction_time][case].plateID.values:
-                        
                         # Check if value is not NaN
                         torque_value = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["driving_torque_mag"].values[0]
                     
@@ -1005,7 +1005,7 @@ class PlateForces():
                             torque_value = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["residual_torque_mag"].values[0]
 
                             if self.DEBUG_MODE:
-                                print(f"Resdiual torque magnitude for {plate} is {torque_value}!")
+                                print(f"Residual torque magnitude for {plate} is {torque_value}!")
 
                             if torque_value != 0 and torque_value != _numpy.nan:
                                 # Enter data into DataFrame
@@ -2068,20 +2068,20 @@ class PlateForces():
         # Normalise torque
         if normalise is not False:
             plot_data = _numpy.where(
-                self.torques[case][plate][torque] != 0,
+                self.torques[case][plate][torque] != 0.,
                 _numpy.where(
-                    self.torques[case][plate][normalise] != 0,
+                    self.torques[case][plate][normalise] != 0.,
                     self.torques[case][plate][torque] / self.torques[case][plate][normalise],            
-                    0
+                    0.
                 ),
-                0
+                0.
             )
 
             if self.DEBUG_MODE:
                 print(f"{plate} after normalisation, {plot_data}")
 
         # Mask zeros
-        plot_data = _numpy.ma.masked_where(plot_data == 0, plot_data)
+        plot_data = _numpy.ma.masked_where(plot_data == 0., plot_data)
 
         # Plot torque
         pl = ax.plot(
