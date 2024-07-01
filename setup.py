@@ -21,12 +21,14 @@ from typing import Union
 # Third-party libraries
 import geopandas as _geopandas
 import matplotlib.pyplot as plt
+
 import numpy as _numpy
 import gplately as _gplately
 import pandas as _pandas
 import pygplates as _pygplates
 import xarray as _xarray
 
+from multiprocessing import Pool
 from shapely.geometry import Point
 from tqdm import tqdm
 
@@ -148,6 +150,8 @@ def get_slabs(
         plates: _pandas.DataFrame,
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
+        DEBUG_MODE: Optional[bool] = False,
+        PARALLEL_MODE: Optional[bool] = False,
     ):
     """
     Function to get data on slabs in reconstruction.
@@ -251,6 +255,7 @@ def get_points(
         plates: _pandas.DataFrame,
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
+        PARALLEL_MODE: Optional[bool] = False,
     ):
     """
     Function to get data on regularly spaced grid points in reconstruction.
@@ -381,14 +386,8 @@ def get_plateIDs(
 
     # Loop through points to get plateIDs
     for topology_geometry, topology_plateID in zip(topology_geometries.geometry, topology_geometries.PLATEID1):
-        # Try to get plateIDs for points within topology geometries
-        try:
-            inside_points = grid[grid.geometry.within(topology_geometry)]
-            plateIDs[inside_points.index] = topology_plateID
-            
-        # If there are no points within the topology geometry or this throws an error, pass
-        except:
-            pass
+        inside_points = grid[grid.geometry.within(topology_geometry)]
+        plateIDs[inside_points.index] = topology_plateID
 
     # Get plateIDs for points for which no plateID was found
     no_plateID = _numpy.where(plateIDs == 0)
@@ -945,7 +944,8 @@ def load_data(
         plates = None,
         resolved_topologies = None,
         resolved_geometries = None,
-        DEBUG_MODE: Optional[bool] = False
+        DEBUG_MODE: Optional[bool] = False,
+        PARALLEL_MODE: Optional[bool] = False,
     ):
     """
     Function to load DataFrames from a folder, or initialise new DataFrames
@@ -1015,9 +1015,9 @@ def load_data(
                     if type == "Plates":
                         data[reconstruction_time][unavailable_case] = get_plates(reconstruction.rotation_model, reconstruction_time, resolved_topologies[reconstruction_time], all_options[unavailable_case])
                     if type == "Slabs":
-                        data[reconstruction_time][unavailable_case] = get_slabs(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
+                        data[reconstruction_time][unavailable_case] = get_slabs(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case],  PARALLEL_MODE = PARALLEL_MODE)
                     if type == "Points":
-                        data[reconstruction_time][unavailable_case] = get_points(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case])
+                        data[reconstruction_time][unavailable_case] = get_points(reconstruction, reconstruction_time, plates[reconstruction_time][unavailable_case], resolved_geometries[reconstruction_time], all_options[unavailable_case], PARALLEL_MODE = PARALLEL_MODE)
 
                     # Append case to available cases
                     available_cases.append(unavailable_case)

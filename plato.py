@@ -50,6 +50,7 @@ class PlateForces():
             seafloor_grids: Optional[dict] = None,
             plates_of_interest: Optional[List[int]] = None,
             DEBUG_MODE: Optional[bool] = False,
+            PARALLEL_MODE: Optional[bool] = False,
         ):
         """
         PlateForces object.
@@ -85,6 +86,9 @@ class PlateForces():
 
         # Set flag for debugging mode
         self.DEBUG_MODE = DEBUG_MODE
+
+        # Set flag for parallel mode
+        self.PARALLEL_MODE = PARALLEL_MODE
 
         # Set files directory
         self.dir_path = os.path.join(os.getcwd(), files_dir)
@@ -243,6 +247,7 @@ class PlateForces():
             resolved_topologies = self.resolved_topologies,
             resolved_geometries = self.resolved_geometries,
             DEBUG_MODE = self.DEBUG_MODE,
+            PARALLEL_MODE = self.PARALLEL_MODE,
         )
 
         # Load or initialise slabs
@@ -259,6 +264,7 @@ class PlateForces():
             plates = self.plates,
             resolved_geometries = self.resolved_geometries,
             DEBUG_MODE = self.DEBUG_MODE,
+            PARALLEL_MODE = self.PARALLEL_MODE,
         )
 
         # Load or initialise points
@@ -275,6 +281,7 @@ class PlateForces():
             plates = self.plates,
             resolved_geometries = self.resolved_geometries,
             DEBUG_MODE = self.DEBUG_MODE,
+            PARALLEL_MODE = self.PARALLEL_MODE,
         )
 
         # Load torques
@@ -571,6 +578,9 @@ class PlateForces():
 
             # Loop through slab pull cases
             for key, entries in self.slab_pull_cases.items():
+                if self.DEBUG_MODE:
+                    print(f"Computing slab pull torques for cases {entries}")
+
                 # Calculate slab pull torque
                 if self.options[key]["Slab pull torque"]:
                     self.slabs[reconstruction_time][key] = functions_main.compute_slab_pull_force(self.slabs[reconstruction_time][key], self.options[key], self.mech)
@@ -631,7 +641,7 @@ class PlateForces():
                             torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_mag"].values[0]
 
                             if self.DEBUG_MODE:
-                                    print(f"Spull torque value for {plate} is {torque_value}!")
+                                    print(f"Slab pull torque value for {plate} is {torque_value}!")
 
                             if torque_value != 0. and torque_value != _numpy.nan:
                                 # Enter data into DataFrame
@@ -653,6 +663,9 @@ class PlateForces():
 
             # Loop through slab bend cases
             for key, entries in self.slab_bend_cases.items():
+                if self.DEBUG_MODE:
+                    print(f"Computing slab bend torques for cases {entries}")
+
                 # Calculate slab bending torque
                 if self.options[key]["Slab bend torque"]:
                     self.slabs[reconstruction_time][key] = functions_main.compute_slab_bend_force(self.slabs[reconstruction_time][key], self.options[key], self.mech, self.constants)
@@ -713,6 +726,9 @@ class PlateForces():
 
             # Loop through gpe cases
             for key, entries in self.gpe_cases.items():
+                if self.DEBUG_MODE:
+                    print(f"Computing GPE torque for cases {entries}")
+
                 # Calculate GPE torque
                 if self.options[key]["GPE torque"]: 
                     self.points[reconstruction_time][key] = functions_main.compute_GPE_force(self.points[reconstruction_time][key], self.seafloor[reconstruction_time], self.options[key], self.mech)
@@ -767,6 +783,9 @@ class PlateForces():
             # Loop through mantle drag cases
             for key, entries in self.mantle_drag_cases.items():
                 if self.options[key]["Reconstructed motions"]:
+                    if self.DEBUG_MODE:
+                        print(f"Computing mantle drag torque from reconstructed motions for cases {entries}")
+
                     # Calculate Mantle drag torque
                     if self.options[key]["Mantle drag torque"]:
                         # Calculate mantle drag force
@@ -776,7 +795,8 @@ class PlateForces():
                             self.slabs[reconstruction_time][key],
                             self.options[key],
                             self.mech,
-                            self.constants
+                            self.constants,
+                            self.DEBUG_MODE,
                         )
 
                         # Calculate mantle drag torque
@@ -822,15 +842,19 @@ class PlateForces():
             # Loop through all cases
             for case in self.cases:
                 if not self.options[case]["Reconstructed motions"]:
+                    if self.DEBUG_MODE:
+                        print(f"Computing mantle drag torque using torque balance for case {case}")
+
                     if self.options[case]["Mantle drag torque"]:
                         # Calculate mantle drag force
                         self.plates[reconstruction_time][case], self.points[reconstruction_time][case], self.slabs[reconstruction_time][case] = functions_main.compute_mantle_drag_force(
                             self.plates[reconstruction_time][case],
                             self.points[reconstruction_time][case],
                             self.slabs[reconstruction_time][case],
-                            self.options[key],
+                            self.options[case],
                             self.mech,
-                            self.constants
+                            self.constants,
+                            self.DEBUG_MODE,
                         )
 
                         # Calculate mantle drag torque
@@ -1842,12 +1866,12 @@ class PlateForces():
 
         # Plot velocity grid
         im = ax.imshow(
-            self.velocity[reconstruction_time][case1].velocity_magnitude.values-self.velocity[reconstruction_time][case2].velocity_magnitude.values ,
-            cmap = plotting_options["velocity cmap"],
+            self.velocity[reconstruction_time][case1].velocity_magnitude.values-self.velocity[reconstruction_time][case2].velocity_magnitude.values,
+            cmap = plotting_options["velocity difference cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
-            vmin=0, 
-            vmax=plotting_options["velocity max"], 
+            vmin=-0.5*plotting_options["velocity max"], 
+            vmax=0.5*plotting_options["velocity max"], 
             origin="lower"
         )
 
@@ -1876,7 +1900,7 @@ class PlateForces():
 
         return im, qu
     
-    def plot_relative_velocity_difference_map(self, ax, fig, reconstruction_time, case1, case2, plotting_options):
+    def plot_relative_velocity_difference_map(self, ax, reconstruction_time, case1, case2, plotting_options):
         """
         Function to create subplot with difference between plate velocity at trenches between two cases
             case:               case for which to plot the sediments
@@ -1893,15 +1917,15 @@ class PlateForces():
         # Plot velocity grid
         im = ax.imshow(
             _numpy.where(
-                self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0,
+                (self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0) | (_numpy.isnan(self.velocity[reconstruction_time][case2].velocity_magnitude.values)),
                 0,
                 self.velocity[reconstruction_time][case1].velocity_magnitude.values/self.velocity[reconstruction_time][case2].velocity_magnitude.values,
             ),
-            cmap = plotting_options["velocity cmap"],
+            cmap = plotting_options["relative velocity difference cmap"],
             transform=ccrs.PlateCarree(), 
             zorder=1, 
             vmin=0, 
-            vmax=plotting_options["velocity max"], 
+            vmax=plotting_options["relative velocity max"], 
             origin="lower"
         )
 
@@ -1916,14 +1940,14 @@ class PlateForces():
                 x=velocity_vectors1.lon,
                 y=velocity_vectors1.lat,
                 u=_numpy.where(
-                    velocity_vectors2.v_lon.values == 0,
+                    (velocity_vectors2.v_lon.values == 0) | (velocity_vectors1.v_lon.values == 0) | (_numpy.isnan(velocity_vectors2.v_lon.values)) | (_numpy.isnan(velocity_vectors1.v_lon.values)),
                     0,
-                    velocity_vectors1.v_lon.values/velocity_vectors2.v_lon.values,
+                    (velocity_vectors1.v_lon.values - velocity_vectors2.v_lon.values) / velocity_vectors2.v_mag.values * 10,
                 ),
                 v=_numpy.where(
-                    velocity_vectors2.v_lat.values == 0,
+                    (velocity_vectors2.v_lat.values == 0) | (velocity_vectors1.v_lat.values == 0) | (_numpy.isnan(velocity_vectors2.v_lat.values)) | (_numpy.isnan(velocity_vectors1.v_lat.values)),
                     0,
-                    velocity_vectors1.v_lat.values/velocity_vectors2.v_lat.values,
+                    (velocity_vectors1.v_lat.values - velocity_vectors2.v_lat.values) / velocity_vectors2.v_mag.values * 10,
                 ),
                 transform=ccrs.PlateCarree(),
                 width=4e-3,

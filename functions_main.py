@@ -523,7 +523,7 @@ def sample_ages(lat, lon, seafloor, coords=["latitude", "longitude"]):
 # BASAL TRACTIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
+def compute_mantle_drag_force(torques, points, slabs, options, mech, constants, DEBUG_MODE=False):
     """
     Function to calculate mantle drag force at points
 
@@ -578,6 +578,9 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
         # Get velocity of upper and lower plates
         plates = ["upper", "lower"]
         for plate in plates:
+            if DEBUG_MODE:
+                print(f"Calculating {plate} plate velocities at trenches")
+
             slab_velocities = compute_velocities(
                 slabs.lat,
                 slabs.lon,
@@ -585,12 +588,16 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
                 torques,
                 summed_torques_cartesian_normalised,
                 options,
-                constants
+                constants,
+                DEBUG_MODE,
             )
 
             slabs[f"v_{plate}_plate_lat"], slabs[f"v_{plate}_plate_lon"], slabs[f"v_{plate}_plate_mag"], slabs[f"v_{plate}_plate_azi"] = slab_velocities
 
         # Get velocity at points
+        if DEBUG_MODE:
+            print(f"Calculating plate velocities at points")
+
         point_velocities = compute_velocities(
             points.lat,
             points.lon,
@@ -598,22 +605,21 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants):
             torques,
             summed_torques_cartesian_normalised,
             options,
-            constants
+            constants,
+            DEBUG_MODE,
         )
 
         points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"] = point_velocities
 
-        print(points["v_mag"].mean())
-        
     return torques, points, slabs
 
-def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants):
+def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants, DEBUG_MODE=False):
     # Initialise arrays to store velocities
-    v_lats = _numpy.empty_like(lats); v_lons = _numpy.empty_like(lats)
-    v_mags = _numpy.empty_like(lats); v_azis = _numpy.empty_like(lats)
+    v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
+    v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
 
     # Loop through points
-    for lat, lon, plateID, v_lat, v_lon, v_mag, v_azi in zip(lats, lons, plateIDs, v_lats, v_lons, v_mags, v_azis):
+    for i, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
         # Check if upper plate is in torques
         if plateID in torques.plateID.values:
             # Get the index of the lower plate in the torques DataFrame
@@ -625,7 +631,7 @@ def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_n
             ])
 
             # Check if the area condition is satisfied
-            if torques.area.values[n] >= options["Minimum plate area"] and summed_torques_cartesian_normalised[:,n][0][0] != _numpy.nan:
+            if torques.area.values[n] >= options["Minimum plate area"] and summed_torques_cartesian_normalised[:,n][0][0] != 0 and summed_torques_cartesian_normalised[:,n][0][0] != _numpy.nan:
                 # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
                 point_velocity = vector_xyz2lat_lon(
                     [lat],
@@ -642,13 +648,13 @@ def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_n
                 )
 
                 # Assign the velocity to the respective columns in the points DataFrame
-                v_lat = point_velocity[0]
-                v_lon = point_velocity[1]
-                v_mag = point_velocity[2]
-                v_azi = point_velocity[3]
+                v_lats[i] = point_velocity[0]
+                v_lons[i] = point_velocity[1]
+                v_mags[i] = point_velocity[2]
+                v_azis[i] = point_velocity[3]
 
     # Convert to cm/a
-    v_lat *= constants.m_s2cm_a; v_lon *= constants.m_s2cm_a; v_mag *= constants.m_s2cm_a
+    v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
 
     return v_lats, v_lons, v_mags, v_azis
 
