@@ -983,7 +983,7 @@ class PlateForces():
 
             for case in self.cases:
                 # Calculate driving torque
-                self.plates[reconstruction_time][case] = functions_main.compute_driving_torque(self.plates[reconstruction_time][case])
+                self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "driving", self.constants)
 
                 # Enter computed slab pull values into torque dictionary
                 for plate in self.plates_of_interest:
@@ -1016,7 +1016,7 @@ class PlateForces():
                 # Select cases that require residual torque computation
                 if self.options[case]["Reconstructed motions"]:
                     # Calculate residual torque
-                    self.plates[reconstruction_time][case] = functions_main.compute_residual_torque(self.plates[reconstruction_time][case])
+                    self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "residual", self.constants)
 
                     # Enter computed slab pull values into torque dictionary
                     for plate in self.plates_of_interest:

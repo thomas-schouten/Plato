@@ -662,69 +662,67 @@ def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_n
 # DRIVING AND RESIDUAL TORQUES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_driving_torque(torques):
+def sum_torque(torques, torque_type, constants):
     """
-    Function to calculate driving torque on plates.
+    Function to calculate driving and residual torque on plates.
 
-    :param torques:                 pandas.DataFrame containing
-    :type torques:                  pandas.DataFrame
-    :param mech:                    mechanical parameters used in calculations
-    :type mech:                     class
-    :param constants:               constants used in calculations
-    :type constants:                class
+    :param torques:         pandas.DataFrame containing torque data
+    :type torques:          pandas.DataFrame
+    :param torque_type:     Type of torque to compute ("driving" or "residual")
+    :type torque_type:      str
+    :param constants:       constants used in calculations
+    :type constants:        class
 
-    :return:                        torques, points
-    :rtype:                         pandas.DataFrame, pandas.DataFrame
+    :return:                torques
+    :rtype:                 pandas.DataFrame
     """
-    # Calculate residual torque in Cartesian coordinates
+    # Determine torque components based on torque type
+    if torque_type == "driving":
+        torque_components = ["slab_pull_torque", "GPE_torque"]
+        torque_opt_components = ["slab_pull_torque_opt", "GPE_torque"]
+    elif torque_type == "residual":
+        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]
+        torque_opt_components = ["slab_pull_torque_opt", "GPE_torque", "slab_bend_torque", "mantle_drag_torque_opt"]
+    else:
+        raise ValueError("Invalid torque_type, must be 'driving' or 'residual'!")
+
+    # Calculate torque in Cartesian coordinates
     for axis in ["_x", "_y", "_z"]:
-        torques["driving_torque" + axis] = (
-            _numpy.nan_to_num(torques["slab_pull_torque" + axis]) + 
-            _numpy.nan_to_num(torques["GPE_torque" + axis])
+        torques[f"{torque_type}_torque{axis}"] = sum(
+            _numpy.nan_to_num(torques[component + axis]) for component in torque_components
         )
-        torques["driving_torque_opt" + axis] = (
-            _numpy.nan_to_num(torques["slab_pull_torque_opt" + axis]) + 
-            _numpy.nan_to_num(torques["GPE_torque" + axis])
+        torques[f"{torque_type}_torque_opt{axis}"] = sum(
+            _numpy.nan_to_num(torques[component + axis]) for component in torque_opt_components
         )
     
-    # Calculate residual torque magnitude
-    torques["driving_torque_mag"] = xyz2mag(torques["driving_torque_x"], torques["driving_torque_y"], torques["driving_torque_z"])
-    torques["driving_torque_opt_mag"] = xyz2mag(torques["driving_torque_opt_x"], torques["driving_torque_opt_y"], torques["driving_torque_opt_z"])
+    # Calculate torque magnitude
+    torques[f"{torque_type}_torque_mag"] = xyz2mag(
+        torques[f"{torque_type}_torque_x"], 
+        torques[f"{torque_type}_torque_y"], 
+        torques[f"{torque_type}_torque_z"]
+    )
+    torques[f"{torque_type}_torque_opt_mag"] = xyz2mag(
+        torques[f"{torque_type}_torque_opt_x"], 
+        torques[f"{torque_type}_torque_opt_y"], 
+        torques[f"{torque_type}_torque_opt_z"]
+    )
 
-    return torques
+    # Calculate the position vector of the centroid of the plate in Cartesian coordinates
+    centroid_position = lat_lon2xyz(torques.centroid_lat, torques.centroid_lon, constants)
 
-def compute_residual_torque(torques):
-    """
-    Function to calculate residual torque on plates.
+    # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
+    for opt in ["", "opt_"]:
+        summed_torques_cartesian = _numpy.array([
+            torques[f"{torque_type}_torque_{opt}x"], 
+            torques[f"{torque_type}_torque_{opt}y"], 
+            torques[f"{torque_type}_torque_{opt}z"]
+        ])
+        force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
 
-    :param torques:                 pandas.DataFrame containing
-    :type torques:                  pandas.DataFrame
-    :param mech:                    mechanical parameters used in calculations
-    :type mech:                     class
-    :param constants:               constants used in calculations
-    :type constants:                class
-
-    :return:                        torques, points
-    :rtype:                         pandas.DataFrame, pandas.DataFrame
-    """
-    # Calculate residual torque in Cartesian coordinates
-    for axis in ["_x", "_y", "_z"]:
-        torques["residual_torque" + axis] = (
-            _numpy.nan_to_num(torques["slab_pull_torque" + axis]) + 
-            _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
-            _numpy.nan_to_num(torques["slab_bend_torque" + axis]) + 
-            _numpy.nan_to_num(torques["mantle_drag_torque" + axis])
+        # Compute force magnitude at centroid
+        torques[f"{torque_type}_force_{opt}lat"], torques[f"{torque_type}_force_{opt}lon"], torques[f"{torque_type}_force_{opt}mag"], torques[f"{torque_type}_force_{opt}azi"] = vector_xyz2lat_lon(
+            torques.centroid_lat, torques.centroid_lon, force_at_centroid, constants
         )
-        torques["residual_torque_opt" + axis] = (
-            _numpy.nan_to_num(torques["slab_pull_torque_opt" + axis]) + 
-            _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
-            _numpy.nan_to_num(torques["slab_bend_torque" + axis]) + 
-            _numpy.nan_to_num(torques["mantle_drag_torque_opt" + axis])
-        )
-    
-    # Calculate residual torque magnitude
-    torques["residual_torque_mag"] = xyz2mag(torques["residual_torque_x"], torques["residual_torque_y"], torques["residual_torque_z"])
-    torques["residual_torque_opt_mag"] = xyz2mag(torques["residual_torque_opt_x"], torques["residual_torque_opt_y"], torques["residual_torque_opt_z"])
 
     return torques
 
