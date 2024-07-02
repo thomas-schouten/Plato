@@ -116,7 +116,7 @@ def compute_slab_pull_force(slabs, options, mech):
 
     return slabs
 
-def compute_interface_term(slabs, options):
+def compute_interface_term(slabs, options, DEBUG_MODE=False):
     """
     Function to calculate the interface term that accounts for resisting forces at the subduction interface.
     These forces are i) shearing along the plate interface, ii) bending of the slab, and iii) vertical resistance to slab sinking.
@@ -143,16 +143,19 @@ def compute_interface_term(slabs, options):
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
 
     # Old implementation of interface term
-    interface_term = 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
+    # interface_term = 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
 
     # Calculate interface term for all components of the slab pull force
     # NOTE: Turned off for now, awaiting further testing
-    # interface_term = options["Slab pull constant"] * (11 - 10**(1-slabs["sediment_fraction"]))
+    interface_term = 11 - 10**(1-slabs["sediment_fraction"])
+
+    if DEBUG_MODE:
+        print(f"Mean, min and max of interface terms: {interface_term.mean()}, {interface_term.min()}, {interface_term.max()}")
 
     # Apply interface term to slab pull force
-    slabs["slab_pull_force_opt_mag"] = slabs["slab_pull_force_mag"] * interface_term
-    slabs["slab_pull_force_opt_lat"] = slabs["slab_pull_force_lat"] * interface_term
-    slabs["slab_pull_force_opt_lon"] = slabs["slab_pull_force_lon"] * interface_term
+    slabs["slab_pull_force_mag"] = slabs["slab_pull_force_mag"] * interface_term
+    slabs["slab_pull_force_lat"] = slabs["slab_pull_force_lat"] * interface_term
+    slabs["slab_pull_force_lon"] = slabs["slab_pull_force_lon"] * interface_term
 
     return slabs
 
@@ -550,18 +553,18 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants, 
     else:
         # Calculate residual torque
         for axis in ["_x", "_y", "_z"]:
-            torques["mantle_drag_torque" + axis] = (
-                _numpy.nan_to_num(torques["slab_pull_torque_opt" + axis]) + 
+            torques["mantle_drag_torque_opt" + axis] = (
+                _numpy.nan_to_num(torques["slab_pull_torque" + axis] * options["Slab pull constant"]) + 
                 _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
                 _numpy.nan_to_num(torques["slab_bend_torque" + axis])) * -1
-        torques["mantle_drag_torque_opt_mag"] = xyz2mag(torques["mantle_drag_torque_x"], torques["mantle_drag_torque_y"], torques["mantle_drag_torque_z"])
+        torques["mantle_drag_torque_opt_mag"] = xyz2mag(torques["mantle_drag_torque_opt_x"], torques["mantle_drag_torque_opt_y"], torques["mantle_drag_torque_opt_z"])
         
         # Convert to centroid
         centroid_position = lat_lon2xyz(torques.centroid_lat, torques.centroid_lon, constants)
         centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
         
         # Calculate force from cross product of torques with centroid position
-        summed_torques_cartesian = _numpy.array([torques["mantle_drag_torque_x"], torques["mantle_drag_torque_y"], torques["mantle_drag_torque_z"]])
+        summed_torques_cartesian = _numpy.array([torques["mantle_drag_torque_opt_x"], torques["mantle_drag_torque_opt_y"], torques["mantle_drag_torque_opt_z"]])
         summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.array(torques.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
         force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
         velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)

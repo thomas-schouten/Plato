@@ -227,15 +227,15 @@ def get_slabs(
 
     # Initialise other columns to store seafloor ages and forces
     # Upper plate
-    slabs["upper_plate_thickness"] = 0
-    slabs["upper_plate_age"] = 0   
+    slabs["upper_plate_thickness"] = 0.
+    slabs["upper_plate_age"] = 0.  
     slabs["continental_arc"] = False
-    slabs["erosion_rate"] = 0
+    slabs["erosion_rate"] = 0.
 
     # Lower plate
-    slabs["lower_plate_age"] = 0
-    slabs["lower_plate_thickness"] = 0
-    slabs["sediment_thickness"] = 0
+    slabs["lower_plate_age"] = 0.
+    slabs["lower_plate_thickness"] = 0.
+    slabs["sediment_thickness"] = 0.
     slabs["sediment_fraction"] = 0.
     slabs["slab_length"] = options["Slab length"]
 
@@ -620,8 +620,8 @@ def get_options(
                       2e3,
                       700e3,
                       1e-12,
-                      0.0301,
-                      8.97e18,
+                      0.0316,
+                      1.22e20,
                       250,
                       1,
                       7.5e12,
@@ -1273,7 +1273,7 @@ def Dataset_from_netCDF(
     # Check if target folder exists
     if os.path.exists(target_file):
         # Load data
-        data = _xarray.open_dataset(os.path.join(target_file), cache=False)
+        data = _xarray.open_dataset(os.path.join(target_file))
 
         return data
     else:

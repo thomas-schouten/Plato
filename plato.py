@@ -581,9 +581,15 @@ class PlateForces():
                 if self.DEBUG_MODE:
                     print(f"Computing slab pull torques for cases {entries}")
 
-                # Calculate slab pull torque
                 if self.options[key]["Slab pull torque"]:
+                    # Calculate slab pull torque
                     self.slabs[reconstruction_time][key] = functions_main.compute_slab_pull_force(self.slabs[reconstruction_time][key], self.options[key], self.mech)
+                    
+                    # Compute interface term if necessary
+                    if self.options[key]["Sediment subduction"]:
+                        self.slabs[reconstruction_time][key] = functions_main.compute_interface_term(self.slabs[reconstruction_time][key], self.options[key], self.DEBUG_MODE)
+                    
+                    # Compute torque on plates
                     self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
                         self.plates[reconstruction_time][key], 
                         self.slabs[reconstruction_time][key].lat, 
@@ -597,37 +603,16 @@ class PlateForces():
                         torque_variable="slab_pull_torque"
                     )
 
-                    # Compute interface term
-                    self.slabs[reconstruction_time][key] = functions_main.compute_interface_term(self.slabs[reconstruction_time][key], self.options[key])
-                    self.plates[reconstruction_time][key] = functions_main.compute_torque_on_plates(
-                        self.plates[reconstruction_time][key], 
-                        self.slabs[reconstruction_time][key].lat, 
-                        self.slabs[reconstruction_time][key].lon, 
-                        self.slabs[reconstruction_time][key].lower_plateID, 
-                        self.slabs[reconstruction_time][key].slab_pull_force_opt_lat, 
-                        self.slabs[reconstruction_time][key].slab_pull_force_opt_lon,
-                        self.slabs[reconstruction_time][key].trench_segment_length,
-                        1,
-                        self.constants,
-                        torque_variable="slab_pull_torque_opt"
-                    )
-
                     # Copy DataFrames
                     if len(entries) > 1:
                         [[self.slabs[reconstruction_time][entry].update(
                             {"slab_pull_force_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_" + coord]}
-                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                        [[self.slabs[reconstruction_time][entry].update(
-                            {"slab_pull_force_opt_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_opt_" + coord]}
                         ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
                         [[self.plates[reconstruction_time][entry].update(
                             {"slab_pull_force_" + coord: self.plates[reconstruction_time][key]["slab_pull_force_" + coord]}
                         ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
                         [[self.plates[reconstruction_time][entry].update(
                             {"slab_pull_torque_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_" + axis]}
-                        ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
-                        [[self.plates[reconstruction_time][entry].update(
-                            {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
                     # Enter computed slab pull values into torque dictionary
@@ -1178,9 +1163,17 @@ class PlateForces():
 
         :return:                        None
         """
-        # Generate grid of viscosities and slab pull coefficients
+        # Set range of viscosities
         viscs = _numpy.linspace(visc_range[0],visc_range[1],grid_size)
-        sp_consts = _numpy.linspace(1e-5,1,grid_size)
+
+        # Set range of slab pull coefficients
+        if self.options[opt_case]["Sediment subduction"]:
+            # Range is smaller with sediment subduction
+            sp_consts = _numpy.linspace(1e-5,0.25,grid_size)
+        else:
+            sp_consts = _numpy.linspace(1e-5,1.,grid_size)
+
+        # Create grids from ranges of viscosities and slab pull coefficients
         visc_grid, sp_const_grid = _numpy.meshgrid(viscs, sp_consts)
         ones_grid = _numpy.ones_like(visc_grid)
 
@@ -1729,7 +1722,7 @@ class PlateForces():
             )
 
         # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True)
+        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="fill")
             
         return im
     
