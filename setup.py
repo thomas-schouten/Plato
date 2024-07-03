@@ -739,7 +739,7 @@ def get_velocity_grid(
         )
     
     # Interpolate to resolution of seafloor grid
-    velocity_grid = velocity_grid.interp_like(seafloor_grid)
+    velocity_grid = velocity_grid.interp(latitude=seafloor_grid.latitude, longitude=seafloor_grid.longitude, method="linear")
 
     # Interpolate NaN values along the dateline
     velocity_grid = velocity_grid.interpolate_na()

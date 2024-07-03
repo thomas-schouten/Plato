@@ -1607,19 +1607,34 @@ class PlateForces():
             self,
             ax,
             reconstruction_time: int,
-            plotting_options: dict
+            cmap = "cmc.lajolla_r",
+            vmin = 0,
+            vmax = 250,
+            log_scale = False,
+            coastlines_facecolour = "lightgrey",
+            coastlines_edgecolour = "none",
+            coastlines_linewidth = 0,
+            plate_boundaries_linewidth = 0.5,
         ):
         """
         Function to create subplot with global seafloor age.
 
-        :param ax:                  axes object
-        :type ax:                   matplotlib.axes.Axes
-        :param fig:                 figure
-        :type fig:                  matplotlib.figure.Figure
-        :param reconstruction_time: the time for which to display the map
-        :type reconstruction_time:  int
-        :param plotting_options:    options for plotting
-        :type plotting_options:     dict
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param reconstruction_time:     the time for which to display the map
+        :type reconstruction_time:      int
+        :param cmap:                    colormap to use for plotting
+        :type cmap:                     str
+        :param vmin:                    minimum value for the colormap
+        :type vmin:                     float
+        :param vmax:                    maximum value for the colormap
+        :type vmax:                     float
+        :param log_scale:               whether or not to use a log scale for the colormap
+        :type log_scale:                boolean
+        :param facecolor_coastlines:    facecolor for coastlines
+        :type facecolor_coastlines:     str
+        :param edgecolor_coastlines:    edgecolor for coastlines
+        :type edgecolor_coastlines:     str
 
         :return:                    axes object and image object
         :rtype:                     matplotlib.axes.Axes, matplotlib.image.AxesImage
@@ -1629,25 +1644,31 @@ class PlateForces():
             return print("Invalid reconstruction time")
         
         # Set basemap
-        ax, gl = self.plot_basemap(ax)
+        gl = self.plot_basemap(ax)
 
         # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
         gl.top_labels = False
         gl.right_labels = False
 
-        # Plot age
-        im = ax.imshow(
+        # Plot seafloor age grid
+        im = self.plot_grid(
+            ax,
             self.seafloor[reconstruction_time].seafloor_age.values,
-            cmap=plotting_options["age cmap"],
-            transform=ccrs.PlateCarree(), 
-            zorder=1, 
-            vmin=0, 
-            vmax=plotting_options["age max"], 
-            origin="lower"
+            cmap = cmap,
+            vmin = vmin,
+            vmax = vmax,
+            log_scale = log_scale
         )
 
         # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="fill")
+        ax = self.plot_reconstruction(
+            ax,
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
 
         return im
 
@@ -1656,15 +1677,21 @@ class PlateForces():
             ax,
             reconstruction_time: int,
             case,
-            plotting_options: dict,
+            cmap = "cmc.imola",
+            vmin = 1e0,
+            vmax = 1e4,
+            log_scale = True,
+            coastlines_facecolour = "lightgrey",
+            coastlines_edgecolour = "none",
+            coastlines_linewidth = 0,
+            plate_boundaries_linewidth = 0.5,
+            marker_size = 20,
         ):
         """
         Function to create subplot with global sediment thicknesses.
         
         :param ax:                  axes object
         :type ax:                   matplotlib.axes.Axes
-        :param fig:                 figure
-        :type fig:                  matplotlib.figure.Figure
         :param reconstruction_time: the time for which to display the map
         :type reconstruction_time:  int
         :param case:                case for which to plot the sediments
@@ -1683,54 +1710,80 @@ class PlateForces():
             return print("Invalid reconstruction time")
         
         # Set basemap
-        ax, gl = self.plot_basemap(ax)
+        gl = self.plot_basemap(ax)
 
+        # Get sediment thickness grid
         if self.options[case]["Sample sediment grid"] !=0:
-            raster = self.seafloor[reconstruction_time][self.options[case]["Sample sediment grid"]].copy()
+            grid = self.seafloor[reconstruction_time][self.options[case]["Sample sediment grid"]].values
         else:
-            raster = _numpy.where(_numpy.isnan(self.seafloor[reconstruction_time].seafloor_age.values), _numpy.nan, 0)
+            grid = _numpy.where(_numpy.isnan(self.seafloor[reconstruction_time].seafloor_age.values), _numpy.nan, vmin)
 
-        if plotting_options["sediment log scale"] is True:
-            raster = _numpy.log10(raster + 1)
-
-        # Plot sediment
-        im = ax.imshow(
-            raster,
-            cmap=plotting_options["sediment cmap"],
-            transform=ccrs.PlateCarree(), 
-            zorder=1, 
-            vmin=plotting_options["sediment vmin"], 
-            vmax=plotting_options["sediment vmax"], 
-            origin="lower"
-        )
+        # Plot sediment thickness grid
+        im = self.plot_grid(
+            ax,
+            grid,
+            cmap = cmap,
+            vmin = vmin,
+            vmax = vmax,
+            log_scale = log_scale
+            )
 
         if self.options[case]["Active margin sediments"] != 0 or self.options[case]["Sample erosion grid"]:
-            data = self.slabs[reconstruction_time][case].copy()
+            lat = self.slabs[reconstruction_time][case].lat.values
+            lon = self.slabs[reconstruction_time][case].lon.values
+            data = self.slabs[reconstruction_time][case].sediment_thickness.values
             
-            if plotting_options["sediment log scale"] is True:
-                data["sediment_thickness"] = _numpy.log10(data["sediment_thickness"] + 1)
+            if log_scale is True:
+                if vmin == 0:
+                    vmin = 1e-3
+                if vmax == 0:
+                    vmax = 1e3
+                vmin = _numpy.log10(vmin)
+                vmax = _numpy.log10(vmax)
 
-            slab_data = ax.scatter(
-                data.lon,
-                data.lat,
-                c=data.sediment_thickness,
-                s=plotting_options["marker size"],
+                data = _numpy.where(
+                    data == 0,
+                    vmin,
+                    _numpy.log10(data),
+                )
+
+            sc = ax.scatter(
+                lon,
+                lat,
+                c=data,
+                s=marker_size,
                 transform=ccrs.PlateCarree(),
-                cmap=plotting_options["sediment cmap"],
-                vmin=plotting_options["sediment vmin"],
-                vmax=plotting_options["sediment vmax"],
+                cmap = cmap,
+                vmin = vmin,
+                vmax = vmax,
             )
 
         # Plot plates and coastlines
-        self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="fill")
+        ax = self.plot_reconstruction(
+            ax,
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
             
-        return im
+        return im, sc
     
     def plot_erosion_rate_map(
             self,
             ax,
             reconstruction_time: int,
-            plotting_options: dict
+            case,
+            cmap = "cmc.davos_r",
+            vmin = 1e0,
+            vmax = 1e3,
+            log_scale = True,
+            coastlines_facecolour = "none",
+            coastlines_edgecolour = "none",
+            coastlines_linewidth = 0,
+            plate_boundaries_linewidth = 0.5,
+            marker_size = 20,
         ):
         """
         Function to create subplot with global sediment thicknesses
@@ -1742,21 +1795,33 @@ class PlateForces():
             return print("Invalid reconstruction time")
         
         # Set basemap
-        ax, gl = self.plot_basemap(ax)
+        gl = self.plot_basemap(ax)
 
-        # Plot sediment
-        im = ax.imshow(
-            self.seafloor[reconstruction_time].erosion_rate.values,
-            cmap=plotting_options["erosion cmap"],
-            transform=ccrs.PlateCarree(), 
-            zorder=1, 
-            vmin=0, 
-            vmax=plotting_options["erosion max"], 
-            origin="lower"
+        # Get erosion rate grid
+        if self.options[case]["Sample erosion grid"] !=0:
+            grid = self.seafloor[reconstruction_time].erosion_rate.values
+        else:
+            grid = _numpy.zeros_like(self.seafloor[reconstruction_time].seafloor_age.values)
+
+        # Get erosion rate grid
+        im = self.plot_grid(
+            ax,
+            grid,
+            cmap = cmap,
+            vmin = vmin,
+            vmax = vmax,
+            log_scale = log_scale
         )
-
+        
         # Plot plates and coastlines
-        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines=False)
+        ax = self.plot_reconstruction(
+            ax,
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
             
         return im
     
@@ -1764,8 +1829,20 @@ class PlateForces():
             self,
             ax,
             reconstruction_time,
-            case,
-            plotting_options
+            case = None,
+            cmap = "cmc.bilbao_r",
+            vmin = 0,
+            vmax = 25,
+            normalise_vectors = False,
+            log_scale = False,
+            coastlines_facecolour = "none",
+            coastlines_edgecolour = "black",
+            coastlines_linewidth = 0.1,
+            plate_boundaries_linewidth = 0.5,
+            vector_width = 4e-3,
+            vector_scale = 3e2,
+            vector_color = "k",
+            vector_alpha = 0.5,
         ):
         """
         Function to plot plate velocities on an axes object
@@ -1779,46 +1856,50 @@ class PlateForces():
         if reconstruction_time not in self.times:
             return print("Invalid reconstruction time")
         
+        # Set case to first case in cases list if not specified
+        if case is None:
+            case = self.cases[0]
+        
         # Set basemap
-        ax, gl = self.plot_basemap(ax)
+        gl = self.plot_basemap(ax)
 
-        # Plot velocity grid
-        im = ax.imshow(
+        # Plot velocity difference grid
+        im = self.plot_grid(
+            ax,
             self.velocity[reconstruction_time][case].velocity_magnitude.values,
-            cmap = plotting_options["velocity cmap"],
-            transform=ccrs.PlateCarree(), 
-            zorder=1, 
-            vmin=0, 
-            vmax=plotting_options["velocity max"], 
-            origin="lower"
+            cmap = cmap,
+            vmin = vmin,
+            vmax = vmax,
+            log_scale = log_scale
         )
 
-        # Subsample velocity vectors
+        # Get velocity vectors
         velocity_vectors = self.points[reconstruction_time][case].iloc[::209].copy()
 
-        # Normalise, if necessary
-        if plotting_options["normalise velocity"] is True:
-            velocity_vectors["v_lon"] = velocity_vectors["v_lon"] / velocity_vectors["v_mag"]
-            velocity_vectors["v_lat"] = velocity_vectors["v_lat"] / velocity_vectors["v_mag"]
-
         # Plot velocity vectors
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            qu = ax.quiver(
-                x=velocity_vectors.lon,
-                y=velocity_vectors.lat,
-                u=velocity_vectors.v_lon,
-                v=velocity_vectors.v_lat,
-                transform=ccrs.PlateCarree(),
-                width=4e-3,
-                scale=3e2,
-                zorder=4,
-                color="k",
-                alpha=0.5
-            )
+        qu = self.plot_vectors(
+            ax,
+            velocity_vectors.lat.values,
+            velocity_vectors.lon.values,
+            velocity_vectors.v_lat.values,
+            velocity_vectors.v_lon.values,
+            velocity_vectors.v_mag.values,
+            normalise_vectors = normalise_vectors,
+            width = vector_width,
+            scale = vector_scale,
+            color = vector_color,
+            alpha = vector_alpha
+        )
 
         # Plot plates and coastlines
-        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge")
+        ax = self.plot_reconstruction(
+            ax,
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
 
         return im, qu
 
@@ -1828,7 +1909,19 @@ class PlateForces():
             reconstruction_time,
             case1,
             case2,
-            plotting_options
+            cmap = "cmc.vik",
+            vmin = -10,
+            vmax = 10,
+            normalise_vectors = False,
+            log_scale = False,
+            coastlines_facecolour = "none",
+            coastlines_edgecolour = "black",
+            coastlines_linewidth = 0.1,
+            plate_boundaries_linewidth = 0.5,
+            vector_width = 4e-3,
+            vector_scale = 3e2,
+            vector_color = "k",
+            vector_alpha = 0.5,
         ):
         """
         Function to create subplot with difference between plate velocity at trenches between two cases
@@ -1855,17 +1948,19 @@ class PlateForces():
             return print("Invalid reconstruction time")
         
         # Set basemap
-        ax, gl = self.plot_basemap(ax)
+        gl = self.plot_basemap(ax)
 
-        # Plot velocity grid
-        im = ax.imshow(
-            self.velocity[reconstruction_time][case1].velocity_magnitude.values-self.velocity[reconstruction_time][case2].velocity_magnitude.values,
-            cmap = plotting_options["velocity difference cmap"],
-            transform=ccrs.PlateCarree(), 
-            zorder=1, 
-            vmin=-0.5*plotting_options["velocity max"], 
-            vmax=0.5*plotting_options["velocity max"], 
-            origin="lower"
+        # Get velocity difference grid
+        grid = self.velocity[reconstruction_time][case1].velocity_magnitude.values-self.velocity[reconstruction_time][case2].velocity_magnitude.values
+
+        # Plot velocity difference grid
+        im = self.plot_grid(
+            ax,
+            grid,
+            cmap = cmap,
+            vmin = vmin,
+            vmax = vmax,
+            log_scale = log_scale
         )
 
         # Subsample velocity vectors
@@ -1873,170 +1968,122 @@ class PlateForces():
         velocity_vectors2 = self.points[reconstruction_time][case2].iloc[::209].copy()
 
         # Plot velocity vectors
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            qu = ax.quiver(
-                x=velocity_vectors1.lon,
-                y=velocity_vectors1.lat,
-                u=velocity_vectors1.v_lon-velocity_vectors2.v_lon,
-                v=velocity_vectors1.v_lat-velocity_vectors2.v_lat,
-                transform=ccrs.PlateCarree(),
-                width=4e-3,
-                scale=3e2,
-                zorder=4,
-                color="k",
-                alpha=0.5
-            )
+        qu = self.plot_vectors(
+            ax,
+            velocity_vectors1.lat.values,
+            velocity_vectors1.lon.values,
+            velocity_vectors1.v_lat.values - velocity_vectors2.v_lat.values,
+            velocity_vectors1.v_lon.values - velocity_vectors2.v_lon.values,
+            velocity_vectors1.v_mag.values - velocity_vectors2.v_mag.values,
+            normalise_vectors = normalise_vectors,
+            width = vector_width,
+            scale = vector_scale,
+            color = vector_color,
+            alpha = vector_alpha
+        )
 
         # Plot plates and coastlines
-        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge")
+        ax = self.plot_reconstruction(
+            ax,
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
 
         return im, qu
     
-    def plot_relative_velocity_difference_map(self, ax, reconstruction_time, case1, case2, plotting_options):
+    def plot_relative_velocity_difference_map(
+            self,
+            ax,
+            reconstruction_time,
+            case1,
+            case2,
+            cmap = "cmc.cork",
+            vmin = 1e-1,
+            vmax = 1e1,
+            log_scale = True,
+            coastlines_facecolour = "none",
+            coastlines_edgecolour = "black",
+            coastlines_linewidth = 0.1,
+            plate_boundaries_linewidth = 0.5,
+            vector_width = 4e-3,
+            vector_scale = 3e2,
+            vector_color = "k",
+            vector_alpha = 0.5,
+        ):
         """
         Function to create subplot with difference between plate velocity at trenches between two cases
             case:               case for which to plot the sediments
             plotting_options:   dictionary with options for plotting
         """
-
         # Check if reconstruction time is in valid times
         if reconstruction_time not in self.times:
             return print("Invalid reconstruction time")
         
         # Set basemap
-        ax, gl = self.plot_basemap(ax)
+        gl = self.plot_basemap(ax)
 
-        # Plot velocity grid
-        im = ax.imshow(
+        # Get relative velocity difference grid
+        grid = _numpy.where(
+            (self.velocity[reconstruction_time][case1].velocity_magnitude.values == 0) | 
+            (self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0) | 
+            (_numpy.isnan(self.velocity[reconstruction_time][case1].velocity_magnitude.values)) | 
+            (_numpy.isnan(self.velocity[reconstruction_time][case2].velocity_magnitude.values)),
+            _numpy.nan,
+            (self.velocity[reconstruction_time][case1].velocity_magnitude.values / 
             _numpy.where(
-                (self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0) | (_numpy.isnan(self.velocity[reconstruction_time][case2].velocity_magnitude.values)),
-                0,
-                self.velocity[reconstruction_time][case1].velocity_magnitude.values/self.velocity[reconstruction_time][case2].velocity_magnitude.values,
-            ),
-            cmap = plotting_options["relative velocity difference cmap"],
-            transform=ccrs.PlateCarree(), 
-            zorder=1, 
-            vmin=0, 
-            vmax=plotting_options["relative velocity max"], 
-            origin="lower"
+                self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0,
+                1e-10,
+                self.velocity[reconstruction_time][case2].velocity_magnitude.values)
+            )
         )
 
-        # Subsample velocity vectors
+        # Set velocity grid
+        im = self.plot_grid(
+            ax,
+            grid,
+            cmap = cmap,
+            vmin = vmin,
+            vmax = vmax,
+            log_scale = log_scale
+        )
+
+        # Get velocity vectors
         velocity_vectors1 = self.points[reconstruction_time][case1].iloc[::209].copy()
         velocity_vectors2 = self.points[reconstruction_time][case2].iloc[::209].copy()
 
+        vector_lat = velocity_vectors1.v_lat.values - velocity_vectors2.v_lat.values
+        vector_lon = velocity_vectors1.v_lon.values - velocity_vectors2.v_lon.values
+        vector_mag = _numpy.sqrt(vector_lat**2 + vector_lon**2)
+
         # Plot velocity vectors
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            qu = ax.quiver(
-                x=velocity_vectors1.lon,
-                y=velocity_vectors1.lat,
-                u=_numpy.where(
-                    (velocity_vectors2.v_lon.values == 0) | (velocity_vectors1.v_lon.values == 0) | (_numpy.isnan(velocity_vectors2.v_lon.values)) | (_numpy.isnan(velocity_vectors1.v_lon.values)),
-                    0,
-                    (velocity_vectors1.v_lon.values - velocity_vectors2.v_lon.values) / velocity_vectors2.v_mag.values * 10,
-                ),
-                v=_numpy.where(
-                    (velocity_vectors2.v_lat.values == 0) | (velocity_vectors1.v_lat.values == 0) | (_numpy.isnan(velocity_vectors2.v_lat.values)) | (_numpy.isnan(velocity_vectors1.v_lat.values)),
-                    0,
-                    (velocity_vectors1.v_lat.values - velocity_vectors2.v_lat.values) / velocity_vectors2.v_mag.values * 10,
-                ),
-                transform=ccrs.PlateCarree(),
-                width=4e-3,
-                scale=3e2,
-                zorder=4,
-                color="k",
-                alpha=0.5
-            )
-
-        # Plot plates and coastlines
-        ax = self.plot_reconstruction(ax, reconstruction_time, plotting_options, plates=True, trenches=True, coastlines="edge")
-
-        return im, qu
-
-    def plot_basemap(self, ax):
-        # Set labels
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
-
-        # Set global extent
-        ax.set_global()
-
-        # Set gridlines
-        gl = ax.gridlines(
-            crs=ccrs.PlateCarree(), 
-            draw_labels=True, 
-            linewidth=0.5, 
-            color="gray", 
-            alpha=0.5, 
-            linestyle="--", 
-            zorder=5
+        qu = self.plot_vectors(
+            ax,
+            velocity_vectors1.lat.values,
+            velocity_vectors1.lon.values,
+            vector_lat,
+            vector_lon,
+            vector_mag,
+            normalise_vectors = True,
+            width = vector_width,
+            scale = vector_scale,
+            color = vector_color,
+            alpha = vector_alpha
         )
 
-        # Turn off gridlabels for top and right
-        gl.top_labels = False
-        gl.right_labels = False  
-
-        return ax, gl
-    
-    def plot_reconstruction(
-            self,
+        # Plot plates and coastlines
+        ax = self.plot_reconstruction(
             ax,
-            reconstruction_time: int, 
-            plotting_options: dict, 
-            coastlines=True, 
-            plates=False, 
-            trenches=False,
-            velocities=None,
-        ):
-        """
-        Function to plot reconstructed features: coastlines, plates and trenches
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
 
-        :param ax:                      axes object
-        :type ax:                       matplotlib.axes.Axes
-        :param reconstruction_time:     the time for which to display the map
-        :type reconstruction_time:      int
-        :param plotting_options:        options for plotting
-        :type plotting_options:         dict
-        :param coastlines:              whether or not to plot coastlines
-        :type coastlines:               boolean
-        :param plates:                  whether or not to plot plates
-        :type plates:                   boolean
-        :param trenches:                whether or not to plot trenches
-        :type trenches:                 boolean
-        :param default_frame:           whether or not to use the default reconstruction
-        :type default_frame:            boolean
-
-        :return:                        axes object with plotted features
-        :rtype:                         matplotlib.axes.Axes
-        """
-        # Set gplot object
-        gplot = gplately.PlotTopologies(self.reconstruction, time=reconstruction_time, coastlines=self.coastlines)
-
-        # Plot coastlines
-        # NOTE: Some reconstructions on the GPlately DataServer do not have polygons for coastlines, that's why we need to catch the exception
-        if coastlines == "fill":
-            try:
-                gplot.plot_coastlines(ax, facecolor="lightgrey", zorder=-5)
-            except:
-                pass
-
-        if coastlines == "edge":
-            try:
-                gplot.plot_coastlines(ax, edgecolor="black", facecolor="none", zorder=2, lw=0.1)
-            except:
-                pass
-        
-        # Plot plates 
-        if plates:
-            gplot.plot_all_topologies(ax, lw=plotting_options["linewidth plate boundaries"], zorder=4)
-            
-        # Plot trenches
-        if plates and trenches:
-            gplot.plot_subduction_teeth(ax, zorder=4)
-
-        return ax
+        return im, qu
     
     def plot_torque_through_time(
             self,
@@ -2077,14 +2124,14 @@ class PlateForces():
             return print("Torque not in columns, please choose from: ", ", ".join(self.torques[case][plate].columns))
         
         # Get plot data
-        plot_data = self.torques[case][plate][torque]
+        data = self.torques[case][plate][torque]
 
         if self.DEBUG_MODE:
-            print(f"{plate} before normalisation, {plot_data}")
+            print(f"{plate} before normalisation, {data}")
 
         # Normalise torque
         if normalise is not False:
-            plot_data = _numpy.where(
+            data = _numpy.where(
                 self.torques[case][plate][torque] != 0.,
                 _numpy.where(
                     self.torques[case][plate][normalise] != 0.,
@@ -2095,36 +2142,243 @@ class PlateForces():
             )
 
             if self.DEBUG_MODE:
-                print(f"{plate} after normalisation, {plot_data}")
+                print(f"{plate} after normalisation, {data}")
 
         # Mask zeros
-        plot_data = _numpy.ma.masked_where(plot_data == 0., plot_data)
+        data = _numpy.ma.masked_where(data == 0., data)
 
         # Plot torque
         pl = ax.plot(
             self.times,
-            plot_data,
+            data,
             **kwargs,
         )
         
         return pl
+    
+    def plot_basemap(self, ax):
+        """
+        Function to plot a basemap on an axes object.
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# RANDOMISATION
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        :param ax:      axes object
+        :type ax:       matplotlib.axes.Axes
 
-    # def randomise_trench_azimuth(plateID):
-    #     random_value = _numpy.random.normal(0, 2.5)
-    #     return plateID, random_value
+        :return:        gridlines object
+        :rtype:         cartopy.mpl.gridliner.Gridliner
+        """
+        # Set labels
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
 
-    # def randomise_slab_age(plateID):
+        # Set global extent
+        ax.set_global()
+
+        # Set gridlines
+        gl = ax.gridlines(
+            crs=ccrs.PlateCarree(), 
+            draw_labels=True, 
+            linewidth=0.5, 
+            color="gray", 
+            alpha=0.5, 
+            linestyle="--", 
+            zorder=5
+        )
+
+        # Turn off gridlabels for top and right
+        gl.top_labels = False
+        gl.right_labels = False  
+
+        return gl
+    
+    def plot_grid(
+            self,
+            ax,
+            grid,
+            log_scale=False,
+            vmin=0,
+            vmax=1e3,
+            cmap="viridis",
+        ):
+        """
+        Function to plot a grid.
+
+        :param ax:          axes object
+        :type ax:           matplotlib.axes.Axes
+        :param data:        data to plot
+        :type data:         numpy.ndarray
+        :param log_scale:   whether or not to use log scale
+        :type log_scale:    bool
+        :param vmin:        minimum value for colormap
+        :type vmin:         float
+        :param vmax:        maximum value for colormap
+        :type vmax:         float
+        :param cmap:        colormap to use
+        :type cmap:         str
+
+        :return:            image object
+        :rtype:             matplotlib.image.AxesImage
+        """
+
+        # Set log scale
+        if log_scale:
+            if vmin == 0:
+                vmin = 1e-3
+            if vmax == 0:
+                vmax = 1e3
+            vmin = _numpy.log10(vmin)
+            vmax = _numpy.log10(vmax)
+
+            grid = _numpy.where(
+                (_numpy.isnan(grid)) | (grid <= 0),
+                _numpy.nan,
+                _numpy.log10(grid),
+            )
+
+        # Plot grid    
+        im = ax.imshow(
+            grid,
+            cmap = cmap,
+            transform = ccrs.PlateCarree(), 
+            zorder = 1, 
+            vmin = vmin, 
+            vmax = vmax, 
+            origin = "lower"
+        )
+
+        return im
+    
+    def plot_vectors(
+            self,
+            ax,
+            lat,
+            lon,
+            vector_lat,
+            vector_lon,
+            vector_mag = None,
+            normalise_vectors = False,
+            width = 4e-3,
+            scale = 3e2,
+            color = "k",
+            alpha = 0.5,
+        ):
+        """
+        Function to plot vectors on an axes object.
+
+        :param ax:                  axes object
+        :type ax:                   matplotlib.axes.Axes
+        :param lat:                 latitude of the vectors
+        :type lat:                  numpy.ndarray
+        :param lon:                 longitude of the vectors
+        :type lon:                  numpy.ndarray
+        :param vector_lat:          latitude component of the vectors
+        :type vector_lat:           numpy.ndarray
+        :param vector_lon:          longitude component of the vectors
+        :type vector_lon:           numpy.ndarray
+        :param vector_mag:          magnitude of the vectors
+        :type vector_mag:           numpy.ndarray
+        :param normalise_vectors:   whether or not to normalise the vectors
+        :type normalise_vectors:    bool
+        :param width:               width of the vectors
+        :type width:                float
+        :param scale:               scale of the vectors
+        :type scale:                float
+        :param zorder:              zorder of the vectors
+        :type zorder:               int
+        :param color:               color of the vectors
+        :type color:                str
+        :param alpha:               transparency of the vectors
+        :type alpha:                float
+
+        :return:                    quiver object
+        :rtype:                     matplotlib.quiver.Quiver
+        """
+        # Normalise vectors, if necessary
+        if normalise_vectors is True and vector_mag is not None:
+            vector_lon = vector_lon / vector_mag * 10
+            vector_lat = vector_lat / vector_mag * 10
+
+        # Plot vectors
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            qu = ax.quiver(
+                    x = lon,
+                    y = lat,
+                    u = vector_lon,
+                    v = vector_lat,
+                    transform = ccrs.PlateCarree(),
+                    width = width,
+                    scale = scale,
+                    zorder = 4,
+                    color = color,
+                    alpha = alpha,
+                )
         
-    #     return plateID, random_value
+        return qu
+        
+    def plot_reconstruction(
+            self,
+            ax,
+            reconstruction_time: int, 
+            coastlines_facecolour = "none",
+            coastlines_edgecolour = "none",
+            coastlines_linewidth = "none",
+            plate_boundaries_linewidth = "none",
+        ):
+        """
+        Function to plot reconstructed features: coastlines, plates and trenches.
+
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param reconstruction_time:     the time for which to display the map
+        :type reconstruction_time:      int
+        :param plotting_options:        options for plotting
+        :type plotting_options:         dict
+        :param coastlines:              whether or not to plot coastlines
+        :type coastlines:               boolean
+        :param plates:                  whether or not to plot plates
+        :type plates:                   boolean
+        :param trenches:                whether or not to plot trenches
+        :type trenches:                 boolean
+        :param default_frame:           whether or not to use the default reconstruction
+        :type default_frame:            boolean
+
+        :return:                        axes object with plotted features
+        :rtype:                         matplotlib.axes.Axes
+        """
+        # Set gplot object
+        gplot = gplately.PlotTopologies(self.reconstruction, time=reconstruction_time, coastlines=self.coastlines)
+
+        # Set zorder for coastlines. They should be plotted under seafloor grids but above velocity grids.
+        if coastlines_facecolour == "none":
+            zorder_coastlines = 2
+        else:
+            zorder_coastlines = -5
+
+        # Plot coastlines
+        # NOTE: Some reconstructions on the GPlately DataServer do not have polygons for coastlines, that's why we need to catch the exception.
+        try:
+            gplot.plot_coastlines(
+                ax,
+                facecolor = coastlines_facecolour,
+                edgecolor = coastlines_edgecolour,
+                zorder = zorder_coastlines,
+                lw = coastlines_linewidth
+            )
+        except:
+            pass
+        
+        # Plot plates 
+        if plate_boundaries_linewidth:
+            gplot.plot_all_topologies(ax, lw=plate_boundaries_linewidth, zorder=4)
+            gplot.plot_subduction_teeth(ax, zorder=4)
+            
+        return ax
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PARALLELISATION
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+    
+    # NOTE: This function is under development and not yet fully functional.
     def run_parallel(self, function_to_run):
         num_processes = multiprocessing.cpu_count()
         pool = multiprocessing.Pool(processes=num_processes)
