@@ -1757,6 +1757,9 @@ class PlateForces():
                 vmin = vmin,
                 vmax = vmax,
             )
+        
+        else:  
+            sc = None
 
         # Plot plates and coastlines
         ax = self.plot_reconstruction(

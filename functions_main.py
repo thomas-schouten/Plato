@@ -616,6 +616,10 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants, 
 
     return torques, points, slabs
 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# VELOCITIES
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants, DEBUG_MODE=False):
     # Initialise arrays to store velocities
     v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
@@ -660,6 +664,30 @@ def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_n
     v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
 
     return v_lats, v_lons, v_mags, v_azis
+
+def compute_rms_velocity(plates, points):
+    """
+    Function to calculate area-weighted root mean square velocity for a given plate.
+
+    :param plates:                  pandas.DataFrame containing plate data
+    :param points:                  pandas.DataFrame containing data of points including columns with latitude, longitude and plateID
+    :type points:                   pandas.DataFrame
+
+    :return:                        plates
+    :rtype:                         pandas.DataFrame
+    """
+    # Calculate root mean square velocity
+    for plateID in plates.plateID:
+        # Select points belonging to plate
+        selected_points = points[points.plateID == plateID]
+
+        # Calculated weighted root mean square velocity and assign to plates DataFrame
+        plates.loc[plates.plateID == plateID, "rms_velocity"] = _numpy.sqrt(
+            _numpy.sum(selected_points.v_lat ** 2 * selected_points.area) / _numpy.sum(selected_points.area) +
+            _numpy.sum(selected_points.v_lon ** 2 * selected_points.area) / _numpy.sum(selected_points.area)
+        )
+
+    return plates
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # DRIVING AND RESIDUAL TORQUES
