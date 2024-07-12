@@ -284,6 +284,19 @@ class PlateForces():
             PARALLEL_MODE = self.PARALLEL_MODE,
         )
 
+        # Calculate rms velocity
+        for reconstruction_time in self.times:
+            for key, entries in self.gpe_cases.items():
+                self.plates[reconstruction_time][key] = functions_main.compute_rms_velocity(
+                    self.plates[reconstruction_time][key],
+                    self.points[reconstruction_time][key]
+                )
+            
+                # Copy DataFrames to other cases
+                for entry in entries[1:]:
+                    self.plates[reconstruction_time][entry]["v_rms_mag"] = self.plates[reconstruction_time][key]["v_rms_mag"]
+                    self.plates[reconstruction_time][entry]["v_rms_azi"] = self.plates[reconstruction_time][key]["v_rms_azi"]
+
         # Load torques
         self.torques = setup.load_torques(
             self.torques,
@@ -857,7 +870,16 @@ class PlateForces():
                         )
 
                         # Compute velocity grid
-                        self.velocity[reconstruction_time][case] = setup.get_velocity_grid(self.points[reconstruction_time][case], self.seafloor[reconstruction_time])
+                        self.velocity[reconstruction_time][case] = setup.get_velocity_grid(
+                            self.points[reconstruction_time][case], 
+                            self.seafloor[reconstruction_time]
+                        )
+
+                        # Compute RMS speeds
+                        self.velocity[reconstruction_time][case] = functions_main.compute_rms_velocity(
+                            self.plates[reconstruction_time][case],
+                            self.points[reconstruction_time][case]
+                        )
 
                         # Enter computed slab pull values into torque dictionary
                         for plate in self.plates_of_interest:
@@ -865,21 +887,27 @@ class PlateForces():
                                 print(f"Updating torques for plate {plate}")
 
                             # Check if plate is in DataFrame
-                            if float(plate) in self.plates[reconstruction_time][key].plateID.values:
+                            if float(plate) in self.plates[reconstruction_time][case].plateID.values:
                                 # Check if value is not NaN
-                                torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
+                                torque_value = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
 
                                 if self.DEBUG_MODE:
                                     print(f"Mantle drag torque value is {torque_value}!")
 
                                 # Enter data into DataFrame
-                                self.torques[key][plate].loc[i, "mantle_drag_torque"] = torque_value
-                                self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
+                                self.torques[case][plate].loc[i, "mantle_drag_torque"] = torque_value
+                                self.torques[case][plate].loc[i, "mantle_drag_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][case].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
 
-    def optimise_torques(self):
+    def optimise_torques(self, cases: list = None):
         """
         Function to optimise torques
+
+        :param cases:                   cases to compute driving torque for
+        :type cases:                    list
         """
+        if cases is None:
+            cases = self.slab_pull_cases
+
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Optimising torques", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
                 print(f"Optimising torques at {reconstruction_time} Ma")
@@ -957,16 +985,22 @@ class PlateForces():
                                 # Enter data into DataFrame
                                 self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = torque_value
     
-    def compute_driving_torque(self):
+    def compute_driving_torque(self, cases: list = None):
         """
         Function to calculate driving torque
+
+        :param cases:                   cases to compute driving torque for
+        :type cases:                    list
         """
+        if cases is None:
+            cases = self.cases
+
         # Loop through reconstruction times
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing driving torques", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
                 print(f"Computing driving torques at {reconstruction_time} Ma")
 
-            for case in self.cases:
+            for case in cases:
                 # Calculate driving torque
                 self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "driving", self.constants)
 
@@ -988,10 +1022,16 @@ class PlateForces():
                             self.torques[case][plate].loc[i, "driving_torque"] = torque_value
                             self.torques[case][plate].loc[i, "driving_torque_opt"] = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["driving_torque_opt_mag"].values[0]
 
-    def compute_residual_torque(self):
+    def compute_residual_torque(self, cases: list = None):
         """
         Function to calculate residual torque
+
+        :param cases:                   cases to compute driving torque for
+        :type cases:                    list
         """
+        if cases is None:
+            cases = self.cases
+
         # Loop through reconstruction times
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing residual torques", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
@@ -1600,6 +1640,47 @@ class PlateForces():
         print(f"Velocity data saved to {self.dir_path}!")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# DATA EXTRACTION 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def extract_plate_data_through_time(
+            self,
+            variable,
+            plate,
+            reconstruction_times: Optional[list] = None,
+            cases: Optional[list] = None,
+        ):
+        """
+        Function to extract plate data for a given variable.
+
+        :param variable:                variable to extract
+        :type variable:                 str
+        :param plates_of_interest:      plate IDs to include in extraction
+        :type plates_of_interest:       list of integers
+        :param reconstruction_times:    reconstruction times to include in extraction
+        :type reconstruction_times:     list of integers
+        :param cases:                   cases to include in extraction
+        :type cases:                    list of strings
+
+        :return:                        array with extracted data
+        :rtype:                         numpy.ndarray
+        """
+        # Set default reconstruction times and cases
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+        
+        if cases is None:
+            cases = self.cases
+
+        # Initialise array to store data
+        data = _numpy.zeros((len(reconstruction_times), len(cases)))
+        for i, case in enumerate(cases):
+            for j, reconstruction_time in enumerate(reconstruction_times):
+                data[j,i] = self.plates[reconstruction_time][case][variable].loc[self.plates[reconstruction_time][case]["plateID"] == plate].values[0]
+
+        return data
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLOTTING 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     
@@ -2092,6 +2173,76 @@ class PlateForces():
             self,
             ax,
             torque: str,
+            plate: int,
+            normalise: Union[str, bool] = "driving_torque_opt",
+            case: Optional[str] = None,
+            **kwargs,
+        ):
+        """
+        Function to plot torque through time
+
+        :param ax:                  axes object
+        :type ax:                   matplotlib.axes.Axes
+        :param torque:              torque to plot
+        :type torque:               str
+        :param plate:               plate for which to plot the torque
+        :type plate:                int
+        :param case:                case for which to plot the torque
+        :type case:                 str
+        :param kwargs:              additional keyword arguments
+        :type kwargs:               dict
+
+        :return:                    axes object with plotted torque
+        :rtype:                     matplotlib.axes.Axes
+        """
+        # If case is not provided, just use the first case
+        if case is None:
+            case = self.cases[0]
+
+        # Check if plate is in torques dictionary
+        if plate not in self.torques[case].keys():
+            return print("Plate not in torques dictionary")
+        
+        # Check if torque is in columns
+        if torque not in self.torques[case][plate].columns:
+            return print("Torque not in columns, please choose from: ", ", ".join(self.torques[case][plate].columns))
+        
+        # Get plot data
+        data = self.torques[case][plate][torque]
+
+        if self.DEBUG_MODE:
+            print(f"{plate} before normalisation, {data}")
+
+        # Normalise torque
+        if normalise is not False:
+            data = _numpy.where(
+                self.torques[case][plate][torque] != 0.,
+                _numpy.where(
+                    self.torques[case][plate][normalise] != 0.,
+                    self.torques[case][plate][torque] / self.torques[case][plate][normalise],            
+                    0.
+                ),
+                0.
+            )
+
+            if self.DEBUG_MODE:
+                print(f"{plate} after normalisation, {data}")
+
+        # Mask zeros
+        data = _numpy.ma.masked_where(data == 0., data)
+
+        # Plot torque
+        pl = ax.plot(
+            self.times,
+            data,
+            **kwargs,
+        )
+        
+        return pl
+    
+    def plot_speed_through_time(
+            self,
+            ax,
             plate: int,
             normalise: Union[str, bool] = "driving_torque_opt",
             case: Optional[str] = None,

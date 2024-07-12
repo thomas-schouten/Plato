@@ -131,6 +131,8 @@ def get_plates(
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag"]
     
+    merged_plates[["rms_speed"]] = 0.; merged_plates[["rms_azi"]] = 0.
+    merged_plates[["slab_flux"]] = 0.; merged_plates[["sediment_flux"]] = 0.
     merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0.] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
     merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
     merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]

@@ -669,22 +669,35 @@ def compute_rms_velocity(plates, points):
     """
     Function to calculate area-weighted root mean square velocity for a given plate.
 
-    :param plates:                  pandas.DataFrame containing plate data
-    :param points:                  pandas.DataFrame containing data of points including columns with latitude, longitude and plateID
+    :param plates:                  plate data
+    :type plates:                   pandas.DataFrame
+    :param points:                  points data including columns with latitude, longitude and plateID
     :type points:                   pandas.DataFrame
 
     :return:                        plates
     :rtype:                         pandas.DataFrame
     """
     # Calculate root mean square velocity
-    for plateID in plates.plateID:
+    for plateID in plates.plateID.values:
         # Select points belonging to plate
         selected_points = points[points.plateID == plateID]
 
-        # Calculated weighted root mean square velocity and assign to plates DataFrame
-        plates.loc[plates.plateID == plateID, "rms_velocity"] = _numpy.sqrt(
-            _numpy.sum(selected_points.v_lat ** 2 * selected_points.area) / _numpy.sum(selected_points.area) +
-            _numpy.sum(selected_points.v_lon ** 2 * selected_points.area) / _numpy.sum(selected_points.area)
+        # Calculate RMS speed
+        plates.loc[plates.plateID == plateID, "v_rms_mag"] = (
+            selected_points.v_mag * 
+            selected_points.segment_length_lat * 
+            selected_points.segment_length_lon
+        ).sum() / (
+            selected_points.segment_length_lat * 
+            selected_points.segment_length_lon
+        ).sum()
+
+        # Calculate RMS azimuth
+        plates.loc[plates.plateID == plateID, "v_rms_azi"] = _numpy.rad2deg(
+            _numpy.arctan2(
+                (selected_points.v_lat * selected_points.segment_length_lat).sum(),
+                (selected_points.v_lon * selected_points.segment_length_lon).sum()
+            )
         )
 
     return plates
@@ -927,6 +940,30 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     )
     
     return torques
+
+def compute_subduction_flux(
+        plates,
+        slabs,
+        type: str = "slab" or "sediment",
+    ):
+    """
+    Function to calculate subduction flux at trench points.
+
+    :param plates:                  plate data
+    :type plates:                   pandas.DataFrame
+    :param slabs:                   slab data
+    :type slabs:                    pandas.DataFrame
+    :param type:                    type of subduction flux to calculate
+    :type type:                     str
+
+    :return:                        plates
+    :rtype:                         pandas.DataFrame
+    """
+    # Calculate subduction flux
+    for plateID in plates.plateID.values:
+        selected_slabs = slabs[slabs.lower_plateID == plateID]
+        if type == "slab":
+            plates.loc[plates.plateID == plateID, "slab_flux"] = selected_slabs.lower_plate_thickness * selected_slabs.
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CONVERSIONS
