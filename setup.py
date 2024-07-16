@@ -8,6 +8,7 @@
 # Import libraries
 # Standard libraries
 import contextlib
+import gc
 import io
 import os
 import tempfile
@@ -126,13 +127,15 @@ def get_plates(
     merged_plates = merged_plates.sort_values(by="plateID")
     merged_plates = merged_plates.reset_index(drop=True)
 
+    # Initialise columns to store other whole-plate properties
+    merged_plates["v_rms_mag"] = 0.; merged_plates["v_rms_azi"] = 0.
+    merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
+
     # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
     torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "driving", "residual"]
     axes = ["x", "y", "z", "mag"]
-    coords = ["lat", "lon", "mag"]
+    coords = ["lat", "lon", "mag", "azi"]
     
-    merged_plates[["rms_speed"]] = 0.; merged_plates[["rms_azi"]] = 0.
-    merged_plates[["slab_flux"]] = 0.; merged_plates[["sediment_flux"]] = 0.
     merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0.] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
     merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
     merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
@@ -403,6 +406,15 @@ def get_plateIDs(
 
         # Insert plate IDs into array
         plateIDs[no_plateID] = no_plateID_grid.plate_id
+
+        # Delete temporary variables to free up memory
+        del no_plateID_lat, no_plateID_lon, no_plateID_grid
+    
+    # Delete temporary variables to free up memory
+    del grid, inside_points
+
+    # Garbage collection
+    gc.collect()
     
     return plateIDs
 
@@ -501,6 +513,7 @@ def get_topology_geometries(
     shutil.rmtree(temp_dir)
 
     return topology_geometries
+
 def get_plate_names(
         plate_id_list: Union[list or _numpy.array],
     ):
@@ -1025,100 +1038,6 @@ def load_data(
                     available_cases.append(unavailable_case)
 
     return data
-
-def load_torques(
-        torques: dict,
-        reconstruction_times: list,
-        cases: list,
-        plates: dict,
-        plates_of_interest: list,
-        DEBUG_MODE: Optional[bool] = False
-    ):
-    """
-    Function to load torques DataFrames.
-
-    :param torques:                 dictionary to store the torques DataFrames.
-    :type torques:                  dict
-    :param reconstruction_times:    reconstruction times.
-    :type reconstruction_times:     list or numpy.array of ints
-    :param cases:                   list of cases to process.
-    :type cases:                    list of str
-    :param plates:                  dictionary of plates DataFrames indexed by reconstruction time and case.
-    :type plates:                   dict
-    :param plates_of_interest:      plates to process.
-    :type plates_of_interest:       list of int
-    :param DEBUG_MODE:              whether or not to run in debug mode
-    :type DEBUG_MODE:               bool
-
-    :return:                        dictionary containing the torques DataFrames.
-    :rtype:                         dict
-
-    This function always reinitialises the torques DataFrames, as the information in them is also stored in the Plates DataFrames and can be recalculated from there.
-    """
-    # Define torque types
-    torque_types = [
-        "slab_pull_torque_mag", 
-        "slab_pull_torque_opt_mag", 
-        "GPE_torque_mag", 
-        "slab_bend_torque_mag", 
-        "mantle_drag_torque_mag", 
-        "mantle_drag_torque_opt_mag", 
-        "driving_torque_mag",
-        "driving_torque_opt_mag",
-        "residual_torque_mag",
-        "residual_torque_opt_mag",
-    ]
-
-    # Loop through cases
-    for case in tqdm(cases, desc="Loading torques", disable=DEBUG_MODE):
-        if DEBUG_MODE:
-            print(f"Loading torques for case: {case}")
-
-        # Initialise dictionary to store torques for case
-        torques[case] = {}
-
-        # Loop through plates of interest
-        for plate in plates_of_interest:
-            if DEBUG_MODE:
-                print(f"Loading torques for plate: {plate}")
-
-            # Initialise array to store torques for plate
-            torque_data = _numpy.zeros((len(reconstruction_times), 11))
-
-            # Loop through reconstruction times
-            for i, reconstruction_time in enumerate(reconstruction_times):
-                if DEBUG_MODE:
-                    print(f"Loading torques for {reconstruction_time} Ma...")
-
-                # Store reconstruction time in first column of array
-                torque_data[i, 0] = reconstruction_time
-
-                # Check if plate is in plates DataFrame
-                if plate in plates[reconstruction_time][case].plateID.values:
-                    torque_data[i, 1:11] = plates[reconstruction_time][case].loc[
-                        plates[reconstruction_time][case].plateID == plate, 
-                        torque_types
-                    ].values[0]
-
-            # Convert to pandas DataFrame
-            torques[case][plate] = _pandas.DataFrame(
-                torque_data, 
-                columns=[
-                    "age", 
-                    "slab_pull_torque", 
-                    "slab_pull_torque_opt", 
-                    "GPE_torque", 
-                    "slab_bend_torque", 
-                    "mantle_drag_torque", 
-                    "mantle_drag_torque_opt", 
-                    "driving_torque",
-                    "driving_torque_opt",
-                    "residual_torque",
-                    "residual_torque_opt"
-                ]
-            )
-
-    return torques
 
 def load_grid(
         grid: dict,

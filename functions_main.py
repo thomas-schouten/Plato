@@ -526,7 +526,7 @@ def sample_ages(lat, lon, seafloor, coords=["latitude", "longitude"]):
 # BASAL TRACTIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_mantle_drag_force(torques, points, slabs, options, mech, constants, DEBUG_MODE=False):
+def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, DEBUG_MODE=False):
     """
     Function to calculate mantle drag force at points
 
@@ -553,49 +553,54 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants, 
     else:
         # Calculate residual torque
         for axis in ["_x", "_y", "_z"]:
-            torques["mantle_drag_torque_opt" + axis] = (
-                _numpy.nan_to_num(torques["slab_pull_torque" + axis] * options["Slab pull constant"]) + 
-                _numpy.nan_to_num(torques["GPE_torque" + axis]) + 
-                _numpy.nan_to_num(torques["slab_bend_torque" + axis])) * -1
-        torques["mantle_drag_torque_opt_mag"] = xyz2mag(torques["mantle_drag_torque_opt_x"], torques["mantle_drag_torque_opt_y"], torques["mantle_drag_torque_opt_z"])
+            plates["mantle_drag_torque_opt" + axis] = (
+                _numpy.nan_to_num(plates["slab_pull_torque" + axis] * options["Slab pull constant"]) + 
+                _numpy.nan_to_num(plates["GPE_torque" + axis]) + 
+                _numpy.nan_to_num(plates["slab_bend_torque" + axis])) * -1
+        plates["mantle_drag_torque_opt_mag"] = xyz2mag(plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"])
         
         # Convert to centroid
-        centroid_position = lat_lon2xyz(torques.centroid_lat, torques.centroid_lon, constants)
+        centroid_position = lat_lon2xyz(plates.centroid_lat, plates.centroid_lon, constants)
         centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
         
-        # Calculate force from cross product of torques with centroid position
-        summed_torques_cartesian = _numpy.array([torques["mantle_drag_torque_opt_x"], torques["mantle_drag_torque_opt_y"], torques["mantle_drag_torque_opt_z"]])
-        summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.array(torques.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
+        # Calculate force from cross product of plates with centroid position
+        summed_torques_cartesian = _numpy.array([plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"]])
+        summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.array(plates.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
         force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
         velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)
 
         # Calculate force at centroid
-        torques["mantle_drag_force_lat"], torques["mantle_drag_force_lon"], torques["mantle_drag_force_mag"], torques["mantle_drag_force_azi"] = vector_xyz2lat_lon(
-            torques.centroid_lat, torques.centroid_lon, force_at_centroid, constants
+        plates["mantle_drag_force_lat"], plates["mantle_drag_force_lon"], plates["mantle_drag_force_mag"], plates["mantle_drag_force_azi"] = vector_xyz2lat_lon(
+            plates.centroid_lat, plates.centroid_lon, force_at_centroid, constants
         )
 
         # Calculate velocity at centroid and convert to cm/a
-        torques["centroid_v_lat"], torques["centroid_v_lon"], torques["centroid_v_mag"], torques["centroid_v_azi"] = vector_xyz2lat_lon(torques.centroid_lat, torques.centroid_lon, velocity_at_centroid, constants)
-        torques["centroid_v_lat"] *= constants.m_s2cm_a; torques["centroid_v_lon"] *= constants.m_s2cm_a; torques["centroid_v_mag"] *= constants.m_s2cm_a
+        plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"] = vector_xyz2lat_lon(plates.centroid_lat, plates.centroid_lon, velocity_at_centroid, constants)
+        plates["centroid_v_lat"] *= constants.m_s2cm_a; plates["centroid_v_lon"] *= constants.m_s2cm_a; plates["centroid_v_mag"] *= constants.m_s2cm_a
 
         # Get velocity of upper and lower plates
-        plates = ["upper", "lower"]
-        for plate in plates:
+        converging_plates = ["upper", "lower"]
+        for converging_plate in converging_plates:
             if DEBUG_MODE:
-                print(f"Calculating {plate} plate velocities at trenches")
+                print(f"Calculating {converging_plate} plate velocities at trenches")
 
             slab_velocities = compute_velocities(
                 slabs.lat,
                 slabs.lon,
-                slabs[f"{plate}_plateID"],
-                torques,
+                slabs[f"{converging_plate}_plateID"],
+                plates,
                 summed_torques_cartesian_normalised,
                 options,
                 constants,
                 DEBUG_MODE,
             )
 
-            slabs[f"v_{plate}_plate_lat"], slabs[f"v_{plate}_plate_lon"], slabs[f"v_{plate}_plate_mag"], slabs[f"v_{plate}_plate_azi"] = slab_velocities
+            slabs[f"v_{converging_plate}_plate_lat"], slabs[f"v_{converging_plate}_plate_lon"], slabs[f"v_{converging_plate}_plate_mag"], slabs[f"v_{converging_plate}_plate_azi"] = slab_velocities
+
+        # Calculate convergence rates
+        slabs.v_convergence_lon = slabs.v_upper_plate_lon - slabs.v_lower_plate_lon
+        slabs.v_convergence_lat = slabs.v_upper_plate_lat - slabs.v_lower_plate_lat
+        slabs.v_convergence_mag = _numpy.sqrt(slabs.v_convergence_lon ** 2 + slabs.v_convergence_lat ** 2)
 
         # Get velocity at points
         if DEBUG_MODE:
@@ -605,7 +610,7 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants, 
             points.lat,
             points.lon,
             points.plateID,
-            torques,
+            plates,
             summed_torques_cartesian_normalised,
             options,
             constants,
@@ -614,13 +619,40 @@ def compute_mantle_drag_force(torques, points, slabs, options, mech, constants, 
 
         points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"] = point_velocities
 
-    return torques, points, slabs
+        # Calculate subduction fluxes
+        if DEBUG_MODE:
+            print(f"Calculating subduction fluxes")
+        
+        for type in ["slab", "sediment"]:
+            plates = compute_subduction_flux(plates, slabs, type)
+
+    return plates, points, slabs
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # VELOCITIES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_normalised, options, constants, DEBUG_MODE=False):
+def compute_velocities(lats, lons, plateIDs, plates, summed_torques_cartesian_normalised, options, constants, DEBUG_MODE=False):
+    """
+    Function to compute velocities from a Cartesian vector at a set of locations.
+
+    :param lats:                                latitudes of points
+    :type lats:                                 numpy.array
+    :param lons:                                longitudes of points
+    :type lons:                                 numpy.array
+    :param plateIDs:                            plate IDs of points
+    :type plateIDs:                             numpy.array
+    :param plates:                              plate data
+    :type plates:                               pandas.DataFrame
+    :param summed_torques_cartesian_normalised: summed torques in Cartesian coordinates
+    :type summed_torques_cartesian_normalised:  numpy.array
+    :param options:                             options
+    :type options:                              dict
+    :param constants:                           constants used in calculations
+    :type constants:                            class
+    :param DEBUG_MODE:                          whether or not to run in debug mode
+    :type DEBUG_MODE:                           bool
+    """
     # Initialise arrays to store velocities
     v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
     v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
@@ -628,9 +660,12 @@ def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_n
     # Loop through points
     for i, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
         # Check if upper plate is in torques
-        if plateID in torques.plateID.values:
+        if DEBUG_MODE:
+            print(plates)
+
+        if plateID in plates.plateID.values:
             # Get the index of the lower plate in the torques DataFrame
-            n = _numpy.where(torques.plateID.values == plateID)
+            n = _numpy.where(plates.plateID.values == plateID)
             velocity_xyz = -1 * _numpy.array([
                 summed_torques_cartesian_normalised[:,n][0][0][0],
                 summed_torques_cartesian_normalised[:,n][1][0][0],
@@ -638,7 +673,7 @@ def compute_velocities(lats, lons, plateIDs, torques, summed_torques_cartesian_n
             ])
 
             # Check if the area condition is satisfied
-            if torques.area.values[n] >= options["Minimum plate area"] and summed_torques_cartesian_normalised[:,n][0][0] != 0 and summed_torques_cartesian_normalised[:,n][0][0] != _numpy.nan:
+            if plates.area.values[n] >= options["Minimum plate area"] and summed_torques_cartesian_normalised[:,n][0][0] != 0 and summed_torques_cartesian_normalised[:,n][0][0] != _numpy.nan:
                 # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
                 point_velocity = vector_xyz2lat_lon(
                     [lat],
@@ -706,18 +741,18 @@ def compute_rms_velocity(plates, points):
 # DRIVING AND RESIDUAL TORQUES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def sum_torque(torques, torque_type, constants):
+def sum_torque(plates, torque_type, constants):
     """
     Function to calculate driving and residual torque on plates.
 
-    :param torques:         pandas.DataFrame containing torque data
-    :type torques:          pandas.DataFrame
+    :param plates:          plate data
+    :type plates:           pandas.DataFrame
     :param torque_type:     Type of torque to compute ("driving" or "residual")
     :type torque_type:      str
     :param constants:       constants used in calculations
     :type constants:        class
 
-    :return:                torques
+    :return:                plate data
     :rtype:                 pandas.DataFrame
     """
     # Determine torque components based on torque type
@@ -732,63 +767,63 @@ def sum_torque(torques, torque_type, constants):
 
     # Calculate torque in Cartesian coordinates
     for axis in ["_x", "_y", "_z"]:
-        torques[f"{torque_type}_torque{axis}"] = sum(
-            _numpy.nan_to_num(torques[component + axis]) for component in torque_components
+        plates[f"{torque_type}_torque{axis}"] = sum(
+            _numpy.nan_to_num(plates[component + axis]) for component in torque_components
         )
-        torques[f"{torque_type}_torque_opt{axis}"] = sum(
-            _numpy.nan_to_num(torques[component + axis]) for component in torque_opt_components
+        plates[f"{torque_type}_torque_opt{axis}"] = sum(
+            _numpy.nan_to_num(plates[component + axis]) for component in torque_opt_components
         )
     
     # Calculate torque magnitude
-    torques[f"{torque_type}_torque_mag"] = xyz2mag(
-        torques[f"{torque_type}_torque_x"], 
-        torques[f"{torque_type}_torque_y"], 
-        torques[f"{torque_type}_torque_z"]
+    plates[f"{torque_type}_torque_mag"] = xyz2mag(
+        plates[f"{torque_type}_torque_x"], 
+        plates[f"{torque_type}_torque_y"], 
+        plates[f"{torque_type}_torque_z"]
     )
-    torques[f"{torque_type}_torque_opt_mag"] = xyz2mag(
-        torques[f"{torque_type}_torque_opt_x"], 
-        torques[f"{torque_type}_torque_opt_y"], 
-        torques[f"{torque_type}_torque_opt_z"]
+    plates[f"{torque_type}_torque_opt_mag"] = xyz2mag(
+        plates[f"{torque_type}_torque_opt_x"], 
+        plates[f"{torque_type}_torque_opt_y"], 
+        plates[f"{torque_type}_torque_opt_z"]
     )
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
-    centroid_position = lat_lon2xyz(torques.centroid_lat, torques.centroid_lon, constants)
+    centroid_position = lat_lon2xyz(plates.centroid_lat, plates.centroid_lon, constants)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
     for opt in ["", "opt_"]:
         summed_torques_cartesian = _numpy.array([
-            torques[f"{torque_type}_torque_{opt}x"], 
-            torques[f"{torque_type}_torque_{opt}y"], 
-            torques[f"{torque_type}_torque_{opt}z"]
+            plates[f"{torque_type}_torque_{opt}x"], 
+            plates[f"{torque_type}_torque_{opt}y"], 
+            plates[f"{torque_type}_torque_{opt}z"]
         ])
         force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
 
         # Compute force magnitude at centroid
-        torques[f"{torque_type}_force_{opt}lat"], torques[f"{torque_type}_force_{opt}lon"], torques[f"{torque_type}_force_{opt}mag"], torques[f"{torque_type}_force_{opt}azi"] = vector_xyz2lat_lon(
-            torques.centroid_lat, torques.centroid_lon, force_at_centroid, constants
+        plates[f"{torque_type}_force_{opt}lat"], plates[f"{torque_type}_force_{opt}lon"], plates[f"{torque_type}_force_{opt}mag"], plates[f"{torque_type}_force_{opt}azi"] = vector_xyz2lat_lon(
+            plates.centroid_lat, plates.centroid_lon, force_at_centroid, constants
         )
 
-    return torques
+    return plates
 
-def optimise_torques(torques, mech, options):
+def optimise_torques(plates, mech, options):
     """
     Function to optimise torques
 
-    :param torques:                 pandas.DataFrame containing
-    :type torques:                  pandas.DataFrame
-    :param mech:                    mechanical parameters used in calculations
-    :type mech:                     class
-    :param options:                 dictionary with options
-    :type options:                  dict
+    :param plates:          plate data
+    :type plates:           pandas.DataFrame
+    :param mech:            mechanical parameters used in calculations
+    :type mech:             class
+    :param options:         options
+    :type options:          dict
 
-    :return:                        torques
-    :rtype:                         pandas.DataFrame
+    :return:                plate data
+    :rtype:                 pandas.DataFrame
     """
     for axis in ["_x", "_y", "_z", "_mag"]:
-        torques["slab_pull_torque_opt" + axis] = torques["slab_pull_torque" + axis].values * options["Slab pull constant"]
-        torques["mantle_drag_torque_opt" + axis] = torques["mantle_drag_torque" + axis].values * options["Mantle viscosity"] / mech.La
+        plates["slab_pull_torque_opt" + axis] = plates["slab_pull_torque" + axis].values * options["Slab pull constant"]
+        plates["mantle_drag_torque_opt" + axis] = plates["mantle_drag_torque" + axis].values * options["Mantle viscosity"] / mech.La
 
-    return torques
+    return plates
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # GENERAL FUNCTIONS
@@ -963,7 +998,12 @@ def compute_subduction_flux(
     for plateID in plates.plateID.values:
         selected_slabs = slabs[slabs.lower_plateID == plateID]
         if type == "slab":
-            plates.loc[plates.plateID == plateID, "slab_flux"] = selected_slabs.lower_plate_thickness * selected_slabs.
+            plates.loc[plates.plateID == plateID, "slab_flux"] = (selected_slabs.lower_plate_thickness * selected_slabs.v_lower_plate_mag).sum()
+        
+        elif type == "sediment":
+            plates.loc[plates.plateID == plateID, "sediment_flux"] = (selected_slabs.sediment_thickness * selected_slabs.v_lower_plate_mag).sum()
+
+    return plates
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CONVERSIONS

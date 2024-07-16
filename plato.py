@@ -297,16 +297,6 @@ class PlateForces():
                     self.plates[reconstruction_time][entry]["v_rms_mag"] = self.plates[reconstruction_time][key]["v_rms_mag"]
                     self.plates[reconstruction_time][entry]["v_rms_azi"] = self.plates[reconstruction_time][key]["v_rms_azi"]
 
-        # Load torques
-        self.torques = setup.load_torques(
-            self.torques,
-            self.times,
-            self.cases,
-            self.plates,
-            self.plates_of_interest,
-            DEBUG_MODE = self.DEBUG_MODE,
-        )
-
         # Load or initialise seafloor
         self.seafloor = setup.load_grid(
             self.seafloor,
@@ -455,18 +445,32 @@ class PlateForces():
 # SAMPLING GRIDS 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def sample_slabs(self):
+    def sample_slabs(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
         Samples seafloor age (and optionally, sediment thickness) the lower plate along subduction zones
         The results are stored in the `slabs` DataFrame, specifically in the `lower_plate_age`, `sediment_thickness`, and `lower_plate_thickness` fields for each case and reconstruction time.
+
+        :param cases:   cases to sample slabs for (defaults to slab pull cases if not specified).
+        :type cases:    list
         """
+        # Make iterable
+        if cases is None:
+            iterable = self.slab_pull_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
+
         # Check options for slabs
         for reconstruction_time in tqdm(self.times, desc="Sampling slabs", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
                 print(f"Sampling slabs at {reconstruction_time} Ma")
 
             # Select cases
-            for key, entries in self.slab_pull_cases.items():
+            for key, entries in iterable.items():
                 if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
                     # Sample age and sediment thickness of lower plate from seafloor
                     self.slabs[reconstruction_time][key]["lower_plate_age"], self.slabs[reconstruction_time][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
@@ -487,26 +491,57 @@ class PlateForces():
                         crust = False, 
                         water = False
                     )
-                
-                    for entry in entries[1:]:
-                        self.slabs[reconstruction_time][entry]["lower_plate_age"] = self.slabs[reconstruction_time][key]["lower_plate_age"]
-                        self.slabs[reconstruction_time][entry]["sediment_thickness"] = self.slabs[reconstruction_time][key]["sediment_thickness"]
-                        self.slabs[reconstruction_time][entry]["lower_plate_thickness"] = self.slabs[reconstruction_time][key]["lower_plate_thickness"]
 
+                    # Calculate slab flux
+                    self.plates[reconstruction_time][key] = functions_main.compute_subduction_flux(
+                        self.plates[reconstruction_time][key],
+                        self.slabs[reconstruction_time][key],
+                        type="slab"
+                    )
+
+                    if self.options[key]["Sediment subduction"]:
+                        # Calculate sediment subduction
+                        self.plates[reconstruction_time][key] = functions_main.compute_subduction_flux(
+                            self.plates[reconstruction_time][key],
+                            self.slabs[reconstruction_time][key],
+                            type="sediment"
+                        )
+
+                    if len(entries) > 1 and cases is None:
+                        for entry in entries[1:]:
+                            self.slabs[reconstruction_time][entry]["lower_plate_age"] = self.slabs[reconstruction_time][key]["lower_plate_age"]
+                            self.slabs[reconstruction_time][entry]["sediment_thickness"] = self.slabs[reconstruction_time][key]["sediment_thickness"]
+                            self.slabs[reconstruction_time][entry]["lower_plate_thickness"] = self.slabs[reconstruction_time][key]["lower_plate_thickness"]
+
+        # Set flag to True
         self.sampled_slabs = True
 
-    def sample_upper_plate(self):
+    def sample_upper_plate(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
         Samples seafloor age the upper plate along subduction zones
         The results are stored in the `slabs` DataFrame, specifically in the `upper_plate_age`, `upper_plate_thickness` fields for each case and reconstruction time.
+
+        :param cases:   cases to sample upper plates for (defaults to slab pull cases if not specified).
+        :type cases:    list
         """
+        # Make iterable
+        if cases is None:
+            iterable = self.gpe_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
+
         # Loop through valid times    
         for reconstruction_time in tqdm(self.times, desc="Sampling upper plates", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
                 print(f"Sampling overriding plate at {reconstruction_time} Ma")
 
             # Select cases
-            for key, entries in self.slab_pull_cases.items():
+            for key, entries in iterable.items():
                 # Check whether to output erosion rate and sediment thickness
                 if self.options[key]["Sediment subduction"] and self.options[key]["Sample erosion grid"] in self.seafloor[reconstruction_time].data_vars:
                     # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
@@ -531,58 +566,102 @@ class PlateForces():
                     )
                 
                 # Copy DataFrames to other cases
-                for entry in entries[1:]:
-                    self.slabs[reconstruction_time][entry]["upper_plate_age"] = self.slabs[reconstruction_time][key]["upper_plate_age"]
-                    self.slabs[reconstruction_time][entry]["continental_arc"] = self.slabs[reconstruction_time][key]["continental_arc"]
-                    if self.options[key]["Sample erosion grid"]:
-                        self.slabs[reconstruction_time][entry]["erosion_rate"] = self.slabs[reconstruction_time][key]["erosion_rate"]
-                        self.slabs[reconstruction_time][entry]["sediment_thickness"] = self.slabs[reconstruction_time][key]["sediment_thickness"]
+                if len(entries) > 1 and cases is None:
+                    for entry in entries[1:]:
+                        self.slabs[reconstruction_time][entry]["upper_plate_age"] = self.slabs[reconstruction_time][key]["upper_plate_age"]
+                        self.slabs[reconstruction_time][entry]["continental_arc"] = self.slabs[reconstruction_time][key]["continental_arc"]
+                        if self.options[key]["Sample erosion grid"]:
+                            self.slabs[reconstruction_time][entry]["erosion_rate"] = self.slabs[reconstruction_time][key]["erosion_rate"]
+                            self.slabs[reconstruction_time][entry]["sediment_thickness"] = self.slabs[reconstruction_time][key]["sediment_thickness"]
         
+        # Set flag to True
         self.sampled_upper_plates = True
 
-    def sample_points(self):
+    def sample_points(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
         Samples seafloor age at points
         The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and reconstruction time.
+
+        :param cases:   cases to sample points for (defaults to gpe cases if not specified).
+        :type cases:    list
         """
+        # Make iterable
+        if cases is None:
+            iterable = self.gpe_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
+
         # Loop through valid times
         for reconstruction_time in tqdm(self.times, desc="Sampling points", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
                 print(f"Sampling points at {reconstruction_time} Ma")
 
-            for key, entries in self.gpe_cases.items():
+            for key, entries in iterable.items():
+                if self.DEBUG_MODE:
+                    print(f"Sampling points for case {key} and entries {entries}...")
+
                 # Select dictionaries
                 self.seafloor[reconstruction_time] = self.seafloor[reconstruction_time]
                 
+                # Sample seafloor age at points
                 self.points[reconstruction_time][key]["seafloor_age"] = functions_main.sample_ages(self.points[reconstruction_time][key].lat, self.points[reconstruction_time][key].lon, self.seafloor[reconstruction_time]["seafloor_age"])
-                for entry in entries[1:]:
-                    self.points[reconstruction_time][entry]["seafloor_age"] = self.points[reconstruction_time][key]["seafloor_age"]
+                
+                # Copy DataFrames to other cases
+                if len(entries) > 1 and cases is None:
+                    for entry in entries[1:]:
+                        self.points[reconstruction_time][entry]["seafloor_age"] = self.points[reconstruction_time][key]["seafloor_age"]
 
+        # Set flag to True
         self.sampled_points = True
 
-    def sample_all(self):
+    def sample_all(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
-        Samples all relevant data from the seafloor to perform torque computation
+        Samples all relevant data from the seafloor to perform torque computation.
+
+        :param cases:   cases to sample data for (defaults to None if not specified).
+        :type cases:    list
         """
-        self.sample_slabs()
-        self.sample_upper_plate()
-        self.sample_points()
+        self.sample_slabs(cases)
+        self.sample_upper_plate(cases)
+        self.sample_points(cases)
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # COMPUTING TORQUES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def compute_slab_pull_torque(self):
+    def compute_slab_pull_torque(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
-        Compute slab pull torque
+        Compute slab pull torque.
+
+        :param cases:   cases to compute slab pull torque for (defaults to slab pull cases if not specified).
+        :type cases:    list
         """
         # Check if upper plates have been sampled already
         if self.sampled_upper_plates == False:
-            self.sample_upper_plate()
+            self.sample_upper_plate(cases)
 
         # Check if slabs have been sampled already
         if self.sampled_slabs == False:
-            self.sample_slabs()
+            self.sample_slabs(cases)
+
+        # Make iterable
+        if cases is None:
+            iterable = self.slab_pull_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing slab pull torques", disable=self.DEBUG_MODE):
@@ -590,9 +669,11 @@ class PlateForces():
                 print(f"Computing slab pull torques at {reconstruction_time} Ma")
 
             # Loop through slab pull cases
-            for key, entries in self.slab_pull_cases.items():
-                if self.DEBUG_MODE:
+            for key, entries in iterable.items():
+                if self.DEBUG_MODE and cases is None:
                     print(f"Computing slab pull torques for cases {entries}")
+                else:
+                    print(f"Computing slab pull torques for case {key}")
 
                 if self.options[key]["Slab pull torque"]:
                     # Calculate slab pull torque
@@ -617,7 +698,7 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    if len(entries) > 1:
+                    if len(entries) > 1 and cases is None:
                         [[self.slabs[reconstruction_time][entry].update(
                             {"slab_pull_force_" + coord: self.slabs[reconstruction_time][key]["slab_pull_force_" + coord]}
                         ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
@@ -628,31 +709,27 @@ class PlateForces():
                             {"slab_pull_torque_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-                    # Enter computed slab pull values into torque dictionary
-                    for plate in self.plates_of_interest:
-                        if self.DEBUG_MODE:
-                            print(f"Updating torques for plate {plate}")
-
-                        # Check if plate is in DataFrame
-                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
-                            # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_mag"].values[0]
-
-                            if self.DEBUG_MODE:
-                                    print(f"Slab pull torque value for {plate} is {torque_value}!")
-
-                            if torque_value != 0. and torque_value != _numpy.nan:
-                                # Enter data into DataFrame
-                                self.torques[key][plate].loc[i, "slab_pull_torque"] = torque_value
-                                self.torques[key][plate].loc[i, "slab_pull_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_opt_mag"].values[0]
-
-    def compute_slab_bend_torque(self):
+    def compute_slab_bend_torque(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
-        Compute slab bend torque
+        Compute slab bend torque.
+
+        :param cases:   cases to compute slab bend torque for (defaults to slab bend cases if not specified).
+        :type cases:    list
         """
         # Check if slabs have been sampled already
         if self.sampled_slabs == False:
-            self.sample_slabs()
+            self.sample_slabs(cases)
+
+        # Make iterable
+        if cases is None:
+            iterable = self.gpe_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing slab bend torques", disable=self.DEBUG_MODE):
@@ -660,7 +737,7 @@ class PlateForces():
                 print(f"Computing slab bend torques at {reconstruction_time} Ma")
 
             # Loop through slab bend cases
-            for key, entries in self.slab_bend_cases.items():
+            for key, entries in iterable.items():
                 if self.DEBUG_MODE:
                     print(f"Computing slab bend torques for cases {entries}")
 
@@ -681,7 +758,7 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    if len(entries) > 1:
+                    if len(entries) > 1 and cases is None:
                         [self.slabs[reconstruction_time][entry].update(
                             {"slab_bend_force_" + coord: self.slabs[reconstruction_time][key]["slab_bend_force_" + coord]}
                         ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
@@ -692,30 +769,27 @@ class PlateForces():
                             {"slab_bend_torque_" + axis: self.plates[reconstruction_time][key]["slab_bend_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
 
-                    # Enter computed slab pull values into torque dictionary
-                    for plate in self.plates_of_interest:
-                        if self.DEBUG_MODE:
-                            print(f"Updating torques for plate {plate}")
-
-                        # Check if plate is in DataFrame
-                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
-                            # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_bend_torque_mag"].values[0]
-
-                            if self.DEBUG_MODE:
-                                    print(f"Slab bend torque value for {plate} is {torque_value}!")
-
-                            if torque_value != 0. and torque_value != _numpy.nan:
-                                # Enter data into DataFrame
-                                self.torques[key][plate].loc[i, "slab_bend_torque"] = torque_value
-
-    def compute_gpe_torque(self):
+    def compute_gpe_torque(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
-        Function to compute gravitational potential energy (GPE) torque
+        Function to compute gravitational potential energy (GPE) torque.
+
+        :param cases:   cases to compute GPE torque for (defaults to GPE cases if not specified).
+        :type cases:    list
         """
         # Check if points have been sampled
-        if self.sampled_points == False:
-            self.sample_points()
+        if cases is None and self.sampled_points == False:
+            self.sample_points(cases)
+
+        # Make iterable
+        if cases is None:
+            iterable = self.mantle_drag_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing GPE torques", disable=self.DEBUG_MODE):
@@ -723,7 +797,7 @@ class PlateForces():
                 print(f"Computing slab bend torques at {reconstruction_time} Ma")
 
             # Loop through gpe cases
-            for key, entries in self.gpe_cases.items():
+            for key, entries in iterable.items():
                 if self.DEBUG_MODE:
                     print(f"Computing GPE torque for cases {entries}")
 
@@ -744,7 +818,7 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    if len(entries) > 1:
+                    if len(entries) > 1 and cases is None:
                         [[self.points[reconstruction_time][entry].update(
                             {"GPE_force_" + coord: self.points[reconstruction_time][key]["GPE_force_" + coord]}
                         ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
@@ -752,26 +826,15 @@ class PlateForces():
                             {"GPE_torque_" + axis: self.plates[reconstruction_time][key]["GPE_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-                    # Enter computed slab pull values into torque dictionary
-                    for plate in self.plates_of_interest:
-                        if self.DEBUG_MODE:
-                            print(f"Updating torques for plate {plate}")
-
-                        # Check if plate is in DataFrame
-                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
-                            # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["GPE_torque_mag"].values[0]
-
-                            if self.DEBUG_MODE:
-                                    print(f"GPE torque value for {plate} is {torque_value}!")
-
-                            if torque_value != 0. and torque_value != _numpy.nan:
-                                # Enter data into DataFrame
-                                self.torques[key][plate].loc[i, "GPE_torque"] = torque_value
-
-    def compute_mantle_drag_torque(self):
+    def compute_mantle_drag_torque(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
         Function to calculate mantle drag torque
+
+        :param cases:   cases to compute mantle drag torque for (defaults to mantle drag cases if not specified).
+        :type cases:    list
         """
         # Loop through reconstruction times
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing mantle drag torques", disable=self.DEBUG_MODE):
@@ -812,30 +875,13 @@ class PlateForces():
                         )
 
                         # Enter mantle drag torque in other cases
-                        if len(entries) > 1:
-                            [[self.points[reconstruction_time][entry].update(
-                                {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
-                            ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                            [[self.plates[reconstruction_time][entry].update(
-                                {"mantle_drag_torque_" + coord: self.plates[reconstruction_time][key]["mantle_drag_torque_" + coord]}
-                            ) for coord in ["x", "y", "z", "mag"]] for entry in entries[1:]]
-
-                        # Enter computed slab pull values into torque dictionary
-                        for plate in self.plates_of_interest:
-                            if self.DEBUG_MODE:
-                                print(f"Updating torques for plate {plate}")
-
-                            # Check if plate is in DataFrame
-                            if float(plate) in self.plates[reconstruction_time][key].plateID.values:
-                                # Check if value is not NaN
-                                torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
-
-                                if self.DEBUG_MODE:
-                                    print(f"Torque value for {plate} is {torque_value}!")
-
-                                if torque_value != 0. or torque_value != _numpy.nan:
-                                    # Enter data into DataFrame
-                                    self.torques[key][plate].loc[i, "mantle_drag_torque"] = torque_value
+                        if len(entries) > 1 and cases is None:
+                                [[self.points[reconstruction_time][entry].update(
+                                    {"mantle_drag_force_" + coord: self.points[reconstruction_time][key]["mantle_drag_force_" + coord]}
+                                ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
+                                [[self.plates[reconstruction_time][entry].update(
+                                    {"mantle_drag_torque_" + coord: self.plates[reconstruction_time][key]["mantle_drag_torque_" + coord]}
+                                ) for coord in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
             # Loop through all cases
             for case in self.cases:
@@ -881,38 +927,31 @@ class PlateForces():
                             self.points[reconstruction_time][case]
                         )
 
-                        # Enter computed slab pull values into torque dictionary
-                        for plate in self.plates_of_interest:
-                            if self.DEBUG_MODE:
-                                print(f"Updating torques for plate {plate}")
-
-                            # Check if plate is in DataFrame
-                            if float(plate) in self.plates[reconstruction_time][case].plateID.values:
-                                # Check if value is not NaN
-                                torque_value = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["mantle_drag_torque_mag"].values[0]
-
-                                if self.DEBUG_MODE:
-                                    print(f"Mantle drag torque value is {torque_value}!")
-
-                                # Enter data into DataFrame
-                                self.torques[case][plate].loc[i, "mantle_drag_torque"] = torque_value
-                                self.torques[case][plate].loc[i, "mantle_drag_torque_opt"] = self.plates[reconstruction_time][key][self.plates[reconstruction_time][case].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
-
-    def optimise_torques(self, cases: list = None):
+    def optimise_torques(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
         Function to optimise torques
 
         :param cases:                   cases to compute driving torque for
         :type cases:                    list
         """
+        # Make iterable
         if cases is None:
-            cases = self.slab_pull_cases
+            slab_iterable = self.slab_pull_cases
+            mantle_iterable = self.mantle_drag_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            slab_iterable = {case: [] for case in cases}
+            mantle_iterable = {case: [] for case in cases}
 
         for i, reconstruction_time in tqdm(enumerate(self.times), desc="Optimising torques", disable=self.DEBUG_MODE):
             if self.DEBUG_MODE:
                 print(f"Optimising torques at {reconstruction_time} Ma")
             
-            for key, entries in self.slab_pull_cases.items():
+            for key, entries in slab_iterable.items():
                 if self.options[key]["Slab pull torque"]:
                     self.plates[reconstruction_time][key] = functions_main.optimise_torques(
                         self.plates[reconstruction_time][key],
@@ -921,40 +960,13 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    if len(entries) > 1:
+                    if len(entries) > 1 and cases is None:
                         [[self.plates[reconstruction_time][entry].update(
                             {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-                    # Enter computed slab pull values into torque dictionary
-                    for plate in self.plates_of_interest:
-                        if self.DEBUG_MODE:
-                            print(f"Updating torques for plate {plate}")
-
-                        # Check if plate is in DataFrame
-                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
-                            # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["slab_pull_torque_opt_mag"].values[0]
-
-                            if self.DEBUG_MODE:
-                                print(f"Optimised slab pull torque value for {plate} is {torque_value}!")
-
-                            if torque_value != 0 or torque_value != _numpy.nan:
-                                # Enter data into DataFrame
-                                self.torques[key][plate].loc[i, "slab_pull_torque_opt"] = torque_value
-
-                            # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
-
-                            if self.DEBUG_MODE:
-                                print(f"Optimised mantle drag torque value for {plate} is {torque_value}!")
-
-                            if torque_value != 0 and torque_value != _numpy.nan:
-                                # Enter data into DataFrame
-                                self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = torque_value
-            
             # Copy torques to other cases
-            for key, entries in self.mantle_drag_cases.items():
+            for key, entries in mantle_iterable.items():
                 if self.options[key]["Mantle drag torque"]:
                     self.plates[reconstruction_time][key] = functions_main.optimise_torques(
                         self.plates[reconstruction_time][key],
@@ -963,29 +975,32 @@ class PlateForces():
                     )
 
                     # Copy DataFrames
-                    if len(entries) > 1:
+                    if len(entries) > 1 and cases is None:
                         [[self.plates[reconstruction_time][entry].update(
                             {"mantle_drag_torque_opt_" + axis: self.plates[reconstruction_time][key]["mantle_drag_torque_opt_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
                     # Enter computed slab pull values into torque dictionary
-                    for plate in self.plates_of_interest:
-                        if self.DEBUG_MODE:
-                            print(f"Updating torques for plate {plate}")
+                    # for plate in self.plates_of_interest:
+                    #     if self.DEBUG_MODE:
+                    #         print(f"Updating torques for plate {plate}")
 
-                        # Check if plate is in DataFrame
-                        if float(plate) in self.plates[reconstruction_time][key].plateID.values:
-                            # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
+                    #     # Check if plate is in DataFrame
+                    #     if float(plate) in self.plates[reconstruction_time][key].plateID.values:
+                    #         # Check if value is not NaN
+                    #         torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
 
-                            if self.DEBUG_MODE:
-                                print(f"Mantle drag torque magnitude for {plate} is {torque_value}!")
+                    #         if self.DEBUG_MODE:
+                    #             print(f"Mantle drag torque magnitude for {plate} is {torque_value}!")
 
-                            if torque_value != 0 and torque_value != _numpy.nan:
-                                # Enter data into DataFrame
-                                self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = torque_value
+                    #         if torque_value != 0 and torque_value != _numpy.nan:
+                    #             # Enter data into DataFrame
+                    #             self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = torque_value
     
-    def compute_driving_torque(self, cases: list = None):
+    def compute_driving_torque(
+            self,
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
         Function to calculate driving torque
 
@@ -1004,30 +1019,15 @@ class PlateForces():
                 # Calculate driving torque
                 self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "driving", self.constants)
 
-                # Enter computed slab pull values into torque dictionary
-                for plate in self.plates_of_interest:
-                    if self.DEBUG_MODE:
-                        print(f"Updating driving torques for plate {plate}")
-
-                    # Check if plate is in DataFrame
-                    if float(plate) in self.plates[reconstruction_time][case].plateID.values:
-                        # Check if value is not NaN
-                        torque_value = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["driving_torque_mag"].values[0]
-                    
-                        if self.DEBUG_MODE:
-                            print(f"Driving torque magnitude for {plate} is {torque_value}!")
-
-                        if torque_value != 0 and torque_value != _numpy.nan:
-                            # Enter data into DataFrame
-                            self.torques[case][plate].loc[i, "driving_torque"] = torque_value
-                            self.torques[case][plate].loc[i, "driving_torque_opt"] = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["driving_torque_opt_mag"].values[0]
-
-    def compute_residual_torque(self, cases: list = None):
+    def compute_residual_torque(
+            self, 
+            cases: Optional[Union[List[str], str]] = None,
+        ):
         """
         Function to calculate residual torque
 
         :param cases:                   cases to compute driving torque for
-        :type cases:                    list
+        :type cases:                    str or list
         """
         if cases is None:
             cases = self.cases
@@ -1043,41 +1043,10 @@ class PlateForces():
                     # Calculate residual torque
                     self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "residual", self.constants)
 
-                    # Enter computed slab pull values into torque dictionary
-                    for plate in self.plates_of_interest:
-                        if self.DEBUG_MODE:
-                            print(f"Updating residual torques for plate {plate}")
-
-                        # Check if plate is in DataFrame
-                        if float(plate) in self.plates[reconstruction_time][case].plateID.values:
-                            # Check if value is not NaN
-                            torque_value = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["residual_torque_mag"].values[0]
-
-                            if self.DEBUG_MODE:
-                                print(f"Residual torque magnitude for {plate} is {torque_value}!")
-
-                            if torque_value != 0 and torque_value != _numpy.nan:
-                                # Enter data into DataFrame
-                                self.torques[case][plate].loc[i, "residual_torque"] = torque_value
-                                self.torques[case][plate].loc[i, "residual_torque_opt"] = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == float(plate)]["residual_torque_opt_mag"].values[0]
-
                 else:
                     # Set residual torque to zero
                     for coord in ["x", "y", "z", "mag"]:
                         self.plates[reconstruction_time][case]["residual_torque_" + coord] = 0
-
-                    # Enter computed slab pull values into torque dictionary
-                    for plate in self.plates_of_interest:
-                        if self.DEBUG_MODE:
-                            print(f"Updating residual torques for plate {plate}")
-
-                        # Check if plate is in DataFrame
-                        if float(plate) in self.plates[reconstruction_time][case].plateID.values:
-                            if self.DEBUG_MODE:
-                                print(f"Plate {plate} is in DataFrame!")
-
-                            # Enter data into DataFrame
-                            self.torques[case][plate].loc[i, "residual_torque"] = 0
 
     def compute_all_torques(self):
         """
@@ -1147,7 +1116,7 @@ class PlateForces():
                 for case in rotate_cases:
                     # Select cases that require rotation
                     if self.options[case]["Reconstructed motions"] and self.options[case]["Mantle drag torque"]:
-                        for plateID in self.plates[reconstruction_time][case].plateID.values:
+                        for plateID in self.plates[reconstruction_time][case].plateID:
                             # Rotate x, y, and z components of torque
                             self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].plateID == plateID, [torque + "_x", torque + "_y", torque + "_z"]] = functions_main.rotate_torque(
                                 plateID,
@@ -1393,9 +1362,9 @@ class PlateForces():
 
             # Add mantle drag torque
             if self.options[opt_case]["Mantle drag torque"] and "mantle_drag_torque_x" in selected_plates.columns:
-                residual_x -= selected_plates.mantle_drag_torque_x.iloc[k] * viscosity
-                residual_y -= selected_plates.mantle_drag_torque_y.iloc[k] * viscosity
-                residual_z -= selected_plates.mantle_drag_torque_z.iloc[k] * viscosity
+                residual_x -= selected_plates.mantle_drag_torque_x.iloc[k] * viscosity / self.mech.La
+                residual_y -= selected_plates.mantle_drag_torque_y.iloc[k] * viscosity / self.mech.La
+                residual_z -= selected_plates.mantle_drag_torque_z.iloc[k] * viscosity / self.mech.La
 
             # Compute magnitude of residual
             residual_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
@@ -1645,18 +1614,18 @@ class PlateForces():
 
     def extract_plate_data_through_time(
             self,
-            variable,
-            plate,
-            reconstruction_times: Optional[list] = None,
-            cases: Optional[list] = None,
+            variable: str,
+            plate: int,
+            reconstruction_times: Optional[Union[list, _numpy.ndarray]] = None,
+            cases: Optional[Union[List[str], str]] = None
         ):
         """
         Function to extract plate data for a given variable.
 
         :param variable:                variable to extract
         :type variable:                 str
-        :param plates_of_interest:      plate IDs to include in extraction
-        :type plates_of_interest:       list of integers
+        :param plate:                   plate IDs to include in extraction
+        :type plate:                    list of integers
         :param reconstruction_times:    reconstruction times to include in extraction
         :type reconstruction_times:     list of integers
         :param cases:                   cases to include in extraction
@@ -1671,12 +1640,36 @@ class PlateForces():
         
         if cases is None:
             cases = self.cases
+        elif isinstance(cases, str):
+            cases = [cases]
 
         # Initialise array to store data
-        data = _numpy.zeros((len(reconstruction_times), len(cases)))
+        data = _numpy.empty((len(cases), len(reconstruction_times)))
+        if self.DEBUG_MODE:
+            print(f"data shape: {data.shape}")
+
         for i, case in enumerate(cases):
             for j, reconstruction_time in enumerate(reconstruction_times):
-                data[j,i] = self.plates[reconstruction_time][case][variable].loc[self.plates[reconstruction_time][case]["plateID"] == plate].values[0]
+                # Check if plate is in the plates DataFrame
+                if plate in self.plates[reconstruction_time][case]["plateID"].values:
+                    # Get value
+                    value = self.plates[reconstruction_time][case][variable].loc[self.plates[reconstruction_time][case]["plateID"] == plate].values[0]
+
+                    # Add non-zero value to data array
+                    if value != 0:
+                        data[i,j] = value
+                    
+                # Hardcoded exception for the Indo-Australian plate
+                elif plate == 501 and reconstruction_time >= 20 and reconstruction_time <= 43:
+                    # Get value
+                    value = self.plates[reconstruction_time][case][variable].loc[self.plates[reconstruction_time][case]["plateID"] == 801].values[0]
+
+                    # Add non-zero value to data array
+                    if value != 0:
+                        data[i,j] = value
+
+                else:
+                    data[i,j] = _numpy.nan
 
         return data
 
