@@ -88,6 +88,7 @@ class PlateForces():
         self.DEBUG_MODE = DEBUG_MODE
 
         # Set flag for parallel mode
+        # TODO: Actually implement parallel mode
         self.PARALLEL_MODE = PARALLEL_MODE
 
         # Set files directory
@@ -158,7 +159,7 @@ class PlateForces():
             
             # Resolve topologies to use to get plates
             # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
-            #       This step could be sped up by extracting all information from the resolved geometries
+            #       This step could be sped up by extracting all information from the resolved geometries, but so far this has not been the main bottleneck
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     action="ignore",
@@ -220,7 +221,7 @@ class PlateForces():
         mantle_drag_options = ["Reconstructed motions", "Grid spacing"]
         self.mantle_drag_cases = setup.process_cases(self.cases, self.options, mantle_drag_options)
 
-        # Load or initialise dictionaries with DataFrames for plates, slabs, points and torque information.
+        # Load or initialise dictionaries with DataFrames for plates, slabs, points and torque information
         self.plates = {}
         self.slabs = {}
         self.points = {}
@@ -284,8 +285,21 @@ class PlateForces():
             PARALLEL_MODE = self.PARALLEL_MODE,
         )
 
-        # Calculate rms velocity
+        # Calculate additional parameters for plates
         for reconstruction_time in self.times:
+            # Calculate trench length and omega
+            for key, entries in self.slab_pull_cases.items():
+                self.plates[reconstruction_time][key] = setup.get_geometric_properties(
+                    self.plates[reconstruction_time][key],
+                    self.slabs[reconstruction_time][key]
+                )
+
+                # Copy DataFrames to other cases
+                for entry in entries[1:]:
+                    self.plates[reconstruction_time][entry]["trench_length"] = self.plates[reconstruction_time][key]["trench_length"]
+                    self.plates[reconstruction_time][entry]["omega"] = self.plates[reconstruction_time][key]["omega"]
+
+            # Calculate rms velocity
             for key, entries in self.gpe_cases.items():
                 self.plates[reconstruction_time][key] = functions_main.compute_rms_velocity(
                     self.plates[reconstruction_time][key],
@@ -296,7 +310,7 @@ class PlateForces():
                 for entry in entries[1:]:
                     self.plates[reconstruction_time][entry]["v_rms_mag"] = self.plates[reconstruction_time][key]["v_rms_mag"]
                     self.plates[reconstruction_time][entry]["v_rms_azi"] = self.plates[reconstruction_time][key]["v_rms_azi"]
-
+            
         # Load or initialise seafloor
         self.seafloor = setup.load_grid(
             self.seafloor,
@@ -471,6 +485,9 @@ class PlateForces():
 
             # Select cases
             for key, entries in iterable.items():
+                if self.DEBUG_MODE:
+                    print(f"Sampling overriding plate for case {key} and entries {entries}...")
+                    
                 if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
                     # Sample age and sediment thickness of lower plate from seafloor
                     self.slabs[reconstruction_time][key]["lower_plate_age"], self.slabs[reconstruction_time][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
@@ -529,7 +546,7 @@ class PlateForces():
         """
         # Make iterable
         if cases is None:
-            iterable = self.gpe_cases
+            iterable = self.slab_pull_cases
         else:
             if isinstance(cases, str):
                 cases = [cases]
@@ -542,8 +559,11 @@ class PlateForces():
 
             # Select cases
             for key, entries in iterable.items():
+                if self.DEBUG_MODE:
+                    print(f"Sampling overriding plate for case {key} and entries {entries}...")
+
                 # Check whether to output erosion rate and sediment thickness
-                if self.options[key]["Sediment subduction"] and self.options[key]["Sample erosion grid"] in self.seafloor[reconstruction_time].data_vars:
+                if self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0 and self.options[key]["Sample erosion grid"] in self.seafloor[reconstruction_time].data_vars:
                     # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
                     self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"], self.slabs[reconstruction_time][key]["erosion_rate"], self.slabs[reconstruction_time][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
                         self.slabs[reconstruction_time][key].lat, 
@@ -554,7 +574,8 @@ class PlateForces():
                         "upper plate",
                         sediment_thickness=self.slabs[reconstruction_time][key].sediment_thickness,
                     )
-                elif self.options[key]["Sediment subduction"]:
+
+                elif self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0:
                     # Sample age and arc type of upper plate from seafloor
                     self.slabs[reconstruction_time][key]["upper_plate_age"], self.slabs[reconstruction_time][key]["continental_arc"] = functions_main.sample_slabs_from_seafloor(
                         self.slabs[reconstruction_time][key].lat, 
@@ -629,8 +650,8 @@ class PlateForces():
         :param cases:   cases to sample data for (defaults to None if not specified).
         :type cases:    list
         """
-        self.sample_slabs(cases)
         self.sample_upper_plate(cases)
+        self.sample_slabs(cases)
         self.sample_points(cases)
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -672,7 +693,7 @@ class PlateForces():
             for key, entries in iterable.items():
                 if self.DEBUG_MODE and cases is None:
                     print(f"Computing slab pull torques for cases {entries}")
-                else:
+                elif self.DEBUG_MODE:
                     print(f"Computing slab pull torques for case {key}")
 
                 if self.options[key]["Slab pull torque"]:
@@ -1048,27 +1069,33 @@ class PlateForces():
                     for coord in ["x", "y", "z", "mag"]:
                         self.plates[reconstruction_time][case]["residual_torque_" + coord] = 0
 
-    def compute_all_torques(self):
+    def compute_all_torques(
+            self, 
+            cases: Optional[Union[List[str], str]] = None
+        ):
         """
-        Computes all torques 
+        Computes all torques
+
+        :param cases:                   cases to compute torques for
+        :type cases:                    str or list
         """
         # Calculate slab pull torque
-        self.compute_slab_pull_torque()
+        self.compute_slab_pull_torque(cases)
 
         # Calculate slab bend torque
-        self.compute_slab_bend_torque()
+        self.compute_slab_bend_torque(cases)
 
         # Calculate GPE torque
-        self.compute_gpe_torque()
+        self.compute_gpe_torque(cases)
 
         # Calculate mantle drag torque
-        self.compute_mantle_drag_torque()
+        self.compute_mantle_drag_torque(cases)
 
         # Calculate driving torque
-        self.compute_driving_torque()
+        self.compute_driving_torque(cases)
         
         # Calculate residual torque
-        self.compute_residual_torque()
+        self.compute_residual_torque(cases)
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ROTATION 
@@ -1617,7 +1644,8 @@ class PlateForces():
             variable: str,
             plate: int,
             reconstruction_times: Optional[Union[list, _numpy.ndarray]] = None,
-            cases: Optional[Union[List[str], str]] = None
+            cases: Optional[Union[List[str], str]] = None,
+            exclude_cases: Optional[Union[List[str], str]] = None,
         ):
         """
         Function to extract plate data for a given variable.
@@ -1634,6 +1662,10 @@ class PlateForces():
         :return:                        array with extracted data
         :rtype:                         numpy.ndarray
         """
+        # Make sure variable is valid
+        if variable not in self.plates[reconstruction_times[0]][cases[0]].columns:
+            return print("Invalid variable")
+        
         # Set default reconstruction times and cases
         if reconstruction_times is None:
             reconstruction_times = self.times
@@ -1642,6 +1674,10 @@ class PlateForces():
             cases = self.cases
         elif isinstance(cases, str):
             cases = [cases]
+
+        # Exclude cases
+        if exclude_cases is not None:
+            cases = [case for case in cases if case not in exclude_cases]
 
         # Initialise array to store data
         data = _numpy.empty((len(cases), len(reconstruction_times)))
@@ -1667,6 +1703,91 @@ class PlateForces():
                     # Add non-zero value to data array
                     if value != 0:
                         data[i,j] = value
+
+                else:
+                    data[i,j] = _numpy.nan
+
+        return data
+    
+    def extract_slab_data_through_time(
+            self,
+            variable: str,
+            plate: int,
+            type: str = "lower",
+            reconstruction_times: Optional[Union[list, _numpy.ndarray]] = None,
+            cases: Optional[Union[List[str], str]] = None, 
+            exclude_cases: Optional[Union[List[str], str]] = None,
+            average: str = "mean"
+        ):
+        """
+        Function to extract slab data for a given variable.
+
+        :param variable:                variable to extract
+        :type variable:                 str
+        :param plate:                   plate IDs to include in extraction
+        :type plate:                    list of integers
+        :param type:                    type of plate to extract data from
+        :type type:                     str
+        :param reconstruction_times:    reconstruction times to include in extraction
+        :type reconstruction_times:     list of integers
+        :param cases:                   cases to include in extraction
+        :type cases:                    list of strings
+
+        :return:                        array with extracted data
+        :rtype:                         numpy.ndarray
+        """
+        # Make sure variable is valid
+        if variable not in self.slabs[reconstruction_times[0]][cases[0]].columns:
+            return print("Invalid variable")
+        
+        # Make sure type is valid
+        if type not in ["lower", "upper", "trench"]:
+            return print("Invalid type")
+        
+        # Make sure average is valid
+        if average not in ["mean", "median"]:
+            return print("Invalid average")
+        
+        # Set default reconstruction times and cases
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+        
+        if cases is None:
+            cases = self.cases
+        elif isinstance(cases, str):
+            cases = [cases]
+
+        # Exclude cases
+        if exclude_cases is not None:
+            cases = [case for case in cases if case not in exclude_cases]
+
+        # Initialise array to store data
+        data = _numpy.empty((len(cases), len(reconstruction_times)))
+        if self.DEBUG_MODE:
+            print(f"data shape: {data.shape}")
+
+        for i, case in enumerate(cases):
+            for j, reconstruction_time in enumerate(reconstruction_times):
+                # Check if plate is in the plates DataFrame
+                if plate in self.slabs[reconstruction_time][case][f"{type}_plateID"].values:
+                    # Get value
+                    values = self.slabs[reconstruction_time][case][variable].loc[self.slabs[reconstruction_time][case][f"{type}_plateID"] == plate].values
+
+                    # Add average value to data array
+                    if average == "mean":
+                        data[i,j] = _numpy.mean(values)
+                    elif average == "median":
+                        data[i,j] = _numpy.median(values)
+                    
+                # Hardcoded exception for the Indo-Australian plate
+                elif plate == 501 and reconstruction_time >= 20 and reconstruction_time <= 43:
+                    # Get value
+                    values = self.slabs[reconstruction_time][case][variable].loc[self.slabs[reconstruction_time][case][f"{type}_plateID"] == 801].values
+
+                    if average == "mean":
+                        data[i,j] = _numpy.mean(values)
+                    elif average == "median":
+                        data[i,j] = _numpy.median(values)
 
                 else:
                     data[i,j] = _numpy.nan

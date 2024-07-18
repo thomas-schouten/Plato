@@ -128,6 +128,7 @@ def get_plates(
     merged_plates = merged_plates.reset_index(drop=True)
 
     # Initialise columns to store other whole-plate properties
+    merged_plates["trench_length"] = 0.; merged_plates["omega"] = 0.
     merged_plates["v_rms_mag"] = 0.; merged_plates["v_rms_azi"] = 0.
     merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
 
@@ -233,7 +234,7 @@ def get_slabs(
     # Initialise other columns to store seafloor ages and forces
     # Upper plate
     slabs["upper_plate_thickness"] = 0.
-    slabs["upper_plate_age"] = 0.  
+    slabs["upper_plate_age"] = 0.
     slabs["continental_arc"] = False
     slabs["erosion_rate"] = 0.
 
@@ -250,7 +251,7 @@ def get_slabs(
     slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 6 for _ in range(len(slabs))] 
 
     # Make sure all the columns are floats
-    slabs = slabs.astype(float)
+    slabs = slabs.apply(lambda x: x.astype(float) if x.name != "continental_arc" else x)
 
     return slabs
 
@@ -513,6 +514,29 @@ def get_topology_geometries(
     shutil.rmtree(temp_dir)
 
     return topology_geometries
+
+def get_geometric_properties(
+        plates: _pandas.DataFrame,
+        slabs: _pandas.DataFrame,
+    ):
+    """
+    Function to get geometric properties of plates.
+
+    :param plates:                plates
+    :type plates:                 pandas.DataFrame
+    :param slabs:                 slabs
+    :type slabs:                  pandas.DataFrame
+
+    :return:                      plates
+    :rtype:                       pandas.DataFrame
+    """
+    # Calculate trench length and omega
+    for plateID in plates.plateID:
+        if plateID in slabs.lower_plateID.unique():
+            plates.loc[plates.plateID == plateID, "trench_length"] = slabs[slabs.lower_plateID == plateID].trench_segment_length.sum()
+            plates.loc[plates.plateID == plateID, "omega"] = plates[plates.plateID == plateID].area.values[0] / plates[plates.plateID == plateID].trench_length.values[0]
+
+    return plates
 
 def get_plate_names(
         plate_id_list: Union[list or _numpy.array],

@@ -998,10 +998,10 @@ def compute_subduction_flux(
     for plateID in plates.plateID.values:
         selected_slabs = slabs[slabs.lower_plateID == plateID]
         if type == "slab":
-            plates.loc[plates.plateID == plateID, "slab_flux"] = (selected_slabs.lower_plate_thickness * selected_slabs.v_lower_plate_mag).sum()
+            plates.loc[plates.plateID == plateID, "slab_flux"] = (selected_slabs.lower_plate_thickness * selected_slabs.v_lower_plate_mag * selected_slabs.trench_segment_length).sum()
         
         elif type == "sediment":
-            plates.loc[plates.plateID == plateID, "sediment_flux"] = (selected_slabs.sediment_thickness * selected_slabs.v_lower_plate_mag).sum()
+            plates.loc[plates.plateID == plateID, "sediment_flux"] = (selected_slabs.sediment_thickness * selected_slabs.v_lower_plate_mag * selected_slabs.trench_segment_length).sum()
 
     return plates
 
