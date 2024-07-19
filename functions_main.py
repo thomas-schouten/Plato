@@ -141,12 +141,8 @@ def compute_interface_term(slabs, options, DEBUG_MODE=False):
         slabs["sediment_fraction"] = _numpy.where(_numpy.isnan(slabs.lower_plate_age), 0, _numpy.nan_to_num(slabs["sediment_thickness"]) / slabs["shear_zone_width"])
         slabs["sediment_fraction"] = _numpy.where(slabs["sediment_fraction"] <= 1, slabs["sediment_fraction"],  1)
         slabs["sediment_fraction"] = _numpy.nan_to_num(slabs["sediment_fraction"])
-
-    # Old implementation of interface term
-    # interface_term = 10 ** slabs["sediment_fraction"] * options["Slab pull constant"]
-
-    # Calculate interface term for all components of the slab pull force
-    # NOTE: Turned off for now, awaiting further testing
+    
+    # Calculate interface term
     interface_term = 11 - 10**(1-slabs["sediment_fraction"])
 
     if DEBUG_MODE:
@@ -570,8 +566,11 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
         velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)
 
         # Calculate force at centroid
+        if DEBUG_MODE:
+            print(f"Computing mantle drag force at centroid: {force_at_centroid}")
+
         plates["mantle_drag_force_lat"], plates["mantle_drag_force_lon"], plates["mantle_drag_force_mag"], plates["mantle_drag_force_azi"] = vector_xyz2lat_lon(
-            plates.centroid_lat, plates.centroid_lon, force_at_centroid, constants
+            plates.centroid_lat, plates.centroid_lon, force_at_centroid, DEBUG_MODE,
         )
 
         # Calculate velocity at centroid and convert to cm/a
@@ -632,68 +631,67 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
 # VELOCITIES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_velocities(lats, lons, plateIDs, plates, summed_torques_cartesian_normalised, options, constants, DEBUG_MODE=False):
+def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, constants, DEBUG_MODE=False):
     """
-    Function to compute velocities from a Cartesian vector at a set of locations.
+    Function to compute lat, lon, magnitude and azimuth of velocity at a set of locations from a Cartesian torque vector.
 
-    :param lats:                                latitudes of points
-    :type lats:                                 numpy.array
-    :param lons:                                longitudes of points
-    :type lons:                                 numpy.array
-    :param plateIDs:                            plate IDs of points
-    :type plateIDs:                             numpy.array
-    :param plates:                              plate data
-    :type plates:                               pandas.DataFrame
-    :param summed_torques_cartesian_normalised: summed torques in Cartesian coordinates
-    :type summed_torques_cartesian_normalised:  numpy.array
-    :param options:                             options
-    :type options:                              dict
-    :param constants:                           constants used in calculations
-    :type constants:                            class
-    :param DEBUG_MODE:                          whether or not to run in debug mode
-    :type DEBUG_MODE:                           bool
+    :param slabs:               slab data
+    :type slabs:                pandas.DataFrame
+    :param plates:              plate data
+    :type plates:               pandas.DataFrame
+    :param torques_xyz:         summed torques in Cartesian coordinates
+    :type torques_xyz:          numpy.array
+    :param options:             options
+    :type options:              dict
+    :param constants:           constants used in calculations
+    :type constants:            class
+    :param DEBUG_MODE:          whether or not to run in debug mode
+    :type DEBUG_MODE:           bool
     """
-    # Initialise arrays to store velocities
-    v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
-    v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
+    # Create empty arrays to store velocities
+    v_lats = _numpy.zeros(len(lats))
+    v_lons = _numpy.zeros(len(lons))
+    v_mags = _numpy.zeros(len(lats))
+    v_azis = _numpy.zeros(len(lats))
 
-    # Loop through points
-    for i, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
-        # Check if upper plate is in torques
+    # Calculate residual torque along trench
+    for plateID in plates.plateID.values:
+        # Create Cartesian velocity vector
+        n = _numpy.where(plates.plateID.values == plateID)
+        ang_velocity_xyz = -1 * _numpy.array([
+            torques_xyz[:,n][0][0][0],
+            torques_xyz[:,n][1][0][0],
+            torques_xyz[:,n][2][0][0]
+        ])
+
         if DEBUG_MODE:
-            print(plates)
+            print(f"Velocity vector for plate {plateID}: {ang_velocity_xyz}")
 
-        if plateID in plates.plateID.values:
-            # Get the index of the lower plate in the torques DataFrame
-            n = _numpy.where(plates.plateID.values == plateID)
-            velocity_xyz = -1 * _numpy.array([
-                summed_torques_cartesian_normalised[:,n][0][0][0],
-                summed_torques_cartesian_normalised[:,n][1][0][0],
-                summed_torques_cartesian_normalised[:,n][2][0][0]
-            ])
+        # Select points belonging to plate
+        selected_lats = lats[plateIDs == plateID]
+        selected_lons = lons[plateIDs == plateID]
 
-            # Check if the area condition is satisfied
-            if plates.area.values[n] >= options["Minimum plate area"] and summed_torques_cartesian_normalised[:,n][0][0] != 0 and summed_torques_cartesian_normalised[:,n][0][0] != _numpy.nan:
-                # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
-                point_velocity = vector_xyz2lat_lon(
-                    [lat],
-                    [lon],
-                    _numpy.array(
-                        [_numpy.cross(
-                        velocity_xyz, lat_lon2xyz(
-                            lat, lon, constants
-                            ) / constants.mean_Earth_radius_m,
-                        axis=0
-                        )]
-                    ).T,
-                    constants
-                )
+        for selected_lat, selected_lon in zip(selected_lats, selected_lons):
+            if DEBUG_MODE:
+                print(f"Calculating velocity at point {selected_lat}, {selected_lon}")
 
-                # Assign the velocity to the respective columns in the points DataFrame
-                v_lats[i] = point_velocity[0]
-                v_lons[i] = point_velocity[1]
-                v_mags[i] = point_velocity[2]
-                v_azis[i] = point_velocity[3]
+            velocity_xyz = _numpy.cross(ang_velocity_xyz, lat_lon2xyz(selected_lat, selected_lon, constants))
+
+        velocity_xyz = _numpy.repeat(velocity_xyz[_numpy.newaxis, :], len(lats), axis=0)
+
+        # Calculate the residual force as the cross product of the torque and the unit position vector
+        points_velocities = vector_xyz2lat_lon(
+            selected_lats,
+            selected_lons,
+            velocity_xyz,
+            constants
+        )
+
+        # Assign the velocity to the respective columns in the points DataFrame
+        v_lats[plateIDs == plateID] = points_velocities[0]
+        v_lons[plateIDs == plateID] = points_velocities[1]
+        v_mags[plateIDs == plateID] = points_velocities[2]
+        v_azis[plateIDs == plateID] = points_velocities[3]
 
     # Convert to cm/a
     v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
@@ -805,9 +803,79 @@ def sum_torque(plates, torque_type, constants):
 
     return plates
 
+def compute_residual_along_trench(plates, slabs, constants, DEBUG_MODE=False):
+    """
+    Function to calculate residual torque along trench.
+
+    :param plates:          plate data
+    :type plates:           pandas.DataFrame
+    :param slabs:           slab data
+    :type slabs:            pandas.DataFrame
+    :param constants:       constants used in calculations
+    :type constants:        class
+
+    :return:                slabs
+    :rtype:                 pandas.DataFrame
+    """
+    # Calculate residual torque along trench
+    for plateID in plates.plateID.values:
+        # Select plate
+        selected_plate = plates[plates.plateID == plateID]
+
+        # Select slabs belonging to plate
+        selected_slabs = slabs[slabs.lower_plateID == plateID]
+
+        # Create Cartesian residual torque vector
+        residual_torque_xyz = _numpy.array([
+            selected_plate.residual_torque_x.values[0],
+            selected_plate.residual_torque_y.values[0],
+            selected_plate.residual_torque_z.values[0]
+        ])
+
+        if DEBUG_MODE:
+            print(f"Calculating residual force along trench for plate {plateID}. Residual torque vector: {residual_torque_xyz}")
+
+        # Calculate the residual force as the cross product of the torque and the unit position vector
+        residual_force = vector_xyz2lat_lon(
+            selected_slabs.lat,
+            selected_slabs.lon,
+            _numpy.array(
+                [_numpy.cross(
+                residual_torque_xyz, lat_lon2xyz(
+                    selected_slabs.lat, selected_slabs.lon, constants
+                    ) / constants.mean_Earth_radius_m,
+                axis=0
+                )]
+            ).T,
+            constants
+        )
+
+        # Assign the velocity to the respective columns in the points DataFrame
+
+        force_lat = residual_force[0] * (selected_slabs.trench_segment_length / selected_slabs.trench_segment_length.sum())
+        force_lon = residual_force[1] * (selected_slabs.trench_segment_length / selected_slabs.trench_segment_length.sum())
+        force_mag = residual_force[2] * (selected_slabs.trench_segment_length / selected_slabs.trench_segment_length.sum())
+        force_azi = residual_force[3]
+
+        # Assign values to slabs
+        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_lat"] = force_lat
+        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_lon"] = force_lon
+        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_mag"] = force_mag
+        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_azi"] = force_azi
+
+        # Calculate residual alignment
+        residual_alignment = _numpy.abs(slabs.trench_normal_azimuth - slabs.residual_torque_azi)
+        residual_alignment = _numpy.where(residual_alignment > 180, 360 - residual_alignment, residual_alignment)
+        residual_alignment = _numpy.where(residual_alignment > 90, 180 - residual_alignment, residual_alignment)
+
+        # Assign values to slabs
+        slabs.loc[slabs.lower_plateID == plateID, "residual_alignment"] = residual_alignment
+
+    return slabs
+
 def optimise_torques(plates, mech, options):
     """
-    Function to optimise torques
+    Function to optimise torques.
 
     :param plates:          plate data
     :type plates:           pandas.DataFrame
@@ -900,7 +968,7 @@ def compute_thicknesses(ages, options, crust=True, water=True):
 
     return lithospheric_mantle_thickness, crustal_thickness, water_depth
 
-def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, segment_length_lat, segment_length_lon, constants, torque_variable="torque"):
+def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, segment_length_lat, segment_length_lon, constants, torque_variable="torque", DEBUG_MODE=False):
     """
     Calculate and update torque information on plates based on latitudinal, longitudinal forces, and segment dimensions.
 
@@ -968,6 +1036,9 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     summed_torques_cartesian = _numpy.array([torques[torque_variable + "_x"], torques[torque_variable + "_y"], torques[torque_variable + "_z"]])
     force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0) 
 
+    if DEBUG_MODE:
+        print(f"Computing torque at centroid: {force_at_centroid}")
+
     # Compute force magnitude at centroid
     force_variable = torque_variable.replace("torque", "force")
     torques[force_variable + "_lat"], torques[force_variable + "_lon"], torques[force_variable + "_mag"], torques[force_variable + "_azi"] = vector_xyz2lat_lon(
@@ -1009,7 +1080,7 @@ def compute_subduction_flux(
 # CONVERSIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def vector_xyz2lat_lon(lats, lons, vector, constants):
+def vector_xyz2lat_lon(lats, lons, vector, DEBUG_MODE=False):
     """
     Function to convert a 3D vector into latitudinal and longitudinal components at a point.
 
@@ -1036,6 +1107,9 @@ def vector_xyz2lat_lon(lats, lons, vector, constants):
     # Loop through points and convert vector to latitudinal and longitudinal components
     for i, (lat, lon) in enumerate(zip(lats, lons)):
         point = pygplates.PointOnSphere(lat, lon)
+        if DEBUG_MODE:
+            print(f"Converting vector {vector} at point {point} to latitudinal and longitudinal components")
+
         vector_mags[i], vector_azis[i], _ = _numpy.asarray(
             pygplates.LocalCartesian.convert_from_geocentric_to_magnitude_azimuth_inclination(
                 point, 

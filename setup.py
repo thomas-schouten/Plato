@@ -246,9 +246,11 @@ def get_slabs(
     slabs["slab_length"] = options["Slab length"]
 
     # Forces
-    forces = ["slab_pull", "slab_bend"]
+    forces = ["slab_pull", "slab_bend", "residual"]
     coords = ["mag", "lat", "lon"]
-    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 6 for _ in range(len(slabs))] 
+    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 9 for _ in range(len(slabs))]
+    slabs["residual_force_azi"] = 0.
+    slabs["residual_alignment"] = 0.
 
     # Make sure all the columns are floats
     slabs = slabs.apply(lambda x: x.astype(float) if x.name != "continental_arc" else x)

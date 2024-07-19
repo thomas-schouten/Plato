@@ -943,7 +943,7 @@ class PlateForces():
                         )
 
                         # Compute RMS speeds
-                        self.velocity[reconstruction_time][case] = functions_main.compute_rms_velocity(
+                        self.plates[reconstruction_time][case] = functions_main.compute_rms_velocity(
                             self.plates[reconstruction_time][case],
                             self.points[reconstruction_time][case]
                         )
@@ -1001,23 +1001,6 @@ class PlateForces():
                             {"mantle_drag_torque_opt_" + axis: self.plates[reconstruction_time][key]["mantle_drag_torque_opt_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-                    # Enter computed slab pull values into torque dictionary
-                    # for plate in self.plates_of_interest:
-                    #     if self.DEBUG_MODE:
-                    #         print(f"Updating torques for plate {plate}")
-
-                    #     # Check if plate is in DataFrame
-                    #     if float(plate) in self.plates[reconstruction_time][key].plateID.values:
-                    #         # Check if value is not NaN
-                    #         torque_value = self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID == float(plate)]["mantle_drag_torque_opt_mag"].values[0]
-
-                    #         if self.DEBUG_MODE:
-                    #             print(f"Mantle drag torque magnitude for {plate} is {torque_value}!")
-
-                    #         if torque_value != 0 and torque_value != _numpy.nan:
-                    #             # Enter data into DataFrame
-                    #             self.torques[key][plate].loc[i, "mantle_drag_torque_opt"] = torque_value
-    
     def compute_driving_torque(
             self,
             cases: Optional[Union[List[str], str]] = None,
@@ -1061,8 +1044,16 @@ class PlateForces():
             for case in self.cases:
                 # Select cases that require residual torque computation
                 if self.options[case]["Reconstructed motions"]:
-                    # Calculate residual torque
+                    # Calculate residual torque for whole plate
                     self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "residual", self.constants)
+
+                    # Calculate residual torque along subduction zones
+                    self.slabs[reconstruction_time][case] = functions_main.compute_residual_along_trench(
+                        self.plates[reconstruction_time][case],
+                        self.slabs[reconstruction_time][case],
+                        self.constants,
+                        DEBUG_MODE = self.DEBUG_MODE,
+                    )
 
                 else:
                     # Set residual torque to zero
@@ -1663,7 +1654,7 @@ class PlateForces():
         :rtype:                         numpy.ndarray
         """
         # Make sure variable is valid
-        if variable not in self.plates[reconstruction_times[0]][cases[0]].columns:
+        if variable not in self.plates[self.times[0]][self.cases[0]].columns.to_list():
             return print("Invalid variable")
         
         # Set default reconstruction times and cases
@@ -1737,7 +1728,7 @@ class PlateForces():
         :rtype:                         numpy.ndarray
         """
         # Make sure variable is valid
-        if variable not in self.slabs[reconstruction_times[0]][cases[0]].columns:
+        if variable not in self.slabs[self.times[0]][self.cases[0]].columns.to_list():
             return print("Invalid variable")
         
         # Make sure type is valid
