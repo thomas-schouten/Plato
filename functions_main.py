@@ -543,8 +543,8 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
     # Get velocities at points
     if options["Reconstructed motions"]:
         # Calculate mantle drag force
-        points["mantle_drag_force_lat"] = -1 * points.v_lat * constants.cm_a2m_s #* options["Mantle viscosity"] / mech.La
-        points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s #* options["Mantle viscosity"] / mech.La
+        points["mantle_drag_force_lat"] = -1 * points.v_lat * constants.cm_a2m_s
+        points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s
 
     else:
         # Calculate residual torque
@@ -648,50 +648,44 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
     :param DEBUG_MODE:          whether or not to run in debug mode
     :type DEBUG_MODE:           bool
     """
-    # Create empty arrays to store velocities
-    v_lats = _numpy.zeros(len(lats))
-    v_lons = _numpy.zeros(len(lons))
-    v_mags = _numpy.zeros(len(lats))
-    v_azis = _numpy.zeros(len(lats))
+    # Initialise arrays to store velocities
+    v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
+    v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
 
-    # Calculate residual torque along trench
-    for plateID in plates.plateID.values:
-        # Create Cartesian velocity vector
-        n = _numpy.where(plates.plateID.values == plateID)
-        ang_velocity_xyz = -1 * _numpy.array([
-            torques_xyz[:,n][0][0][0],
-            torques_xyz[:,n][1][0][0],
-            torques_xyz[:,n][2][0][0]
-        ])
+    # Loop through points
+    for i, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
+        # Check if upper plate is in torques
+        if plateID in plates.plateID.values:
+            # Get the index of the lower plate in the torques DataFrame
+            n = _numpy.where(plates.plateID.values == plateID)
+            velocity_xyz = -1 * _numpy.array([
+                torques_xyz[:,n][0][0][0],
+                torques_xyz[:,n][1][0][0],
+                torques_xyz[:,n][2][0][0]
+            ])
 
-        if DEBUG_MODE:
-            print(f"Velocity vector for plate {plateID}: {ang_velocity_xyz}")
+            # Check if the area condition is satisfied
+            if plates.area.values[n] >= options["Minimum plate area"] and torques_xyz[:,n][0][0] != 0 and torques_xyz[:,n][0][0] != _numpy.nan:
+                # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
+                point_velocity = vector_xyz2lat_lon(
+                    [lat],
+                    [lon],
+                    _numpy.array(
+                        [_numpy.cross(
+                        velocity_xyz, lat_lon2xyz(
+                            lat, lon, constants
+                            ) / constants.mean_Earth_radius_m,
+                        axis=0
+                        )]
+                    ).T,
+                    constants
+                )
 
-        # Select points belonging to plate
-        selected_lats = lats[plateIDs == plateID]
-        selected_lons = lons[plateIDs == plateID]
-
-        for selected_lat, selected_lon in zip(selected_lats, selected_lons):
-            if DEBUG_MODE:
-                print(f"Calculating velocity at point {selected_lat}, {selected_lon}")
-
-            velocity_xyz = _numpy.cross(ang_velocity_xyz, lat_lon2xyz(selected_lat, selected_lon, constants))
-
-        velocity_xyz = _numpy.repeat(velocity_xyz[_numpy.newaxis, :], len(lats), axis=0)
-
-        # Calculate the residual force as the cross product of the torque and the unit position vector
-        points_velocities = vector_xyz2lat_lon(
-            selected_lats,
-            selected_lons,
-            velocity_xyz,
-            constants
-        )
-
-        # Assign the velocity to the respective columns in the points DataFrame
-        v_lats[plateIDs == plateID] = points_velocities[0]
-        v_lons[plateIDs == plateID] = points_velocities[1]
-        v_mags[plateIDs == plateID] = points_velocities[2]
-        v_azis[plateIDs == plateID] = points_velocities[3]
+                # Assign the velocity to the respective columns in the points DataFrame
+                v_lats[i] = point_velocity[0][0]
+                v_lons[i] = point_velocity[1][0]
+                v_mags[i] = point_velocity[2][0]
+                v_azis[i] = point_velocity[3][0]
 
     # Convert to cm/a
     v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
@@ -817,59 +811,65 @@ def compute_residual_along_trench(plates, slabs, constants, DEBUG_MODE=False):
     :return:                slabs
     :rtype:                 pandas.DataFrame
     """
-    # Calculate residual torque along trench
-    for plateID in plates.plateID.values:
-        # Select plate
-        selected_plate = plates[plates.plateID == plateID]
+    # Initialise arrays to store residual forces
+    force_lats = _numpy.zeros_like(slabs.lat); force_lons = _numpy.zeros_like(slabs.lat)
+    force_mags = _numpy.zeros_like(slabs.lat); force_azis = _numpy.zeros_like(slabs.lat)
 
-        # Select slabs belonging to plate
-        selected_slabs = slabs[slabs.lower_plateID == plateID]
+    # Loop through points
+    for i, (lat, lon, plateID) in enumerate(zip(slabs.lat, slabs.lon, slabs.lower_plateID)):
+        if plateID in plates.plateID.values:
+            # Select plates
+            selected_plate = plates[plates.plateID == plateID]
 
-        # Create Cartesian residual torque vector
-        residual_torque_xyz = _numpy.array([
-            selected_plate.residual_torque_x.values[0],
-            selected_plate.residual_torque_y.values[0],
-            selected_plate.residual_torque_z.values[0]
-        ])
+            # Select slabs
+            selected_slabs = slabs[slabs.lower_plateID == plateID]
 
-        if DEBUG_MODE:
-            print(f"Calculating residual force along trench for plate {plateID}. Residual torque vector: {residual_torque_xyz}")
+            # Calculate slab length
+            selected_trench_length = selected_slabs.trench_segment_length.sum()
 
-        # Calculate the residual force as the cross product of the torque and the unit position vector
-        residual_force = vector_xyz2lat_lon(
-            selected_slabs.lat,
-            selected_slabs.lon,
-            _numpy.array(
-                [_numpy.cross(
-                residual_torque_xyz, lat_lon2xyz(
-                    selected_slabs.lat, selected_slabs.lon, constants
-                    ) / constants.mean_Earth_radius_m,
-                axis=0
-                )]
-            ).T,
-            constants
-        )
+            # Get residual torque vector
+            residual_torque_xyz = _numpy.array([
+                selected_plate.residual_torque_x.values[0],
+                selected_plate.residual_torque_y.values[0],
+                selected_plate.residual_torque_z.values[0]
+            ])
 
-        # Assign the velocity to the respective columns in the points DataFrame
+            # Check if torque is not zero or NaN
+            if residual_torque_xyz[0] != 0 and residual_torque_xyz[0] != _numpy.nan:
+                # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
+                residual_force = vector_xyz2lat_lon(
+                    [lat],
+                    [lon],
+                    _numpy.array(
+                        [_numpy.cross(
+                        residual_torque_xyz, lat_lon2xyz(
+                            lat, lon, constants
+                            ) / constants.mean_Earth_radius_m,
+                        axis=0
+                        )]
+                    ).T,
+                    constants
+                )
 
-        force_lat = residual_force[0] * (selected_slabs.trench_segment_length / selected_slabs.trench_segment_length.sum())
-        force_lon = residual_force[1] * (selected_slabs.trench_segment_length / selected_slabs.trench_segment_length.sum())
-        force_mag = residual_force[2] * (selected_slabs.trench_segment_length / selected_slabs.trench_segment_length.sum())
-        force_azi = residual_force[3]
+                # Assign the velocity to the respective columns in the points DataFrame
+                force_lats[i] = residual_force[0][0] * slabs.trench_segment_length.iloc[i] / (selected_trench_length * constants.mean_Earth_radius_m)
+                force_lons[i] = residual_force[1][0] * slabs.trench_segment_length.iloc[i] / (selected_trench_length * constants.mean_Earth_radius_m)
+                force_mags[i] = residual_force[2][0] * slabs.trench_segment_length.iloc[i] / (selected_trench_length * constants.mean_Earth_radius_m)
+                force_azis[i] = residual_force[3][0]
 
-        # Assign values to slabs
-        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_lat"] = force_lat
-        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_lon"] = force_lon
-        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_mag"] = force_mag
-        slabs.loc[slabs.lower_plateID == plateID, "residual_torque_azi"] = force_azi
+    # Assign values to slabs
+    slabs["residual_force_lat"] = force_lats
+    slabs["residual_force_lon"] = force_lons
+    slabs["residual_force_mag"] = force_mags
+    slabs["residual_force_azi"] = force_azis
 
-        # Calculate residual alignment
-        residual_alignment = _numpy.abs(slabs.trench_normal_azimuth - slabs.residual_torque_azi)
-        residual_alignment = _numpy.where(residual_alignment > 180, 360 - residual_alignment, residual_alignment)
-        residual_alignment = _numpy.where(residual_alignment > 90, 180 - residual_alignment, residual_alignment)
+    # Calculate residual alignment
+    residual_alignment = _numpy.abs(slabs.trench_normal_azimuth - slabs.residual_force_azi)
+    residual_alignment = _numpy.where(residual_alignment > 180, 360 - residual_alignment, residual_alignment)
+    residual_alignment = _numpy.where(residual_alignment > 90, 180 - residual_alignment, residual_alignment)
 
-        # Assign values to slabs
-        slabs.loc[slabs.lower_plateID == plateID, "residual_alignment"] = residual_alignment
+    # Assign values to slabs
+    slabs["residual_alignment"] = residual_alignment
 
     return slabs
 
@@ -1106,10 +1106,10 @@ def vector_xyz2lat_lon(lats, lons, vector, DEBUG_MODE=False):
 
     # Loop through points and convert vector to latitudinal and longitudinal components
     for i, (lat, lon) in enumerate(zip(lats, lons)):
+        # Make PointonSphere
         point = pygplates.PointOnSphere(lat, lon)
-        if DEBUG_MODE:
-            print(f"Converting vector {vector} at point {point} to latitudinal and longitudinal components")
 
+        # Convert vector to magnitude, azimuth, and inclination
         vector_mags[i], vector_azis[i], _ = _numpy.asarray(
             pygplates.LocalCartesian.convert_from_geocentric_to_magnitude_azimuth_inclination(
                 point, 

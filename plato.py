@@ -533,7 +533,7 @@ class PlateForces():
         # Set flag to True
         self.sampled_slabs = True
 
-    def sample_upper_plate(
+    def sample_upper_plates(
             self,
             cases: Optional[Union[List[str], str]] = None,
         ):
@@ -650,7 +650,7 @@ class PlateForces():
         :param cases:   cases to sample data for (defaults to None if not specified).
         :type cases:    list
         """
-        self.sample_upper_plate(cases)
+        self.sample_upper_plates(cases)
         self.sample_slabs(cases)
         self.sample_points(cases)
 
@@ -670,7 +670,7 @@ class PlateForces():
         """
         # Check if upper plates have been sampled already
         if self.sampled_upper_plates == False:
-            self.sample_upper_plate(cases)
+            self.sample_upper_plates(cases)
 
         # Check if slabs have been sampled already
         if self.sampled_slabs == False:
@@ -2274,6 +2274,112 @@ class PlateForces():
 
         return im, qu
     
+    def plot_residual_force_map(
+            self,
+            ax,
+            reconstruction_time,
+            case = None,
+            cmap = "cmc.lipari_r",
+            vmin = 1e-2,
+            vmax = 1e-1,
+            normalise_vectors = False,
+            log_scale = True,
+            marker_size = 20,
+            coastlines_facecolour = "none",
+            coastlines_edgecolour = "black",
+            coastlines_linewidth = 0.1,
+            plate_boundaries_linewidth = 0.5,
+            vector_width = 4e-3,
+            vector_scale = 3e2,
+            vector_color = "k",
+            vector_alpha = 1,
+        ):
+        """
+        Function to plot plate velocities on an axes object
+            ax:                     axes object
+            fig:                    figure
+            reconstruction_time:    the time for which to display the map
+            case:                   case for which to plot the sediments
+            plotting_options:       dictionary with options for plotting
+        """
+        # Check if reconstruction time is in valid times
+        if reconstruction_time not in self.times:
+            return print("Invalid reconstruction time")
+        
+        # Set case to first case in cases list if not specified
+        if case is None:
+            case = self.cases[0]
+        
+        # Set basemap
+        gl = self.plot_basemap(ax)
+
+        # Copy dataframe
+        plot_slabs = self.slabs[reconstruction_time][case].copy()
+
+        # Reorder entries to make sure the largest values are plotted on top
+        plot_slabs = plot_slabs.sort_values("residual_force_mag", ascending=True)
+
+        lat = plot_slabs.lat.values
+        lon = plot_slabs.lon.values
+        data = plot_slabs.residual_force_mag.values / plot_slabs.slab_pull_force_mag.values
+        
+        # Convert to log scale, if needed
+        if log_scale is True:
+            if vmin == 0:
+                vmin = 1e-3
+            if vmax == 0:
+                vmax = 1e3
+            vmin = _numpy.log10(vmin)
+            vmax = _numpy.log10(vmax)
+
+            data = _numpy.where(
+                data == 0,
+                vmin,
+                _numpy.log10(data),
+            )
+
+        # Plot velocity difference grid
+        sc = ax.scatter(
+                lon,
+                lat,
+                c = data,
+                s = marker_size,
+                transform = ccrs.PlateCarree(),
+                cmap = cmap,
+                vmin = vmin,
+                vmax = vmax,
+            )
+
+        # Get velocity vectors
+        force_vectors = self.slabs[reconstruction_time][case].iloc[::5].copy()
+
+        # Plot velocity vectors
+        qu = self.plot_vectors(
+            ax,
+            force_vectors.lat.values,
+            force_vectors.lon.values,
+            force_vectors.residual_force_lat.values,
+            force_vectors.residual_force_lon.values,
+            force_vectors.slab_pull_force_mag.values,
+            normalise_vectors = normalise_vectors,
+            width = vector_width,
+            scale = vector_scale,
+            color = vector_color,
+            alpha = vector_alpha
+        )
+
+        # Plot plates and coastlines
+        ax = self.plot_reconstruction(
+            ax,
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
+
+        return sc, qu
+    
     def plot_torque_through_time(
             self,
             ax,
@@ -2552,7 +2658,7 @@ class PlateForces():
         :rtype:                     matplotlib.quiver.Quiver
         """
         # Normalise vectors, if necessary
-        if normalise_vectors is True and vector_mag is not None:
+        if normalise_vectors and vector_mag is not None:
             vector_lon = vector_lon / vector_mag * 10
             vector_lat = vector_lat / vector_mag * 10
 
