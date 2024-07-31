@@ -1148,15 +1148,6 @@ class PlateForces():
                             # Copy magnitude of torque
                             self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].plateID == plateID, torque + "_mag"] = reference_plates[reconstruction_time][case].loc[reference_plates[reconstruction_time][case].plateID == plateID, torque + "_mag"].values[0]
 
-                            if int(plateID) in self.torques[case].keys():
-                                # Print if plateID is in torques dictionary
-                                if self.DEBUG_MODE:
-                                    print(f"{plateID} is in torques dictionary")
-                                    print(self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == plateID][f"{torque}_mag"].values[0])
-
-                                # Enter data into DataFrame
-                                self.torques[case][int(plateID)].loc[i, torque] = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].plateID == plateID][f"{torque}_mag"].values[0]
-        
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OPTIMISATION 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
