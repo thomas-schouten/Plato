@@ -172,6 +172,10 @@ def get_slabs(
     :type topology_geometries:    geopandas.GeoDataFrame
     :param options:               options for the case
     :type options:                dict
+    :param DEBUG_MODE:            whether to run in debug mode
+    :type DEBUG_MODE:             bool
+    :param PARALLEL_MODE:         whether to run in parallel mode
+    :type PARALLEL_MODE:          bool
     
     :return:                      slabs
     :rtype:                       pandas.DataFrame

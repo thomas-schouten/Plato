@@ -160,6 +160,7 @@ class PlateForces():
             # Resolve topologies to use to get plates
             # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
             #       This step could be sped up by extracting all information from the resolved geometries, but so far this has not been the main bottleneck
+            # Ignore annoying warnings
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     action="ignore",
@@ -2206,19 +2207,22 @@ class PlateForces():
         gl = self.plot_basemap(ax)
 
         # Get relative velocity difference grid
-        grid = _numpy.where(
-            (self.velocity[reconstruction_time][case1].velocity_magnitude.values == 0) | 
-            (self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0) | 
-            (_numpy.isnan(self.velocity[reconstruction_time][case1].velocity_magnitude.values)) | 
-            (_numpy.isnan(self.velocity[reconstruction_time][case2].velocity_magnitude.values)),
-            _numpy.nan,
-            (self.velocity[reconstruction_time][case1].velocity_magnitude.values / 
-            _numpy.where(
-                self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0,
-                1e-10,
-                self.velocity[reconstruction_time][case2].velocity_magnitude.values)
+        # Ignore annoying warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            grid = _numpy.where(
+                (self.velocity[reconstruction_time][case1].velocity_magnitude.values == 0) | 
+                (self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0) | 
+                (_numpy.isnan(self.velocity[reconstruction_time][case1].velocity_magnitude.values)) | 
+                (_numpy.isnan(self.velocity[reconstruction_time][case2].velocity_magnitude.values)),
+                _numpy.nan,
+                (self.velocity[reconstruction_time][case1].velocity_magnitude.values / 
+                _numpy.where(
+                    self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0,
+                    1e-10,
+                    self.velocity[reconstruction_time][case2].velocity_magnitude.values)
+                )
             )
-        )
 
         # Set velocity grid
         im = self.plot_grid(
@@ -2584,11 +2588,14 @@ class PlateForces():
             vmin = _numpy.log10(vmin)
             vmax = _numpy.log10(vmax)
 
-            grid = _numpy.where(
-                (_numpy.isnan(grid)) | (grid <= 0),
-                _numpy.nan,
-                _numpy.log10(grid),
-            )
+            # Ignore annoying warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                grid = _numpy.where(
+                    (_numpy.isnan(grid)) | (grid <= 0),
+                    _numpy.nan,
+                    _numpy.log10(grid),
+                )
 
         # Plot grid    
         im = ax.imshow(
@@ -2654,6 +2661,7 @@ class PlateForces():
             vector_lat = vector_lat / vector_mag * 10
 
         # Plot vectors
+        # Ignore annoying warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             qu = ax.quiver(

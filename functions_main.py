@@ -247,8 +247,8 @@ def sample_slabs_from_seafloor(
         current_sampling_distance = initial_sampling_distance - 30
         iterations = 12
     if plate == "upper plate":
-        current_sampling_distance = initial_sampling_distance + 200
-        iterations = 8
+        current_sampling_distance = initial_sampling_distance + 100
+        iterations = 4
 
     for i in range(iterations):
         sampling_lat[mask], sampling_lon[mask] = project_points(lat[mask], lon[mask], trench_normal_azimuth[mask], current_sampling_distance)
@@ -264,8 +264,8 @@ def sample_slabs_from_seafloor(
             elif i % 2 == 0:
                 current_sampling_distance -= 30 * (2 ** (i // 2))
 
-                if plate == "upper plate":
-                        current_sampling_distance += 100
+        if plate == "upper plate":
+            current_sampling_distance += 100
 
     # Check whether arc is continental or not
     if plate == "upper plate":
