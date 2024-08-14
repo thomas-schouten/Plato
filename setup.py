@@ -387,41 +387,36 @@ def get_plateIDs(
     :rtype:                            list
     """
     # Convert lats and lons to numpy arrays if they are not already
-    lats = _numpy.array(lats)
-    lons = _numpy.array(lons)
+    lats = _numpy.asarray(lats)
+    lons = _numpy.asarray(lons)
 
-    # Create a GeoDataFrame with grid
-    grid = _geopandas.GeoDataFrame({"geometry": [Point(lon, lat) for lon, lat in zip(lons, lats)]})
+    # Create a GeoDataFrame with grid, use pandas.Index to avoid memory overhead
+    grid = _geopandas.GeoDataFrame(
+        {"geometry": _geopandas.points_from_xy(lons, lats)},
+        index=_pandas.RangeIndex(len(lats))
+    )
 
     # Initialise empty array to store plateIDs
     plateIDs = _numpy.zeros(len(lons))
 
     # Loop through points to get plateIDs
     for topology_geometry, topology_plateID in zip(topology_geometries.geometry, topology_geometries.PLATEID1):
-        inside_points = grid[grid.geometry.within(topology_geometry)]
-        plateIDs[inside_points.index] = topology_plateID
-
-    # Get plateIDs for points for which no plateID was found
-    no_plateID = _numpy.where(plateIDs == 0)
+        # Use vectorized 'within' operation and update plateIDs in place
+        mask = grid.geometry.within(topology_geometry)
+        plateIDs[mask] = topology_plateID
     
-    if len(no_plateID[0]) != 0:
-        no_plateID_lat = lats[no_plateID]
-        no_plateID_lon = lons[no_plateID]
+    # Use vectorized operations to find and assign plate IDs for remaining points
+    no_plateID_mask = plateIDs == 0
+    if no_plateID_mask.any():
+        no_plateID_grid = _gplately.Points(
+            reconstruction,
+            lons[no_plateID_mask],
+            lats[no_plateID_mask],
+            time=reconstruction_time
+        )
 
-        # Use _pygplates to fill in remaining plate IDs
-        no_plateID_grid = _gplately.Points(reconstruction, no_plateID_lon, no_plateID_lat, time=reconstruction_time)
-
-        # Insert plate IDs into array
-        plateIDs[no_plateID] = no_plateID_grid.plate_id
-
-        # Delete temporary variables to free up memory
-        del no_plateID_lat, no_plateID_lon, no_plateID_grid
-    
-    # Delete temporary variables to free up memory
-    del grid, inside_points
-
-    # Garbage collection
-    gc.collect()
+        # Assign missing plate IDs in place
+        plateIDs[no_plateID_mask] = no_plateID_grid.plate_id
     
     return plateIDs
 
@@ -444,8 +439,8 @@ def get_velocities(
     :rtype:                          numpy.array, numpy.array, numpy.array, numpy.array
     """
     # Convert lats and lons to numpy arrays if they are not already
-    lats = _numpy.array(lats)
-    lons = _numpy.array(lons)
+    lats = _numpy.asarray(lats)
+    lons = _numpy.asarray(lons)
 
     # Initialise empty array to store velocities
     velocities_lat = _numpy.zeros(len(lats))
@@ -1137,17 +1132,17 @@ def load_grid(
                 # Load grid if found
                 grid[reconstruction_time][case] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name, case=case)
 
-            # If not found, initialise a new grid
-            if grid[reconstruction_time][case] is None:
+                # If not found, initialise a new grid
+                if grid[reconstruction_time][case] is None:
                 
-                # Interpolate velocity grid from points
-                if type == "Velocity":
-                    for case in cases:
-                        if DEBUG_MODE:
-                            print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
+                    # Interpolate velocity grid from points
+                    if type == "Velocity":
+                        for case in cases:
+                            if DEBUG_MODE:
+                                print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
 
-                        # Get velocity grid
-                        grid[reconstruction_time][case] = get_velocity_grid(points[reconstruction_time][case], seafloor_grid[reconstruction_time])
+                            # Get velocity grid
+                            grid[reconstruction_time][case] = get_velocity_grid(points[reconstruction_time][case], seafloor_grid[reconstruction_time])
 
     return grid
 

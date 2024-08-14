@@ -177,12 +177,6 @@ class PlateForces():
             
         print("Plate reconstruction ready!")
 
-        # Set plates of interest
-        if plates_of_interest:
-            self.plates_of_interest = plates_of_interest
-        else:
-            self.plates_of_interest = [101, 201, 301, 501, 511, 801, 901, 909, 911, 918, 926, 902]
-
         # Store cases and case options
         self.cases, self.options = setup.get_options(cases_file, cases_sheet)
 
@@ -1790,7 +1784,7 @@ class PlateForces():
             vmax = 250,
             log_scale = False,
             coastlines_facecolour = "lightgrey",
-            coastlines_edgecolour = "none",
+            coastlines_edgecolour = "lightgrey",
             coastlines_linewidth = 0,
             plate_boundaries_linewidth = 0.5,
         ):
@@ -1860,7 +1854,7 @@ class PlateForces():
             vmax = 1e4,
             log_scale = True,
             coastlines_facecolour = "lightgrey",
-            coastlines_edgecolour = "none",
+            coastlines_edgecolour = "lightgrey",
             coastlines_linewidth = 0,
             plate_boundaries_linewidth = 0.5,
             marker_size = 20,
@@ -2274,20 +2268,28 @@ class PlateForces():
             ax,
             reconstruction_time,
             case = None,
+            trench_means = False,
             cmap = "cmc.lipari_r",
             vmin = 1e-2,
             vmax = 1e-1,
-            normalise_vectors = False,
+            normalise_data = True,
+            normalise_vectors = True,
             log_scale = True,
-            marker_size = 20,
-            coastlines_facecolour = "none",
-            coastlines_edgecolour = "black",
-            coastlines_linewidth = 0.1,
+            marker_size = 30,
+            coastlines_facecolour = "lightgrey",
+            coastlines_edgecolour = "lightgrey",
+            coastlines_linewidth = 0,
             plate_boundaries_linewidth = 0.5,
-            vector_width = 4e-3,
-            vector_scale = 3e2,
-            vector_color = "k",
-            vector_alpha = 1,
+            slab_vector_width = 2e-3,
+            slab_vector_scale = 3e2,
+            slab_vector_colour = "k",
+            slab_vector_alpha = 1,
+            plate_vector_width = 5e-3,
+            plate_vector_scale = 3e2,
+            plate_vector_facecolour = "white",
+            plate_vector_edgecolour = "k",
+            plate_vector_linewidth = 1,
+            plate_vector_alpha = 1,
         ):
         """
         Function to plot plate velocities on an axes object
@@ -2310,14 +2312,50 @@ class PlateForces():
 
         # Copy dataframe
         plot_slabs = self.slabs[reconstruction_time][case].copy()
+        plot_plates = self.plates[reconstruction_time][case].copy()
+
+        # Calculate means at trenches for the "residual_force_mag" column
+        if trench_means is True:
+            # Calculate the mean of "residual_force_mag" for each trench_plateID
+            mean_values = plot_slabs.groupby("trench_plateID")["residual_force_mag"].transform("mean")
+            
+            # Assign the mean values back to the original "residual_force_mag" column
+            plot_slabs["residual_force_mag"] = mean_values
 
         # Reorder entries to make sure the largest values are plotted on top
         plot_slabs = plot_slabs.sort_values("residual_force_mag", ascending=True)
 
-        lat = plot_slabs.lat.values
-        lon = plot_slabs.lon.values
-        data = plot_slabs.residual_force_mag.values / plot_slabs.slab_pull_force_mag.values
-        
+        # Normalise data by dividing by the slab pull force magnitude
+        slab_data = plot_slabs.residual_force_mag.values
+        plate_data_lat = plot_plates.residual_force_lat.values
+        plate_data_lon = plot_plates.residual_force_lon.values
+        plate_data_mag = plot_plates.residual_force_mag.values
+
+        if normalise_data is True:
+            slab_data = _numpy.where(
+                plot_slabs.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_slabs.slab_pull_force_mag.values),
+                0,
+                slab_data / plot_slabs.slab_pull_force_mag.values
+            )
+
+            plate_data_lat = _numpy.where(
+                plot_plates.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_plates.slab_pull_force_mag.values),
+                0,
+                plate_data_lat / plot_plates.slab_pull_force_mag.values
+            )
+
+            plate_data_lon = _numpy.where(
+                plot_plates.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_plates.slab_pull_force_mag.values),
+                0,
+                plate_data_lon / plot_plates.slab_pull_force_mag.values
+            )
+
+            plate_data_mag = _numpy.where(
+                plot_plates.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_plates.slab_pull_force_mag.values),
+                0,
+                plate_data_mag / plot_plates.slab_pull_force_mag.values
+            )
+            
         # Convert to log scale, if needed
         if log_scale is True:
             if vmin == 0:
@@ -2327,17 +2365,29 @@ class PlateForces():
             vmin = _numpy.log10(vmin)
             vmax = _numpy.log10(vmax)
 
-            data = _numpy.where(
-                data == 0,
+            slab_data = _numpy.where(
+                slab_data == 0 | _numpy.isnan(slab_data),
                 vmin,
-                _numpy.log10(data),
+                _numpy.log10(slab_data),
             )
+
+            # plate_data_lat = _numpy.where(
+            #     plate_data_lat == 0 | _numpy.isnan(plate_data_lat),
+            #     0,
+            #     _numpy.log10(plate_data_lat),
+            # )
+
+            # plate_data_lon = _numpy.where(
+            #     plate_data_lon == 0 | _numpy.isnan(plate_data_lon),
+            #     0,
+            #     _numpy.log10(plate_data_lon),
+            # )
 
         # Plot velocity difference grid
         sc = ax.scatter(
-                lon,
-                lat,
-                c = data,
+                plot_slabs.lon.values,
+                plot_slabs.lat.values,
+                c = slab_data,
                 s = marker_size,
                 transform = ccrs.PlateCarree(),
                 cmap = cmap,
@@ -2349,18 +2399,36 @@ class PlateForces():
         force_vectors = self.slabs[reconstruction_time][case].iloc[::5].copy()
 
         # Plot velocity vectors
-        qu = self.plot_vectors(
+        slab_qu = self.plot_vectors(
             ax,
             force_vectors.lat.values,
             force_vectors.lon.values,
             force_vectors.residual_force_lat.values,
             force_vectors.residual_force_lon.values,
-            force_vectors.slab_pull_force_mag.values,
+            force_vectors.residual_force_mag.values,
             normalise_vectors = normalise_vectors,
-            width = vector_width,
-            scale = vector_scale,
-            color = vector_color,
-            alpha = vector_alpha
+            width = slab_vector_width,
+            scale = slab_vector_scale,
+            facecolour = slab_vector_colour,
+            alpha = slab_vector_alpha
+        )
+
+        # Plot residual torque vectors at plate centroids
+        plate_qu = self.plot_vectors(
+            ax,
+            plot_plates.centroid_lat.values,
+            plot_plates.centroid_lon.values,
+            plate_data_lat,
+            plate_data_lon,
+            plate_data_mag,
+            normalise_vectors = normalise_vectors,
+            width = plate_vector_width,
+            scale = plate_vector_scale,
+            facecolour = plate_vector_facecolour,
+            edgecolour = plate_vector_edgecolour,
+            linewidth = plate_vector_linewidth,
+            alpha = plate_vector_alpha,
+            zorder = 10
         )
 
         # Plot plates and coastlines
@@ -2373,7 +2441,7 @@ class PlateForces():
             plate_boundaries_linewidth = plate_boundaries_linewidth,
         )
 
-        return sc, qu
+        return sc, slab_qu, plate_qu
     
     def plot_torque_through_time(
             self,
@@ -2621,8 +2689,11 @@ class PlateForces():
             normalise_vectors = False,
             width = 4e-3,
             scale = 3e2,
-            color = "k",
+            facecolour = "k",
+            edgecolour = "none",
+            linewidth = 1,
             alpha = 0.5,
+            zorder = 4,
         ):
         """
         Function to plot vectors on an axes object.
@@ -2672,9 +2743,11 @@ class PlateForces():
                     transform = ccrs.PlateCarree(),
                     width = width,
                     scale = scale,
-                    zorder = 4,
-                    color = color,
+                    zorder = zorder,
+                    color = facecolour,
+                    edgecolor = edgecolour,
                     alpha = alpha,
+                    linewidth = linewidth,
                 )
         
         return qu

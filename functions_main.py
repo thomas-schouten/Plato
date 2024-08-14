@@ -173,7 +173,7 @@ def compute_slab_bending_force(slabs, options, mech, constants):
     if options["Bending mechanism"] == "viscous":
         bending_force = (-2. / 3.) * ((slabs.lower_plate_thickness) / (mech.rad_curv)) ** 3 * mech.lith_visc * slabs.v_convergence * constants.cm_a2m_s # [n-s , e-w], [N/m]
     elif options["Bending mechanism"] == "plastic":
-        bending_force = (-1. / 6.) * ((slabs.lower_plate_thickness ** 2) / mech.rad_curv) * mech.yield_stress * _numpy.array(
+        bending_force = (-1. / 6.) * ((slabs.lower_plate_thickness ** 2) / mech.rad_curv) * mech.yield_stress * _numpy.asarray(
             (_numpy.cos(slabs.trench_normal_vector + slabs.obliquity_convergence), _numpy.sin(slabs.trench_normal_vector + slabs.obliquity_convergence)))  # [n-s, e-w], [N/m]
         
     slabs["bending_force_lat"], slabs["bending_force_lon"] = mag_azi2lat_lon(bending_force, slabs.trench_normal_vector + slabs.obliquity_convergence)
@@ -511,7 +511,7 @@ def sample_ages(lat, lon, seafloor, coords=["latitude", "longitude"]):
     lon_da = _xarray.DataArray(lon, dims="point")
 
     # Interpolate age value at point
-    ages = _numpy.array(seafloor.interp({coords[0]: lat_da, coords[1]: lon_da}, method="nearest").values.tolist())
+    ages = _numpy.asarray(seafloor.interp({coords[0]: lat_da, coords[1]: lon_da}, method="nearest").values.tolist())
 
     # Close the seafloor to free memory space
     seafloor.close()
@@ -560,8 +560,8 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
         centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
         
         # Calculate force from cross product of plates with centroid position
-        summed_torques_cartesian = _numpy.array([plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"]])
-        summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.array(plates.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
+        summed_torques_cartesian = _numpy.asarray([plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"]])
+        summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.asarray(plates.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
         force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
         velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)
 
@@ -658,7 +658,7 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
         if plateID in plates.plateID.values:
             # Get the index of the lower plate in the torques DataFrame
             n = _numpy.where(plates.plateID.values == plateID)
-            velocity_xyz = -1 * _numpy.array([
+            velocity_xyz = -1 * _numpy.asarray([
                 torques_xyz[:,n][0][0][0],
                 torques_xyz[:,n][1][0][0],
                 torques_xyz[:,n][2][0][0]
@@ -670,7 +670,7 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
                 point_velocity = vector_xyz2lat_lon(
                     [lat],
                     [lon],
-                    _numpy.array(
+                    _numpy.asarray(
                         [_numpy.cross(
                         velocity_xyz, lat_lon2xyz(
                             lat, lon, constants
@@ -783,7 +783,7 @@ def sum_torque(plates, torque_type, constants):
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
     for opt in ["", "opt_"]:
-        summed_torques_cartesian = _numpy.array([
+        summed_torques_cartesian = _numpy.asarray([
             plates[f"{torque_type}_torque_{opt}x"], 
             plates[f"{torque_type}_torque_{opt}y"], 
             plates[f"{torque_type}_torque_{opt}z"]
@@ -828,7 +828,7 @@ def compute_residual_along_trench(plates, slabs, constants, DEBUG_MODE=False):
             selected_trench_length = selected_slabs.trench_segment_length.sum()
 
             # Get residual torque vector
-            residual_torque_xyz = _numpy.array([
+            residual_torque_xyz = _numpy.asarray([
                 selected_plate.residual_torque_x.values[0],
                 selected_plate.residual_torque_y.values[0],
                 selected_plate.residual_torque_z.values[0]
@@ -840,7 +840,7 @@ def compute_residual_along_trench(plates, slabs, constants, DEBUG_MODE=False):
                 residual_force = vector_xyz2lat_lon(
                     [lat],
                     [lon],
-                    _numpy.array(
+                    _numpy.asarray(
                         [_numpy.cross(
                         residual_torque_xyz, lat_lon2xyz(
                             lat, lon, constants
@@ -1033,7 +1033,7 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     centroid_position = lat_lon2xyz(torques.centroid_lat, torques.centroid_lon, constants)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
-    summed_torques_cartesian = _numpy.array([torques[torque_variable + "_x"], torques[torque_variable + "_y"], torques[torque_variable + "_z"]])
+    summed_torques_cartesian = _numpy.asarray([torques[torque_variable + "_x"], torques[torque_variable + "_y"], torques[torque_variable + "_z"]])
     force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0) 
 
     if DEBUG_MODE:
@@ -1098,7 +1098,7 @@ def vector_xyz2lat_lon(lats, lons, vector, DEBUG_MODE=False):
           It could be optimised using vectorised operations, but so far it has not impacted performance in its current form
     """
     # Convert lats and lons to numpy arrays, if not already
-    lats = _numpy.array(lats); lons = _numpy.array(lons)
+    lats = _numpy.asarray(lats); lons = _numpy.asarray(lons)
 
     # Initialize dataframes
     vector_mags = _numpy.zeros(len(lats)); vector_azis = _numpy.zeros(len(lats))
@@ -1144,7 +1144,7 @@ def lat_lon2xyz(lat, lon, constants):
     lon_rads = _numpy.deg2rad(lon)
 
     # Calculate position vectors
-    position = constants.mean_Earth_radius_m * _numpy.array([_numpy.cos(lat_rads) * _numpy.cos(lon_rads), _numpy.cos(lat_rads) * _numpy.sin(lon_rads), _numpy.sin(lat_rads)])
+    position = constants.mean_Earth_radius_m * _numpy.asarray([_numpy.cos(lat_rads) * _numpy.cos(lon_rads), _numpy.cos(lat_rads) * _numpy.sin(lon_rads), _numpy.sin(lat_rads)])
 
     return position
 
@@ -1191,7 +1191,7 @@ def torques2xyz(position, lat, lon, force_lat, force_lon, segment_length_lat, se
     force_y = force_magnitude * _numpy.cos(theta) * _numpy.cos(lon_rads)
     force_z = force_magnitude * _numpy.sin(theta) * _numpy.cos(lat_rads)
 
-    force = _numpy.array([force_x, force_y, force_z])
+    force = _numpy.asarray([force_x, force_y, force_z])
 
     # Calculate torque
     torque = _numpy.cross(position, force, axis=0)
@@ -1368,7 +1368,7 @@ def rotate_vector(vector, rotation, constants):
         raise ValueError("Euler parameters do not sum to 1")
     
     # Calculate rotation matrix
-    rotation_matrix = _numpy.array([
+    rotation_matrix = _numpy.asarray([
         [a**2 + b**2 - c**2 - d**2, 2 * (b * c - a * d), 2 * (a * c + b * d)],
         [2 * (b * c + a * d), a**2 - b**2 + c**2 - d**2, 2 * (c * d - a * b)],
         [2 * (b * d - a * c), 2 * (a * b + c * d), a**2 - b**2 - c**2 + d**2]
