@@ -838,9 +838,17 @@ def process_cases(cases, options, target_options):
 # SAVING 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, case, folder, DEBUG_MODE=False):
+def DataFrame_to_parquet(
+        data: _pandas.DataFrame,
+        data_name: str,
+        reconstruction_name: str,
+        reconstruction_time: int,
+        case: str,
+        folder: str,
+        DEBUG_MODE: bool = False
+    ):
     """
-    Function to save DataFrame to a folder
+    Function to save DataFrame to a Parquet file in a folder efficiently.
 
     :param data:                  data
     :type data:                   pandas.DataFrame
@@ -857,71 +865,85 @@ def DataFrame_to_csv(data, data_name, reconstruction_name, reconstruction_time, 
     :param DEBUG_MODE:            whether to run in debug mode
     :type DEBUG_MODE:             bool
     """
+    # Construct the file path
+    target_dir = folder if folder else os.getcwd()
+    file_name = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.parquet"
+    file_path = os.path.join(target_dir, data_name, file_name)
+    
+    # Debug information
     if DEBUG_MODE:
-        if folder:
-            print(f"Saving {data_name} to {folder}/{data_name}")
-        else:
-            print(f"Saving {data_name} to {data_name}")
+        print(f"Saving {data_name} to {file_path}")
 
-    # Determine the target directory
-    target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
-    
     # Ensure the directory exists
-    check_dir(target_dir)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
-    # Make file name
-    file_name = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
-    file_path = os.path.join(target_dir, file_name)
-
-    # Delete old file if it exists to prevent "Permission denied" error
-    if os.path.exists(file_path):
+    # Delete old file if it exists
+    try:
         os.remove(file_path)
+    except FileNotFoundError:
+        pass  # No need to remove if file does not exist
 
-    # Save the data to CSV
-    data.to_csv(file_path, index=False)
+    # Save the data to Parquet
+    data.to_parquet(file_path, index=False)
 
-def Dataset_to_netCDF(data, data_name, reconstruction_name, reconstruction_time, folder, DEBUG_MODE=False):
+def DataFrame_to_csv(
+        data: _pandas.DataFrame,
+        data_name: str,
+        reconstruction_name: str,
+        reconstruction_time: int,
+        case: str,
+        folder: str,
+        DEBUG_MODE: bool = False
+    ):
     """
-    Function to save xarray Dataset to a folder
+    Function to save DataFrame to a folder efficiently.
 
     :param data:                  data
-    :type data:                   xarray.Dataset
+    :type data:                   pandas.DataFrame
     :param data_name:             name of dataset
     :type data_name:              string
     :param reconstruction_name:   name of reconstruction
     :type reconstruction_name:    string
-    :param reconstruction_time:   age of reconstruction in Ma
-    :type reconstruction_time:    int
+    :param reconstruction_time:   reconstruction time
+    :type reconstruction_time:    integer
+    :param case:                  case
+    :type case:                   string
     :param folder:                folder
     :type folder:                 string
+    :param DEBUG_MODE:            whether to run in debug mode
+    :type DEBUG_MODE:             bool
     """
-    # Determine the target directory
-    target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
+    # Construct the file path
+    target_dir = folder if folder else os.getcwd()
+    file_name = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
+    file_path = os.path.join(target_dir, data_name, file_name)
     
-    # Ensure the directory exists
-    check_dir(target_dir)
-    
-    # Make file name
-    file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"
-    file_path = os.path.join(target_dir, file_name)
-
-    # Print target directory and file path if in debug mode
+    # Debug information
     if DEBUG_MODE:
-        print(f"Target directory for {data_name}: {target_dir}")
-        print(f"File path for {data_name} at {reconstruction_time}: {file_path}")
+        print(f"Saving {data_name} to {file_path}")
 
-    # Delete old file if it exists to prevent "Permission denied" error
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        if DEBUG_MODE:
-            print(f"Deleted old file {file_path}")
-
-    # Save the data to NetCDF
-    data.to_netcdf(file_path)
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
-def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstruction_time, folder, DEBUG_MODE=False):
+    # Delete old file if it exists
+    try:
+        os.remove(file_path)
+    except FileNotFoundError:
+        pass  # No need to remove if file does not exist
+
+    # Save the data to CSV
+    data.to_csv(file_path, index=False)
+    
+def GeoDataFrame_to_geoparquet(
+        data: _geopandas.GeoDataFrame,
+        data_name: str,
+        reconstruction_name: str,
+        reconstruction_time: int,
+        folder: str,
+        DEBUG_MODE: bool = False
+    ):
     """
-    Function to save GeoDataFrame to a folder
+    Function to save GeoDataFrame to a GeoParquet file in a folder efficiently.
 
     :param data:                  data
     :type data:                   geopandas.GeoDataFrame
@@ -933,28 +955,77 @@ def GeoDataFrame_to_shapefile(data, data_name, reconstruction_name, reconstructi
     :type reconstruction_time:    int
     :param folder:                folder
     :type folder:                 string
+    :param DEBUG_MODE:            whether to run in debug mode
+    :type DEBUG_MODE:             bool
     """
-    # Determine the target directory
+    # Construct the target directory and file path
     target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
-    
-    # Define target dir and check if it exists
-    target_dir = os.path.join(folder, data_name)
-    check_dir(target_dir)
-
-    # Make file name
-    file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp"
+    file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.parquet"
     file_path = os.path.join(target_dir, file_name)
-
-    # Print target directory and file path if in debug mode
+    
+    # Debug information
     if DEBUG_MODE:
         print(f"Target directory for {data_name}: {target_dir}")
         print(f"File path for {data_name} at {reconstruction_time}: {file_path}")
 
-    # Delete old file if it exists to prevent "Permission denied" error
-    if os.path.exists(file_path):
+    # Ensure the directory exists
+    os.makedirs(target_dir, exist_ok=True)
+    
+    # Delete old file if it exists
+    try:
         os.remove(file_path)
         if DEBUG_MODE:
             print(f"Deleted old file {file_path}")
+    except FileNotFoundError:
+        pass  # File does not exist, no need to remove
+
+    # Save the data to a GeoParquet file
+    data.to_parquet(file_path)
+
+def GeoDataFrame_to_shapefile(
+        data: _geopandas.GeoDataFrame,
+        data_name: str,
+        reconstruction_name: str,
+        reconstruction_time: int,
+        folder: str,
+        DEBUG_MODE: bool = False
+    ):
+    """
+    Function to save GeoDataFrame to a folder efficiently.
+
+    :param data:                  data
+    :type data:                   geopandas.GeoDataFrame
+    :param data_name:             name of dataset
+    :type data_name:              string
+    :param reconstruction_name:   name of reconstruction
+    :type reconstruction_name:    string
+    :param reconstruction_time:   age of reconstruction in Ma
+    :type reconstruction_time:    int
+    :param folder:                folder
+    :type folder:                 string
+    :param DEBUG_MODE:            whether to run in debug mode
+    :type DEBUG_MODE:             bool
+    """
+    # Construct the target directory and file path
+    target_dir = os.path.join(folder if folder else os.getcwd(), data_name)
+    file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.shp"
+    file_path = os.path.join(target_dir, file_name)
+    
+    # Debug information
+    if DEBUG_MODE:
+        print(f"Target directory for {data_name}: {target_dir}")
+        print(f"File path for {data_name} at {reconstruction_time}: {file_path}")
+
+    # Ensure the directory exists
+    os.makedirs(target_dir, exist_ok=True)
+    
+    # Delete old file if it exists
+    try:
+        os.remove(file_path)
+        if DEBUG_MODE:
+            print(f"Deleted old file {file_path}")
+    except FileNotFoundError:
+        pass  # File does not exist, no need to remove
 
     # Save the data to a shapefile
     data.to_file(file_path)
@@ -1016,8 +1087,8 @@ def load_data(
         if files_dir:
             for case in all_cases:
                 # Load DataFrame if found
-                data[reconstruction_time][case] = DataFrame_from_csv(files_dir, type, reconstruction_name, case, reconstruction_time)
-
+                data[reconstruction_time][case] = DataFrame_from_parquet(files_dir, type, reconstruction_name, case, reconstruction_time)
+                
                 if data[reconstruction_time][case] is not None:
                     unavailable_cases.remove(case)
                     available_cases.append(case)
@@ -1146,15 +1217,15 @@ def load_grid(
 
     return grid
 
-def DataFrame_from_csv(
+def DataFrame_from_parquet(
         folder: str,
         type: str,
         reconstruction_name: str,
         case: str,
-        reconstruction_time: int,
-    ):
+        reconstruction_time: int
+    ) -> _pandas.DataFrame:
     """
-    Function to load DataFrames from a folder
+    Function to load DataFrames from a folder efficiently.
 
     :param folder:               folder
     :type folder:                str
@@ -1165,23 +1236,58 @@ def DataFrame_from_csv(
     :param case:                 case
     :type case:                  str
     :param reconstruction_time:  reconstruction time
-    :type reconstruction_time:   inte
+    :type reconstruction_time:   int
     
     :return:                     data
-    :rtype:                      pandas.DataFrame
+    :rtype:                      pandas.DataFrame or None
     """
-    # Get target folder
-    if folder:
-        target_file = os.path.join(folder, type, f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv")
-    else:
-        target_file = os.getcwd(type, f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv")  # Use the current working directory
+    # Construct the target file path
+    target_file = os.path.join(
+        folder if folder else os.getcwd(),
+        type,
+        f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.parquet"
+    )
 
-    # Check if target file exists
+    # Check if target file exists and load data
     if os.path.exists(target_file):
-        # Load data
-        data = _pandas.read_csv(os.path.join(target_file))
+        return _pandas.read_parquet(target_file)
+    else:
+        return None
 
-        return data
+def DataFrame_from_csv(
+        folder: str,
+        type: str,
+        reconstruction_name: str,
+        case: str,
+        reconstruction_time: int
+    ) -> _pandas.DataFrame:
+    """
+    Function to load DataFrames from a folder efficiently.
+
+    :param folder:               folder
+    :type folder:                str
+    :param type:                 type of data
+    :type type:                  str
+    :param reconstruction_name:  name of reconstruction
+    :type reconstruction_name:   str
+    :param case:                 case
+    :type case:                  str
+    :param reconstruction_time:  reconstruction time
+    :type reconstruction_time:   int
+    
+    :return:                     data
+    :rtype:                      pandas.DataFrame or None
+    """
+    # Construct the target file path
+    target_file = os.path.join(
+        folder if folder else os.getcwd(),
+        type,
+        f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
+    )
+
+    # Check if target file exists and load data
+    if os.path.exists(target_file):
+        return _pandas.read_csv(target_file)
     else:
         return None
 
@@ -1190,38 +1296,64 @@ def Dataset_from_netCDF(
         type: str,
         reconstruction_time: int,
         reconstruction_name: str,
-        case: Optional[str] = None,
-    ):
+        case: Optional[str] = None
+    ) -> _xarray.Dataset:
     """
-    Function to load xarray Dataset from a folder
+    Function to load xarray Dataset from a folder efficiently.
 
     :param folder:               folder
-    :type folder:                string
-    :param reconstruction_times: reconstruction times
-    :type reconstruction_times:  list or numpy.array
+    :type folder:                str
+    :param reconstruction_time:  reconstruction time
+    :type reconstruction_time:   int
     :param reconstruction_name:  name of reconstruction
     :type reconstruction_name:   str
-    :param case:                 case
-    :type case:                  str
+    :param case:                 optional case
+    :type case:                  str, optional
 
     :return:                     data
-    :rtype:                      xarray.Dataset
+    :rtype:                      xarray.Dataset or None
     """
-    # Make file name
-    if case:
-        file_name = f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.nc"
-    else:
-        file_name = f"{type}_{reconstruction_name}_{reconstruction_time}Ma.nc"
+    # Construct the file name based on whether a case is provided
+    file_name = f"{type}_{reconstruction_name}_{case + '_' if case else ''}{reconstruction_time}Ma.nc"
 
-    # Get target file
+    # Construct the full path to the target file
     target_file = os.path.join(folder if folder else os.getcwd(), type, file_name)
 
-    # Check if target folder exists
+    # Check if the target file exists and load the dataset
     if os.path.exists(target_file):
-        # Load data
-        data = _xarray.open_dataset(os.path.join(target_file))
+        return _xarray.open_dataset(target_file)
+    else:
+        return None
+    
+def GeoDataFrame_from_geoparquet(
+        folder: str,
+        type: str,
+        reconstruction_time: int,
+        reconstruction_name: str
+    ) -> _geopandas.GeoDataFrame:
+    """
+    Function to load GeoDataFrame from a folder efficiently.
 
-        return data
+    :param folder:               folder
+    :type folder:                str
+    :param reconstruction_time:  reconstruction time
+    :type reconstruction_time:   int
+    :param reconstruction_name:  name of reconstruction
+    :type reconstruction_name:   str
+
+    :return:                     data
+    :rtype:                      geopandas.GeoDataFrame or None
+    """
+    # Construct the target file path
+    target_file = os.path.join(
+        folder if folder else os.getcwd(),
+        type,
+        f"{type}_{reconstruction_name}_{reconstruction_time}Ma.geoparquet"
+    )
+
+    # Check if target file exists and load data
+    if os.path.exists(target_file):
+        return _geopandas.read_file(target_file)
     else:
         return None
     
@@ -1229,32 +1361,30 @@ def GeoDataFrame_from_shapefile(
         folder: str,
         type: str,
         reconstruction_time: int,
-        reconstruction_name: str,
-    ):
+        reconstruction_name: str
+    ) -> _geopandas.GeoDataFrame:
     """
-    Function to load GeoDataFrame from a folder
+    Function to load GeoDataFrame from a folder efficiently.
 
     :param folder:               folder
-    :type folder:                string
-    :param reconstruction_times: reconstruction times
-    :type reconstruction_times:  list or numpy.array
+    :type folder:                str
+    :param reconstruction_time:  reconstruction time
+    :type reconstruction_time:   int
     :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   string
+    :type reconstruction_name:   str
 
     :return:                     data
-    :rtype:                      geopandas.GeoDataFrame
+    :rtype:                      geopandas.GeoDataFrame or None
     """
-    # Get target folder
-    if folder:
-        target_file = os.path.join(folder, type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.shp")
-    else:
-        target_file = os.getcwd(type, f"{type}_{reconstruction_name}_{reconstruction_time}Ma.shp")  # Use the current working directory
-    
-    # Check if target folder exists
-    if os.path.exists(target_file):
-        # Load data
-        data = _geopandas.read_file(os.path.join(target_file))
+    # Construct the target file path
+    target_file = os.path.join(
+        folder if folder else os.getcwd(),
+        type,
+        f"{type}_{reconstruction_name}_{reconstruction_time}Ma.shp"
+    )
 
-        return data
+    # Check if target file exists and load data
+    if os.path.exists(target_file):
+        return _geopandas.read_file(target_file)
     else:
         return None

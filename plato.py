@@ -144,7 +144,7 @@ class PlateForces():
         for reconstruction_time in tqdm(self.times, desc="Loading geometries", disable=self.DEBUG_MODE):
             
             # Load resolved geometries if they are available
-            self.resolved_geometries[reconstruction_time] = setup.GeoDataFrame_from_shapefile(
+            self.resolved_geometries[reconstruction_time] = setup.GeoDataFrame_from_geoparquet(
                 self.dir_path,
                 "Geometries",
                 reconstruction_time,
@@ -1563,9 +1563,9 @@ class PlateForces():
     def save_all(self):
         for reconstruction_time in tqdm(self.times, desc="Saving data", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
-                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
-                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_parquet(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_parquet(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_parquet(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
             setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
             setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
             setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
@@ -1575,21 +1575,21 @@ class PlateForces():
     def save_plates(self):
         for reconstruction_time in tqdm(self.times, desc="Saving plates", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_parquet(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Plates data saved to {self.dir_path}!")
 
     def save_slabs(self):
         for reconstruction_time in tqdm(self.times, desc="Saving slabs", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_parquet(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Slabs data saved to {self.dir_path}!")
     
     def save_points(self):
         for reconstruction_time in tqdm(self.times, desc="Saving points", disable=self.DEBUG_MODE):
             for case in self.cases:
-                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_parquet(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Points data saved to {self.dir_path}!")
 
