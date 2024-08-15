@@ -27,9 +27,7 @@ import xarray as _xarray
 # Local libraries
 import setup
 import functions_main
-import shutil
 import sys
-import tempfile
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATE FORCES OBJECT
@@ -48,7 +46,6 @@ class PlateForces():
             polygon_file: Optional[List[str]] = None,
             coastline_file: Optional[str] = None,
             seafloor_grids: Optional[dict] = None,
-            plates_of_interest: Optional[List[int]] = None,
             DEBUG_MODE: Optional[bool] = False,
             PARALLEL_MODE: Optional[bool] = False,
         ):
@@ -1566,7 +1563,7 @@ class PlateForces():
                 setup.DataFrame_to_parquet(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
                 setup.DataFrame_to_parquet(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
                 setup.DataFrame_to_parquet(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
-            setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.GeoDataFrame_to_geoparquet(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
             setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
             setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
@@ -1611,6 +1608,50 @@ class PlateForces():
             setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Velocity data saved to {self.dir_path}!")
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# EXPORTING 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def export_all(self):
+        for reconstruction_time in tqdm(self.times, desc="Saving data", disable=self.DEBUG_MODE):
+            for case in self.cases:
+                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+
+        print(f"All data exported to {self.dir_path}!")
+
+    def export_plates(self):
+        for reconstruction_time in tqdm(self.times, desc="Saving plates", disable=self.DEBUG_MODE):
+            for case in self.cases:
+                setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+
+        print(f"Plates data exported to {self.dir_path}!")
+
+    def export_slabs(self):
+        for reconstruction_time in tqdm(self.times, desc="Saving slabs", disable=self.DEBUG_MODE):
+            for case in self.cases:
+                setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+
+        print(f"Slabs data exported to {self.dir_path}!")
+    
+    def export_points(self):
+        for reconstruction_time in tqdm(self.times, desc="Saving points", disable=self.DEBUG_MODE):
+            for case in self.cases:
+                setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+
+        print(f"Points data exported to {self.dir_path}!")
+
+    def export_geometries(self):
+        for reconstruction_time in tqdm(self.times, desc="Saving geometries", disable=self.DEBUG_MODE):
+            for case in self.cases:
+                setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+
+        print(f"Geometries data exported to {self.dir_path}!")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # DATA EXTRACTION 

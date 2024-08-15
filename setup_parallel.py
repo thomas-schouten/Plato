@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATO
 # Algorithm to calculate plate forces from tectonic reconstructions
-# Setup
-# Thomas Schouten, 2023
+# Parallel processor for accelerating the retrieval of plate IDs
+# Thomas Schouten, 2024
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Import libraries
@@ -20,6 +20,7 @@ from typing import Union
 
 # Third-party libraries
 import geopandas as _geopandas
+import matplotlib.pyplot as plt
 
 import numpy as _numpy
 import gplately as _gplately
@@ -27,16 +28,13 @@ import pandas as _pandas
 import pygplates as _pygplates
 import xarray as _xarray
 
+from multiprocessing import Pool
 from tqdm import tqdm
 
 # Local libraries
 from functions_main import set_constants
 from functions_main import mag_azi2lat_lon
 from functions_main import project_points
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# INITIALISATION 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def get_plates(
         rotations: _pygplates.RotationModel,
@@ -152,7 +150,6 @@ def get_slabs(
         plates: _pandas.DataFrame,
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
-        PARALLEL_MODE: Optional[bool] = False,
     ):
     """
     Function to get data on slabs in reconstruction.
@@ -167,10 +164,6 @@ def get_slabs(
     :type topology_geometries:    geopandas.GeoDataFrame
     :param options:               options for the case
     :type options:                dict
-    :param DEBUG_MODE:            whether to run in debug mode
-    :type DEBUG_MODE:             bool
-    :param PARALLEL_MODE:         whether to run in parallel mode
-    :type PARALLEL_MODE:          bool
     
     :return:                      slabs
     :rtype:                       pandas.DataFrame
@@ -205,7 +198,6 @@ def get_slabs(
         sampling_lat,
         sampling_lon,
         reconstruction_time,
-        PARALLEL_MODE=PARALLEL_MODE
     )
 
     # Get absolute velocities of upper and lower plates
@@ -282,7 +274,6 @@ def get_points(
         plates: _pandas.DataFrame,
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
-        PARALLEL_MODE: Optional[bool] = False,
     ):
     """
     Function to get data on regularly spaced grid points in reconstruction.
@@ -319,7 +310,6 @@ def get_points(
         lat_grid,
         lon_grid,
         reconstruction_time,
-        PARALLEL_MODE=PARALLEL_MODE
     )
 
     # Initialise empty array to store velocities
@@ -384,7 +374,18 @@ def get_points(
     
     return points
 
-def extract_geometry_data(topology_geometries):
+def extract_geometry_data(
+        topology_geometries
+    ) -> list:
+    """
+    Function to extract geometry data from topology geometries relevant to obtaining plate IDs.
+
+    :param topology_geometries:        topology geometries
+    :type topology_geometries:         geopandas.GeoDataFrame
+
+    :return:                           nested tuples containting geometry and plate ID of each topology geometry
+    :rtype:                            list
+    """
     return [(geom, plateID) for geom, plateID in zip(topology_geometries.geometry, topology_geometries.PLATEID1)]
 
 def process_plateIDs(
@@ -392,6 +393,19 @@ def process_plateIDs(
         lats_chunk: _numpy.array,
         lons_chunk: _numpy.array,
     ) -> list:
+    """
+    Function to process plate IDs for a chunk of latitudes and longitudes.
+
+    :param geometries_data:           geometry data
+    :type geometries_data:            list
+    :param lats_chunk:                chunk of latitudes
+    :type lats_chunk:                 numpy.array
+    :param lons_chunk:                chunk of longitudes
+    :type lons_chunk:                 numpy.array
+
+    :return:                          plateIDs
+    :rtype:                           numpy.array
+    """
     plateIDs = _numpy.zeros(len(lats_chunk))
     
     for topology_geometry, topology_plateID in geometries_data:
@@ -410,8 +424,7 @@ def get_plateIDs(
         lats: Union[list or _numpy.array],
         lons: Union[list or _numpy.array],
         reconstruction_time: int,
-        PARALLEL_MODE: Optional[bool] = False,
-        num_workers: Optional[int] = None,
+        NUM_PROCESSES: Optional[int] = None,
     ):
     """
     Function to get plate IDs for a set of latitudes and longitudes.
@@ -430,17 +443,30 @@ def get_plateIDs(
     :return:                           plateIDs
     :rtype:                            list
     """
-    # Convert lats and lons to numpy arrays if they are not already
+    # Extract geometry data from topology geometries
+    geometries_data = extract_geometry_data(topology_geometries)
+
+    # Parallel processing of plate IDs
     lats = _numpy.asarray(lats)
     lons = _numpy.asarray(lons)
 
-    # Extract geometry data
-    geometries_data = extract_geometry_data(topology_geometries)
+    # Use all available CPUs if NUM_PROCESSES is not specified
+    if NUM_PROCESSES is None:
+        NUM_PROCESSES = _os.cpu_count()
 
-    # Get plateIDs for the entire dataset
-    plateIDs = process_plateIDs(geometries_data, lats, lons)
+    # Split the data into chunks
+    chunk_size = len(lats) // NUM_PROCESSES
+    chunks = [(geometries_data.copy(), lats[i:i + chunk_size].copy(), lons[i:i + chunk_size].copy()) for i in range(0, len(lats), chunk_size)]
 
-    # Use vectorised operations to find and assign plate IDs for remaining points
+    # Create a Pool of workers
+    with Pool(NUM_PROCESSES) as pool:
+        # Map the process_chunk function to chunks
+        results = pool.starmap(process_plateIDs, chunks)
+
+    # Concatenate results from all chunks
+    plateIDs = _numpy.concatenate(results)
+
+    # Use gplately's Point object to find and assign plate IDs for remaining points
     no_plateID_mask = plateIDs == 0
     if no_plateID_mask.any():
         no_plateID_grid = _gplately.Points(
@@ -1071,371 +1097,3 @@ def check_dir(target_dir):
     # Check if a directory exists, and create it if it doesn't
     if not _os.path.exists(target_dir):
         _os.makedirs(target_dir)
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# LOADING 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def load_data(
-        data: dict,
-        reconstruction: _gplately.PlateReconstruction,
-        reconstruction_name: str,
-        reconstruction_times: list,
-        type: str,
-        all_cases: list,
-        all_options: dict,
-        matching_case_dict: dict,
-        files_dir: Optional[str] = None,
-        plates = None,
-        resolved_topologies = None,
-        resolved_geometries = None,
-        DEBUG_MODE: Optional[bool] = False,
-        PARALLEL_MODE: Optional[bool] = False,
-    ) -> dict:
-    """
-    Function to load DataFrames from a folder, or initialise new DataFrames
-    
-    :param data:                  data
-    :type data:                   dict
-    :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
-    :param reconstruction_name:   name of reconstruction
-    :type reconstruction_name:    string
-    :param reconstruction_times:  reconstruction times
-    :type reconstruction_times:   list or _numpy.array
-    :param type:                  type of data
-    :type type:                   string
-    :param all_cases:             all cases
-    :type all_cases:              list
-    :param all_options:           all options
-    :type all_options:            dict
-    :param matching_case_dict:    matching case dictionary
-    :type matching_case_dict:     dict
-    :param files_dir:             files directory
-    :type files_dir:              string
-    :param plates:                plates
-    :type plates:                 pandas.DataFrame
-    :param resolved_topologies:   resolved topologies
-    :type resolved_topologies:    geopandas.GeoDataFrame
-    :param resolved_geometries:   resolved geometries
-    :type resolved_geometries:    geopandas.GeoDataFrame
-    :param DEBUG_MODE:            whether to run in debug mode
-    :type DEBUG_MODE:             bool
-    :param PARALLEL_MODE:         whether to run in parallel mode
-    :type PARALLEL_MODE:          bool
-
-    :return:                      data
-    :rtype:                       dict
-    """
-    def load_or_initialise_case(case, reconstruction_time):
-        df = None
-        if files_dir:
-            df = DataFrame_from_parquet(files_dir, type, reconstruction_name, case, reconstruction_time)
-            if df is not None:
-                return case, df
-        
-        # Check for matching case and copy data
-        matching_key = next((key for key, cases in matching_case_dict.items() if case in cases), None)
-        if matching_key:
-            for matching_case in matching_case_dict[matching_key]:
-                if matching_case in data[reconstruction_time]:
-                    return case, data[reconstruction_time][matching_case].copy()
-
-        # Initialize new DataFrame if not found
-        if df is None:
-            if DEBUG_MODE:
-                print(f"Initializing new DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {case}...")
-            if type == "Plates":
-                df = get_plates(
-                    reconstruction.rotation_model,
-                    reconstruction_time,
-                    resolved_topologies[reconstruction_time],
-                    all_options[case]
-                )
-
-            elif type == "Slabs":
-                df = get_slabs(
-                    reconstruction,
-                    reconstruction_time,
-                    plates[reconstruction_time][case],
-                    resolved_geometries[reconstruction_time],
-                    all_options[case],
-                    PARALLEL_MODE=PARALLEL_MODE
-                )
-
-            elif type == "Points":
-                df = get_points(
-                    reconstruction,
-                    reconstruction_time,
-                    plates[reconstruction_time][case],
-                    resolved_geometries[reconstruction_time],
-                    all_options[case],
-                    PARALLEL_MODE=PARALLEL_MODE
-                )
-
-        return case, df
-
-    # Sequential processing
-    # NOTE: Parallel processing increases computation time by a factor 1.5, so this function is kept sequential
-    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} DataFrames", disable=DEBUG_MODE):
-        data[reconstruction_time] = {}
-        
-        for case in all_cases:
-            case, df = load_or_initialise_case(case, reconstruction_time)
-            data[reconstruction_time][case] = df
-
-    return data 
-
-def load_grid(
-        grid: dict,
-        reconstruction_name: str,
-        reconstruction_times: list,
-        type: str,
-        files_dir: str,
-        points: Optional[dict] = None,
-        seafloor_grid: Optional[_xarray.Dataset] = None,
-        cases: Optional[list] = None,
-        DEBUG_MODE: Optional[bool] = False
-    ) -> dict:
-    """
-    Function to load grid from a folder.
-
-    :param grids:                  grids
-    :type grids:                   dict
-    :param reconstruction_name:    name of reconstruction
-    :type reconstruction_name:     string
-    :param reconstruction_times:   reconstruction times
-    :type reconstruction_times:    list or numpy.array
-    :param type:                   type of grid
-    :type type:                    string
-    :param files_dir:              files directory
-    :type files_dir:               string
-    :param points:                 points
-    :type points:                  dict
-    :param seafloor_grid:          seafloor grid
-    :type seafloor_grid:           xarray.Dataset
-    :param cases:                  cases
-    :type cases:                   list
-    :param DEBUG_MODE:             whether or not to run in debug mode
-    :type DEBUG_MODE:              bool
-
-    :return:                       grids
-    :rtype:                        xarray.Dataset
-    """
-    # Loop through times
-    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} grids", disable=DEBUG_MODE):
-        # Check if the grid for the reconstruction time is already in the dictionary
-        if reconstruction_time in grid:
-            # Rename variables and coordinates in seafloor age grid for clarity
-            if type == "Seafloor":
-                if "z" in grid[reconstruction_time].data_vars:
-                    grid[reconstruction_time] = grid[reconstruction_time].rename({"z": "seafloor_age"})
-                if "lat" in grid[reconstruction_time].coords:
-                    grid[reconstruction_time] = grid[reconstruction_time].rename({"lat": "latitude"})
-                if "lon" in grid[reconstruction_time].coords:
-                    grid[reconstruction_time] = grid[reconstruction_time].rename({"lon": "longitude"})
-
-            continue
-
-        # Load grid if found
-        if type == "Seafloor":
-            # Load grid if found
-            grid[reconstruction_time] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name)
-
-            # Download seafloor age grid from GPlately DataServer
-            grid[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
-
-        elif type == "Velocity" and cases:
-            # Initialise dictionary to store velocity grids for cases
-            grid[reconstruction_time] = {}
-
-            # Loop through cases
-            for case in cases:
-                # Load grid if found
-                grid[reconstruction_time][case] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name, case=case)
-
-                # If not found, initialise a new grid
-                if grid[reconstruction_time][case] is None:
-                
-                    # Interpolate velocity grid from points
-                    if type == "Velocity":
-                        for case in cases:
-                            if DEBUG_MODE:
-                                print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
-
-                            # Get velocity grid
-                            grid[reconstruction_time][case] = get_velocity_grid(points[reconstruction_time][case], seafloor_grid[reconstruction_time])
-
-    return grid
-
-def DataFrame_from_parquet(
-        folder: str,
-        type: str,
-        reconstruction_name: str,
-        case: str,
-        reconstruction_time: int
-    ) -> _pandas.DataFrame:
-    """
-    Function to load DataFrames from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param type:                 type of data
-    :type type:                  str
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-    :param case:                 case
-    :type case:                  str
-    :param reconstruction_time:  reconstruction time
-    :type reconstruction_time:   int
-    
-    :return:                     data
-    :rtype:                      pandas.DataFrame or None
-    """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.parquet"
-    )
-
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _pandas.read_parquet(target_file)
-    else:
-        return None
-
-def DataFrame_from_csv(
-        folder: str,
-        type: str,
-        reconstruction_name: str,
-        case: str,
-        reconstruction_time: int
-    ) -> _pandas.DataFrame:
-    """
-    Function to load DataFrames from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param type:                 type of data
-    :type type:                  str
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-    :param case:                 case
-    :type case:                  str
-    :param reconstruction_time:  reconstruction time
-    :type reconstruction_time:   int
-    
-    :return:                     data
-    :rtype:                      pandas.DataFrame or None
-    """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{case}_{reconstruction_time}Ma.csv"
-    )
-
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _pandas.read_csv(target_file)
-    else:
-        return None
-
-def Dataset_from_netCDF(
-        folder: str,
-        type: str,
-        reconstruction_time: int,
-        reconstruction_name: str,
-        case: Optional[str] = None
-    ) -> _xarray.Dataset:
-    """
-    Function to load xarray Dataset from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param reconstruction_time:  reconstruction time
-    :type reconstruction_time:   int
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-    :param case:                 optional case
-    :type case:                  str, optional
-
-    :return:                     data
-    :rtype:                      xarray.Dataset or None
-    """
-    # Construct the file name based on whether a case is provided
-    file_name = f"{type}_{reconstruction_name}_{case + '_' if case else ''}{reconstruction_time}Ma.nc"
-
-    # Construct the full path to the target file
-    target_file = _os.path.join(folder if folder else _os.getcwd(), type, file_name)
-
-    # Check if the target file exists and load the dataset
-    if _os.path.exists(target_file):
-        return _xarray.open_dataset(target_file)
-    else:
-        return None
-    
-def GeoDataFrame_from_geoparquet(
-        folder: str,
-        type: str,
-        reconstruction_time: int,
-        reconstruction_name: str
-    ) -> _geopandas.GeoDataFrame:
-    """
-    Function to load GeoDataFrame from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param reconstruction_time:  reconstruction time
-    :type reconstruction_time:   int
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-
-    :return:                     data
-    :rtype:                      geopandas.GeoDataFrame or None
-    """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{reconstruction_time}Ma.geoparquet"
-    )
-
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _geopandas.read_file(target_file)
-    else:
-        return None
-    
-def GeoDataFrame_from_shapefile(
-        folder: str,
-        type: str,
-        reconstruction_time: int,
-        reconstruction_name: str
-    ) -> _geopandas.GeoDataFrame:
-    """
-    Function to load GeoDataFrame from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param reconstruction_time:  reconstruction time
-    :type reconstruction_time:   int
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-
-    :return:                     data
-    :rtype:                      geopandas.GeoDataFrame or None
-    """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{reconstruction_time}Ma.shp"
-    )
-
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _geopandas.read_file(target_file)
-    else:
-        return None
