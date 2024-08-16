@@ -358,7 +358,7 @@ class PlateForces():
         coords = ["lat", "lon", "mag"]
         
         # Upper plate
-        for reconstruction_time in tqdm(self.times, desc="Resetting plates, slabs, and points", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(self.times, desc="Resetting plates, slabs, and points", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 # Reset plates
                 self.plates[reconstruction_time][case][[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[_numpy.nan] * len(torques) * len(axes) for _ in range(len(self.plates[reconstruction_time][case].plateID))]
@@ -397,7 +397,15 @@ class PlateForces():
 # ADDING GRIDS 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def add_grid(self, input_grids, variable_name, target_variable="z", cut_to_seafloor=True, prefactor=1):
+    def add_grid(
+            self,
+            input_grids,
+            variable_name,
+            target_variable="z",
+            cut_to_seafloor=True,
+            prefactor=1,
+            PROGRESS_BAR: Optional[bool] = True,
+        ):
         """
         Function to add another grid of a variable to the seafloor grid.
         The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction time.
@@ -417,7 +425,7 @@ class PlateForces():
         
         # Loop through times to load, interpolate, and store variables in seafloor grid
         input_grids_interpolated = {}
-        for reconstruction_time in tqdm(self.times, desc=f"Adding {variable_name} grid", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(self.times, desc=f"Adding {variable_name} grid", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Adding {variable_name} grid for {reconstruction_time} Ma...")
 
@@ -453,15 +461,29 @@ class PlateForces():
 
     def sample_slabs(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Samples seafloor age (and optionally, sediment thickness) the lower plate along subduction zones
         The results are stored in the `slabs` DataFrame, specifically in the `lower_plate_age`, `sediment_thickness`, and `lower_plate_thickness` fields for each case and reconstruction time.
 
-        :param cases:   cases to sample slabs for (defaults to slab pull cases if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to sample slabs for
+        :type reconstruction_times:     list
+        :param cases:                   cases to sample slabs for (defaults to slab pull cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Make iterable
         if cases is None:
             iterable = self.slab_pull_cases
@@ -471,7 +493,7 @@ class PlateForces():
             iterable = {case: [] for case in cases}
 
         # Check options for slabs
-        for reconstruction_time in tqdm(self.times, desc="Sampling slabs", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(reconstruction_times, desc="Sampling slabs", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Sampling slabs at {reconstruction_time} Ma")
 
@@ -527,15 +549,29 @@ class PlateForces():
 
     def sample_upper_plates(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Samples seafloor age the upper plate along subduction zones
         The results are stored in the `slabs` DataFrame, specifically in the `upper_plate_age`, `upper_plate_thickness` fields for each case and reconstruction time.
 
-        :param cases:   cases to sample upper plates for (defaults to slab pull cases if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to sample upper plates for
+        :type reconstruction_times:     list
+        :param cases:                   cases to sample upper plates for (defaults to slab pull cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+        
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Make iterable
         if cases is None:
             iterable = self.slab_pull_cases
@@ -545,7 +581,7 @@ class PlateForces():
             iterable = {case: [] for case in cases}
 
         # Loop through valid times    
-        for reconstruction_time in tqdm(self.times, desc="Sampling upper plates", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(reconstruction_times, desc="Sampling upper plates", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Sampling overriding plate at {reconstruction_time} Ma")
 
@@ -592,15 +628,29 @@ class PlateForces():
 
     def sample_points(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Samples seafloor age at points
         The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and reconstruction time.
 
-        :param cases:   cases to sample points for (defaults to gpe cases if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to sample points for
+        :type reconstruction_times:     list
+        :param cases:                   cases to sample points for (defaults to gpe cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Make iterable
         if cases is None:
             iterable = self.gpe_cases
@@ -610,7 +660,7 @@ class PlateForces():
             iterable = {case: [] for case in cases}
 
         # Loop through valid times
-        for reconstruction_time in tqdm(self.times, desc="Sampling points", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(reconstruction_times, desc="Sampling points", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Sampling points at {reconstruction_time} Ma")
 
@@ -634,17 +684,23 @@ class PlateForces():
 
     def sample_all(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Samples all relevant data from the seafloor to perform torque computation.
 
-        :param cases:   cases to sample data for (defaults to None if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to sample data for
+        :type reconstruction_times:     list
+        :param cases:                   cases to sample data for (defaults to None if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
-        self.sample_upper_plates(cases)
-        self.sample_slabs(cases)
-        self.sample_points(cases)
+        self.sample_upper_plates(reconstruction_times, cases, PROGRESS_BAR)
+        self.sample_slabs(reconstruction_times, cases, PROGRESS_BAR)
+        self.sample_points(reconstruction_times, cases, PROGRESS_BAR)
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # COMPUTING TORQUES
@@ -652,21 +708,35 @@ class PlateForces():
 
     def compute_slab_pull_torque(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Compute slab pull torque.
 
-        :param cases:   cases to compute slab pull torque for (defaults to slab pull cases if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to compute slab pull torque for
+        :type reconstruction_times:     list
+        :param cases:                   cases to compute slab pull torque for (defaults to slab pull cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Check if upper plates have been sampled already
         if self.sampled_upper_plates == False:
-            self.sample_upper_plates(cases)
+            self.sample_upper_plates(reconstruction_times, cases)
 
         # Check if slabs have been sampled already
         if self.sampled_slabs == False:
-            self.sample_slabs(cases)
+            self.sample_slabs(reconstruction_times, cases)
 
         # Make iterable
         if cases is None:
@@ -677,7 +747,7 @@ class PlateForces():
             iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing slab pull torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing slab pull torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing slab pull torques at {reconstruction_time} Ma")
 
@@ -724,17 +794,31 @@ class PlateForces():
 
     def compute_slab_bend_torque(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Compute slab bend torque.
 
-        :param cases:   cases to compute slab bend torque for (defaults to slab bend cases if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to compute slab bend torque for
+        :type reconstruction_times:     list
+        :param cases:                   cases to compute slab bend torque for (defaults to slab bend cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Check if slabs have been sampled already
         if self.sampled_slabs == False:
-            self.sample_slabs(cases)
+            self.sample_slabs(reconstruction_times, cases)
 
         # Make iterable
         if cases is None:
@@ -745,7 +829,7 @@ class PlateForces():
             iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing slab bend torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Computing slab bend torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing slab bend torques at {reconstruction_time} Ma")
 
@@ -784,17 +868,31 @@ class PlateForces():
 
     def compute_gpe_torque(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Function to compute gravitational potential energy (GPE) torque.
 
-        :param cases:   cases to compute GPE torque for (defaults to GPE cases if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
+        :param cases:                   cases to compute GPE torque for (defaults to GPE cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Check if points have been sampled
-        if cases is None and self.sampled_points == False:
-            self.sample_points(cases)
+        if self.sampled_points == False:
+            self.sample_points(reconstruction_times, cases)
 
         # Make iterable
         if cases is None:
@@ -805,7 +903,7 @@ class PlateForces():
             iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing GPE torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Computing GPE torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing slab bend torques at {reconstruction_time} Ma")
 
@@ -841,21 +939,43 @@ class PlateForces():
 
     def compute_mantle_drag_torque(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Function to calculate mantle drag torque
 
-        :param cases:   cases to compute mantle drag torque for (defaults to mantle drag cases if not specified).
-        :type cases:    list
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
+        :param cases:                   cases to compute mantle drag torque for (defaults to mantle drag cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
+        # Make iterable
+        if cases is None:
+            iterable = self.mantle_drag_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
+
         # Loop through reconstruction times
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing mantle drag torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Computing mantle drag torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing mantle drag torques at {reconstruction_time} Ma")
 
             # Loop through mantle drag cases
-            for key, entries in self.mantle_drag_cases.items():
+            for key, entries in iterable.items():
                 if self.options[key]["Reconstructed motions"]:
                     if self.DEBUG_MODE:
                         print(f"Computing mantle drag torque from reconstructed motions for cases {entries}")
@@ -942,14 +1062,40 @@ class PlateForces():
 
     def optimise_torques(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            plates: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
         Function to optimise torques
 
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
         :param cases:                   cases to compute driving torque for
         :type cases:                    list
+        :param plates:                  plates to optimise torques for
+        :type plates:                   list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Make iterable
         if cases is None:
             slab_iterable = self.slab_pull_cases
@@ -960,17 +1106,33 @@ class PlateForces():
             slab_iterable = {case: [] for case in cases}
             mantle_iterable = {case: [] for case in cases}
 
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Optimising torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Optimising torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
-                print(f"Optimising torques at {reconstruction_time} Ma")
+                print(f"Optimising torques at {reconstruction_time} Ma")            
             
+            # Optimise torques for slab pull cases
             for key, entries in slab_iterable.items():
                 if self.options[key]["Slab pull torque"]:
-                    self.plates[reconstruction_time][key] = functions_main.optimise_torques(
-                        self.plates[reconstruction_time][key],
+                    # Select plates
+                    selected_plates = self.plates[reconstruction_time][key].copy()
+                    if plates is not None:
+                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                        selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
+                    
+                    # Optimise torques
+                    selected_plates = functions_main.optimise_torques(
+                        selected_plates,
                         self.mech,
                         self.options[key],
                     )
+
+                    # Feed back into plates
+                    if plates is not None:
+                        mask = self.plates[reconstruction_time][key].plateID.isin(plates)
+                        self.plates[reconstruction_time][key].loc[mask, :] = selected_plates
+                    else:
+                        self.plates[reconstruction_time][key] = selected_plates
 
                     # Copy DataFrames
                     if len(entries) > 1 and cases is None:
@@ -978,14 +1140,25 @@ class PlateForces():
                             {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-            # Copy torques to other cases
+            # Optimise torques for mantle drag cases
             for key, entries in mantle_iterable.items():
                 if self.options[key]["Mantle drag torque"]:
-                    self.plates[reconstruction_time][key] = functions_main.optimise_torques(
-                        self.plates[reconstruction_time][key],
+                    # Select plates
+                    selected_plates = self.plates[reconstruction_time][key].copy()
+                    if plates is not None:
+                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                        selected_plates = selected_plates[selected_plates.plateID.isin(plates)].copy()
+
+                    selected_plates = functions_main.optimise_torques(
+                        selected_plates,
                         self.mech,
                         self.options[key],
                     )
+
+                    # Feed back into plates
+                    if plates is not None:
+                        self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID.isin(plates)] = selected_plates
 
                     # Copy DataFrames
                     if len(entries) > 1 and cases is None:
@@ -995,57 +1168,147 @@ class PlateForces():
 
     def compute_driving_torque(
             self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            plates: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            PROGRESS_BAR: Optional[bool] = True,
         ):
         """
         Function to calculate driving torque
 
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
         :param cases:                   cases to compute driving torque for
         :type cases:                    list
+        :param plates:                  plates to compute driving torque for
+        :type plates:                   list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
+        # Define cases if not provided
         if cases is None:
             cases = self.cases
 
         # Loop through reconstruction times
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing driving torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Computing driving torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing driving torques at {reconstruction_time} Ma")
 
             for case in cases:
+                # Select plates
+                selected_plates = self.plates[reconstruction_time][case].copy()
+                if plates is not None:
+                    if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                    selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
+
                 # Calculate driving torque
-                self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "driving", self.constants)
+                selected_plates = functions_main.sum_torque(selected_plates, "driving", self.constants)
+
+                # Feed back into plates
+                if plates is not None:
+                    mask = self.plates[reconstruction_time][case].plateID.isin(plates)
+                    self.plates[reconstruction_time][case].loc[mask, :] = selected_plates
+                else:
+                    self.plates[reconstruction_time][case] = selected_plates
 
     def compute_residual_torque(
             self, 
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            plates: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            PROGRESS_BAR: Optional[bool] = True,            
         ):
         """
         Function to calculate residual torque
 
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
         :param cases:                   cases to compute driving torque for
         :type cases:                    str or list
+        :param plates:                  plates to compute driving torque for
+        :type plates:                   list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
+        # Define cases if not provided
         if cases is None:
             cases = self.cases
 
         # Loop through reconstruction times
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Computing residual torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Computing residual torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing residual torques at {reconstruction_time} Ma")
 
             for case in self.cases:
                 # Select cases that require residual torque computation
                 if self.options[case]["Reconstructed motions"]:
-                    # Calculate residual torque for whole plate
-                    self.plates[reconstruction_time][case] = functions_main.sum_torque(self.plates[reconstruction_time][case], "residual", self.constants)
+                    # Select plates
+                    selected_plates = self.plates[reconstruction_time][case].copy()
+                    if plates is not None:
+                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                        selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
+
+                    # Calculate driving torque
+                    selected_plates = functions_main.sum_torque(selected_plates, "driving", self.constants)
+
+                    # Feed back into plates
+                    if plates is not None:
+                        mask = self.plates[reconstruction_time][case].plateID.isin(plates)
+                        self.plates[reconstruction_time][case].loc[mask, :] = selected_plates
+                    else:
+                        self.plates[reconstruction_time][case] = selected_plates
+
+                    # Select slabs
+                    selected_slabs = self.slabs[reconstruction_time][case]
+                    if plates is not None:
+                        selected_slabs = selected_slabs[selected_slabs.lower_plateID.isin(plates)].copy()
 
                     # Calculate residual torque along subduction zones
-                    self.slabs[reconstruction_time][case] = functions_main.compute_residual_along_trench(
+                    selected_slabs = functions_main.compute_residual_along_trench(
                         self.plates[reconstruction_time][case],
-                        self.slabs[reconstruction_time][case],
+                        selected_slabs,
                         self.constants,
                         DEBUG_MODE = self.DEBUG_MODE,
                     )
+
+                    # Feed back into slabs
+                    self.slabs[reconstruction_time][case][self.slabs[reconstruction_time][case].lower_plateID.isin(plates)] = selected_slabs
 
                 else:
                     # Set residual torque to zero
@@ -1054,31 +1317,49 @@ class PlateForces():
 
     def compute_all_torques(
             self, 
-            cases: Optional[Union[List[str], str]] = None
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plates: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            PROGRESS_BAR: Optional[bool] = True,
         ):
         """
         Computes all torques
 
-        :param cases:                   cases to compute torques for
-        :type cases:                    str or list
+        :param reconstruction_times:    reconstruction times to all torques for
+        :type reconstruction_times:     list
+        :param reconstruction_times:    reconstruction times to rotate torques for
+        :type reconstruction_times:     list
+        :param case:                    case to rotate torques for
+        :type case:                     str or None
+        :param PROGRESS_BAR:            whether or not to display progress bar
+        :type PROGRESS_BAR:             bool
         """
         # Calculate slab pull torque
-        self.compute_slab_pull_torque(cases)
+        self.compute_slab_pull_torque(reconstruction_times, cases, PROGRESS_BAR)
 
         # Calculate slab bend torque
-        self.compute_slab_bend_torque(cases)
+        self.compute_slab_bend_torque(reconstruction_times, cases, PROGRESS_BAR)
 
         # Calculate GPE torque
-        self.compute_gpe_torque(cases)
+        self.compute_gpe_torque(reconstruction_times, cases, PROGRESS_BAR)
 
         # Calculate mantle drag torque
-        self.compute_mantle_drag_torque(cases)
+        self.compute_mantle_drag_torque(reconstruction_times, cases, PROGRESS_BAR)
 
         # Calculate driving torque
-        self.compute_driving_torque(cases)
+        self.compute_driving_torque(reconstruction_times, cases, plates, PROGRESS_BAR)
         
         # Calculate residual torque
-        self.compute_residual_torque(cases)
+        self.compute_residual_torque(reconstruction_times, cases, plates, PROGRESS_BAR)
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ROTATION 
@@ -1090,7 +1371,9 @@ class PlateForces():
             reference_rotations: _pygplates.RotationModel,
             reference_plates: dict,
             reference_case: Optional[str] = None,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             case: Optional[str] = None,
+            PROGRESS_BAR: Optional[bool] = True,
         ):
         """
         Function to rotate torques all plates to a new reference frame
@@ -1101,9 +1384,21 @@ class PlateForces():
         :type reference_rotations:      pygplates.RotationModel
         :param reference_plates:        reference plates
         :type reference_plates:         dict
-        :param case:                    case to rotate
+        :param reconstruction_times:    reconstruction times to rotate torques for
+        :type reconstruction_times:     list
+        :param case:                    case to rotate torques for
         :type case:                     str or None
+        :param PROGRESS_BAR:            whether or not to display progress bar
+        :type PROGRESS_BAR:             bool
         """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+        
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
         # Check if the torque is valid
         if torque not in ["slab_pull_torque", "slab_pull_torque_opt", "GPE_torque", "slab_bend_torque", "mantle_drag_torque", "mantle_drag_torque_opt"]:
             raise ValueError(f"Invalid torque '{torque}' Please select one of slab_pull_torque, GPE_torque, slab_bend_torque or mantle_drag_torque.")
@@ -1119,7 +1414,7 @@ class PlateForces():
             reference_case = list(reference_plates.keys())[0]
     
         # Loop through all reconstruction times
-        for i, reconstruction_time in tqdm(enumerate(self.times), desc="Rotating torques", disable=self.DEBUG_MODE):
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Rotating torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             # Check if times in reference_plates dictionary
             if reference_case in reference_plates.keys():
                 # Loop through all cases
@@ -1326,7 +1621,7 @@ class PlateForces():
         if plates_of_interest:
             selected_plates = selected_plates[selected_plates["plateID"].isin(plates_of_interest)]
             if selected_plates.empty:
-                return _numpy.nan
+                return _numpy.nan, _numpy.nan, _numpy.nan
             
             selected_plates = selected_plates.reset_index(drop=True)
         else:
@@ -1370,10 +1665,16 @@ class PlateForces():
             # Compute magnitude of residual
             residual_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
 
+            # Find minimum residual torque
+            residual_mag_min = residual_mag[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
+
+            # Find optimal driving torque
+            driving_mag_min = driving_mag[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
+
             # Find optimal slab pull coefficient
             opt_sp_const = sp_consts[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
 
-        return opt_sp_const
+        return opt_sp_const, driving_mag_min, residual_mag_min
     
     def minimise_residual_velocity(self, opt_time, opt_case, plates_of_interest=None, grid_size=10, visc_range=[1e19, 5e20], plot=True, weight_by_area=True, ref_case=None):
         """
@@ -1557,55 +1858,56 @@ class PlateForces():
 # SAVING 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def save_all(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving data", disable=self.DEBUG_MODE):
+    def save_all(self, PROGRESS_BAR=True):
+        for reconstruction_time in tqdm(self.times, desc="Saving data", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_parquet(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
                 setup.DataFrame_to_parquet(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
                 setup.DataFrame_to_parquet(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.Dataset_to_netcdf(self.velocity[reconstruction_time][case], "Velocity", self.name, reconstruction_time, self.dir_path, case=case, DEBUG_MODE=self.DEBUG_MODE)
             setup.GeoDataFrame_to_geoparquet(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
-            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
-            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+            setup.Dataset_to_netcdf(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"All data saved to {self.dir_path}!")
 
-    def save_plates(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving plates", disable=self.DEBUG_MODE):
+    def save_plates(self, PROGRESS_BAR=True):
+        for reconstruction_time in tqdm(self.times, desc="Saving plates", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_parquet(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Plates data saved to {self.dir_path}!")
 
-    def save_slabs(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving slabs", disable=self.DEBUG_MODE):
+    def save_slabs(self, PROGRESS_BAR=True):
+        for reconstruction_time in tqdm(self.times, desc="Saving slabs", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_parquet(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Slabs data saved to {self.dir_path}!")
     
-    def save_points(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving points", disable=self.DEBUG_MODE):
+    def save_points(self, PROGRESS_BAR=True):
+        for reconstruction_time in tqdm(self.times, desc="Saving points", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_parquet(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Points data saved to {self.dir_path}!")
 
-    def save_geometries(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving geometries", disable=self.DEBUG_MODE):
+    def save_geometries(self, PROGRESS_BAR=True):
+        for reconstruction_time in tqdm(self.times, desc="Saving geometries", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
-                setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+                setup.GeoDataFrame_to_geoparquet(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Geometries data saved to {self.dir_path}!")
 
-    def save_seafloor(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving seafloor", disable=self.DEBUG_MODE):
-            setup.Dataset_to_netCDF(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+    def save_seafloor(self, PROGRESS_BAR=True):
+        for reconstruction_time in tqdm(self.times, desc="Saving seafloor", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            setup.Dataset_to_netcdf(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Seafloor data saved to {self.dir_path}!")
 
-    def save_velocity(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving velocity", disable=self.DEBUG_MODE):
-            setup.Dataset_to_netCDF(self.velocity[reconstruction_time], "Velocity", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
+    def save_velocity(self, PROGRESS_BAR=True):
+        for reconstruction_time in tqdm(self.times, desc="Saving velocity", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            for case in self.cases:
+                setup.Dataset_to_netcdf(self.velocity[reconstruction_time][case], "Velocity", self.name, reconstruction_time, self.dir_path, case, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Velocity data saved to {self.dir_path}!")
 
@@ -1614,7 +1916,7 @@ class PlateForces():
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def export_all(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving data", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(self.times, desc="Saving data", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
                 setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
@@ -1626,28 +1928,28 @@ class PlateForces():
         print(f"All data exported to {self.dir_path}!")
 
     def export_plates(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving plates", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(self.times, desc="Saving plates", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_csv(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Plates data exported to {self.dir_path}!")
 
     def export_slabs(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving slabs", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(self.times, desc="Saving slabs", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_csv(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Slabs data exported to {self.dir_path}!")
     
     def export_points(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving points", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(self.times, desc="Saving points", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.DataFrame_to_csv(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
         print(f"Points data exported to {self.dir_path}!")
 
     def export_geometries(self):
-        for reconstruction_time in tqdm(self.times, desc="Saving geometries", disable=self.DEBUG_MODE):
+        for reconstruction_time in tqdm(self.times, desc="Saving geometries", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             for case in self.cases:
                 setup.GeoDataFrame_to_shapefile(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
@@ -2103,7 +2405,7 @@ class PlateForces():
             normalise_vectors = normalise_vectors,
             width = vector_width,
             scale = vector_scale,
-            color = vector_color,
+            facecolour = vector_color,
             alpha = vector_alpha
         )
 
@@ -2194,7 +2496,7 @@ class PlateForces():
             normalise_vectors = normalise_vectors,
             width = vector_width,
             scale = vector_scale,
-            color = vector_color,
+            facecolour = vector_color,
             alpha = vector_alpha
         )
 
@@ -2288,7 +2590,7 @@ class PlateForces():
             normalise_vectors = True,
             width = vector_width,
             scale = vector_scale,
-            color = vector_color,
+            facecolour = vector_color,
             alpha = vector_alpha
         )
 

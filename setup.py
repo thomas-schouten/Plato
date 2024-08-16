@@ -26,7 +26,6 @@ import gplately as _gplately
 import pandas as _pandas
 import pygplates as _pygplates
 import xarray as _xarray
-
 from tqdm import tqdm
 
 # Local libraries
@@ -1064,6 +1063,58 @@ def GeoDataFrame_to_shapefile(
     # Save the data to a shapefile
     data.to_file(file_path)
 
+def Dataset_to_netcdf(
+        data: _xarray.Dataset,
+        data_name: str,
+        reconstruction_name: str,
+        reconstruction_time: int,
+        folder: str,
+        case: str = None,
+        DEBUG_MODE: bool = False
+    ):
+    """
+    Function to save Dataset to a NetCDF file in a folder efficiently.
+
+    :param data:                  data
+    :type data:                   xarray.Dataset
+    :param data_name:             name of dataset
+    :type data_name:              string
+    :param reconstruction_name:   name of reconstruction
+    :type reconstruction_name:    string
+    :param reconstruction_time:   age of reconstruction in Ma
+    :type reconstruction_time:    int
+    :param folder:                folder
+    :type folder:                 string
+    :param DEBUG_MODE:            whether to run in debug mode
+    :type DEBUG_MODE:             bool
+    """
+    # Construct the target directory and file path
+    target_dir = _os.path.join(folder if folder else _os.getcwd(), data_name)
+    if case:
+        file_name = f"{data_name}_{reconstruction_name}_{case}_{reconstruction_time}Ma.nc"
+    else:
+        file_name = f"{data_name}_{reconstruction_name}_{reconstruction_time}Ma.nc"
+    file_path = _os.path.join(target_dir, file_name)
+
+    # Debug information
+    if DEBUG_MODE:
+        print(f"Target directory for {data_name}: {target_dir}")
+        print(f"File path for {data_name} at {reconstruction_time}: {file_path}")
+
+    # Ensure the directory exists
+    _os.makedirs(target_dir, exist_ok=True)
+
+    # Delete old file if it exists
+    try:
+        _os.remove(file_path)
+        if DEBUG_MODE:
+            print(f"Deleted old file {file_path}")
+    except FileNotFoundError:
+        pass
+
+    # Save the data to a NetCDF file
+    data.to_netcdf(file_path)
+
 def check_dir(target_dir):
     """
     Function to check if a directory exists, and create it if it doesn't
@@ -1399,12 +1450,12 @@ def GeoDataFrame_from_geoparquet(
     target_file = _os.path.join(
         folder if folder else _os.getcwd(),
         type,
-        f"{type}_{reconstruction_name}_{reconstruction_time}Ma.geoparquet"
+        f"{type}_{reconstruction_name}_{reconstruction_time}Ma.parquet"
     )
 
     # Check if target file exists and load data
     if _os.path.exists(target_file):
-        return _geopandas.read_file(target_file)
+        return _geopandas.read_parquet(target_file)
     else:
         return None
     
