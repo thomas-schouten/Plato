@@ -123,8 +123,8 @@ def get_plates(
     merged_plates = merged_plates.reset_index(drop=True)
 
     # Initialise columns to store other whole-plate properties
-    merged_plates["trench_length"] = 0.; merged_plates["omega"] = 0.
-    merged_plates["v_rms_mag"] = 0.; merged_plates["v_rms_azi"] = 0.
+    merged_plates["trench_length"] = 0.; merged_plates["zeta"] = 0.
+    merged_plates["v_rms_mag"] = 0.; merged_plates["v_rms_azi"] = 0.; merged_plates["omega_rms"] = 0.
     merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
 
     # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
@@ -568,7 +568,7 @@ def get_geometric_properties(
     for plateID in plates.plateID:
         if plateID in slabs.lower_plateID.unique():
             plates.loc[plates.plateID == plateID, "trench_length"] = slabs[slabs.lower_plateID == plateID].trench_segment_length.sum()
-            plates.loc[plates.plateID == plateID, "omega"] = plates[plates.plateID == plateID].area.values[0] / plates[plates.plateID == plateID].trench_length.values[0]
+            plates.loc[plates.plateID == plateID, "zeta"] = plates[plates.plateID == plateID].area.values[0] / plates[plates.plateID == plateID].trench_length.values[0]
 
     return plates
 

@@ -279,29 +279,40 @@ class PlateForces():
 
         # Calculate additional parameters for plates
         for reconstruction_time in self.times:
-            # Calculate trench length and omega
+            # Calculate trench length and zeta
             for key, entries in self.slab_pull_cases.items():
-                self.plates[reconstruction_time][key] = setup.get_geometric_properties(
-                    self.plates[reconstruction_time][key],
-                    self.slabs[reconstruction_time][key]
-                )
+                if self.plates[reconstruction_time][key]["trench_length"].mean() == 0 or self.plates[reconstruction_time][key]["zeta"].mean() == 0:
+                    self.plates[reconstruction_time][key] = setup.get_geometric_properties(
+                        self.plates[reconstruction_time][key],
+                        self.slabs[reconstruction_time][key]
+                    )
 
                 # Copy DataFrames to other cases
                 for entry in entries[1:]:
-                    self.plates[reconstruction_time][entry]["trench_length"] = self.plates[reconstruction_time][key]["trench_length"]
-                    self.plates[reconstruction_time][entry]["omega"] = self.plates[reconstruction_time][key]["omega"]
+                    if self.plates[reconstruction_time][entry]["trench_length"].mean() == 0:
+                        self.plates[reconstruction_time][entry]["trench_length"] = self.plates[reconstruction_time][key]["trench_length"]
+                    
+                    if self.plates[reconstruction_time][entry]["zeta"].mean() == 0:
+                        self.plates[reconstruction_time][entry]["zeta"] = self.plates[reconstruction_time][key]["zeta"]
 
             # Calculate rms velocity
             for key, entries in self.gpe_cases.items():
-                self.plates[reconstruction_time][key] = functions_main.compute_rms_velocity(
-                    self.plates[reconstruction_time][key],
-                    self.points[reconstruction_time][key]
-                )
+                if self.plates[reconstruction_time][key]["v_rms_mag"].mean() == 0:
+                    self.plates[reconstruction_time][key] = functions_main.compute_rms_velocity(
+                        self.plates[reconstruction_time][key],
+                        self.points[reconstruction_time][key]
+                    )
             
                 # Copy DataFrames to other cases
                 for entry in entries[1:]:
-                    self.plates[reconstruction_time][entry]["v_rms_mag"] = self.plates[reconstruction_time][key]["v_rms_mag"]
-                    self.plates[reconstruction_time][entry]["v_rms_azi"] = self.plates[reconstruction_time][key]["v_rms_azi"]
+                    if self.plates[reconstruction_time][entry]["v_rms_mag"].mean() == 0:
+                        self.plates[reconstruction_time][entry]["v_rms_mag"] = self.plates[reconstruction_time][key]["v_rms_mag"]
+
+                    if self.plates[reconstruction_time][entry]["v_rms_azi"].mean() == 0:
+                        self.plates[reconstruction_time][entry]["v_rms_azi"] = self.plates[reconstruction_time][key]["v_rms_azi"]
+
+                    if self.plates[reconstruction_time][entry]["omega_rms"].mean() == 0:
+                        self.plates[reconstruction_time][entry]["omega_rms"] = self.plates[reconstruction_time][key]["omega_rms"]
             
         # Load or initialise seafloor
         self.seafloor = setup.load_grid(
@@ -1301,14 +1312,18 @@ class PlateForces():
 
                     # Calculate residual torque along subduction zones
                     selected_slabs = functions_main.compute_residual_along_trench(
-                        self.plates[reconstruction_time][case],
+                        selected_plates,
                         selected_slabs,
                         self.constants,
                         DEBUG_MODE = self.DEBUG_MODE,
                     )
 
                     # Feed back into slabs
-                    self.slabs[reconstruction_time][case][self.slabs[reconstruction_time][case].lower_plateID.isin(plates)] = selected_slabs
+                    if plates is not None:
+                        mask = self.self.slabs[reconstruction_time][case].lower_plateID.isin(plates)
+                        self.slabs[reconstruction_time][case].loc[mask, :] = selected_slabs
+                    else:
+                        self.slabs[reconstruction_time][case] = selected_slabs
 
                 else:
                     # Set residual torque to zero
@@ -1592,7 +1607,15 @@ class PlateForces():
 
         return self.opt_sp_const[opt_time][opt_case], self.opt_visc[opt_time][opt_case], self.residual_torque_normalised[opt_time][opt_case]
     
-    def find_slab_pull_coefficient(self, opt_time, opt_case, plates_of_interest=None, grid_size=500, viscosity=1e19, plot=True, weight_by_area=True):
+    def find_slab_pull_coefficient(
+            self,
+            opt_time, 
+            opt_case, 
+            plates_of_interest=None, 
+            grid_size=500, 
+            viscosity=1e19, 
+            plot=False, 
+        ):
         """
         Function to find optimised slab pull coefficient for a given (set of) plates using a grid search.
 
@@ -1667,6 +1690,18 @@ class PlateForces():
 
             # Find minimum residual torque
             residual_mag_min = residual_mag[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
+
+            if plot:
+                fig, ax = plt.subplots(figsize=(15*self.constants.cm2in, 12*self.constants.cm2in))
+                p = ax.plot(residual_mag/driving_mag)
+                ax.semilogy()
+                ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
+                ax.set_xticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
+                ax.set_ylim([10**-1.5, 10**1.5])
+                ax.set_xlim([0, grid_size])
+                ax.set_ylabel("Normalised residual torque")
+                ax.set_xlabel("Slab pull reduction factor")
+                plt.show()
 
             # Find optimal driving torque
             driving_mag_min = driving_mag[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]

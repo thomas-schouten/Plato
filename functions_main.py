@@ -174,7 +174,8 @@ def compute_slab_bending_force(slabs, options, mech, constants):
         bending_force = (-2. / 3.) * ((slabs.lower_plate_thickness) / (mech.rad_curv)) ** 3 * mech.lith_visc * slabs.v_convergence * constants.cm_a2m_s # [n-s , e-w], [N/m]
     elif options["Bending mechanism"] == "plastic":
         bending_force = (-1. / 6.) * ((slabs.lower_plate_thickness ** 2) / mech.rad_curv) * mech.yield_stress * _numpy.asarray(
-            (_numpy.cos(slabs.trench_normal_vector + slabs.obliquity_convergence), _numpy.sin(slabs.trench_normal_vector + slabs.obliquity_convergence)))  # [n-s, e-w], [N/m]
+            (_numpy.cos(slabs.trench_normal_vector + slabs.obliquity_convergence), _numpy.sin(slabs.trench_normal_vector + slabs.obliquity_convergence))
+        )  # [n-s, e-w], [N/m]
         
     slabs["bending_force_lat"], slabs["bending_force_lon"] = mag_azi2lat_lon(bending_force, slabs.trench_normal_vector + slabs.obliquity_convergence)
     
@@ -694,7 +695,7 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
 
 def compute_rms_velocity(plates, points):
     """
-    Function to calculate area-weighted root mean square velocity for a given plate.
+    Function to calculate area-weighted root mean square (RMS) velocity for a given plate.
 
     :param plates:                  plate data
     :type plates:                   pandas.DataFrame
@@ -703,29 +704,57 @@ def compute_rms_velocity(plates, points):
 
     :return:                        plates
     :rtype:                         pandas.DataFrame
+
+    RMS velocity consists of the following components:
+    - RMS velocity magnitude
+    - RMS velocity azimuth
+    - RMS spin rate
     """
-    # Calculate root mean square velocity
+    # Calculate components of the root mean square velocity
     for plateID in plates.plateID.values:
-        # Select points belonging to plate
+        # Filter points for the current plate
         selected_points = points[points.plateID == plateID]
 
-        # Calculate RMS speed
-        plates.loc[plates.plateID == plateID, "v_rms_mag"] = (
-            selected_points.v_mag * 
-            selected_points.segment_length_lat * 
-            selected_points.segment_length_lon
-        ).sum() / (
-            selected_points.segment_length_lat * 
-            selected_points.segment_length_lon
-        ).sum()
+        # Precompute segment areas to avoid repeated calculation
+        segment_areas = selected_points.segment_length_lat * selected_points.segment_length_lon
+        total_area = segment_areas.sum()
 
-        # Calculate RMS azimuth
-        plates.loc[plates.plateID == plateID, "v_rms_azi"] = _numpy.rad2deg(
-            _numpy.arctan2(
-                (selected_points.v_lat * selected_points.segment_length_lat).sum(),
-                (selected_points.v_lon * selected_points.segment_length_lon).sum()
+        # Calculate RMS velocity magnitude
+        v_rms_mag = (selected_points.v_mag * segment_areas).sum() / total_area
+        plates.loc[plates.plateID == plateID, "v_rms_mag"] = v_rms_mag
+
+        # Calculate RMS velocity azimuth (in degrees)
+        sin_azi = _numpy.sum(_numpy.sin(selected_points.v_azi) * segment_areas) / total_area
+        cos_azi = _numpy.sum(_numpy.cos(selected_points.v_azi) * segment_areas) / total_area
+
+        v_rms_azi = _numpy.rad2deg(
+            _numpy.arctan2(sin_azi, cos_azi)
+        )
+        # Ensure azimuth is within the range [0, 360]
+        v_rms_azi = _numpy.where(v_rms_azi < 0, v_rms_azi + 360, v_rms_azi)
+        plates.loc[plates.plateID == plateID, "v_rms_azi"] = v_rms_azi
+
+        # Get rotation pole
+        rotation_pole_lat = plates.loc[plates.plateID == plateID, "pole_lat"].values[0]
+        rotation_pole_lon = plates.loc[plates.plateID == plateID, "pole_lon"].values[0]
+        rotation_angle = plates.loc[plates.plateID == plateID, "pole_angle"].values[0]
+
+        omegas = _numpy.zeros(len(selected_points))
+        for i, (lat, lon) in enumerate(zip(selected_points.lat, selected_points.lon)):
+            # print(lat_lon2xyz(rotation_pole_lat, rotation_pole_lon, constants).T)
+            # Calculate the spin rate at each point
+            omegas[i] = _numpy.dot(
+                lat_lon2xyz(lat, lon, constants).T,
+                lat_lon2xyz(rotation_pole_lat, rotation_pole_lon, constants),
+            ) * rotation_angle / (total_area * constants.mean_Earth_radius_m)
+
+        # Calculate the RMS spin rate
+        omega_rms = _numpy.sqrt(
+            _numpy.abs(
+                _numpy.sum(omegas * segment_areas) / total_area
             )
         )
+        plates.loc[plates.plateID == plateID, "omega_rms"] = omega_rms
 
     return plates
 
