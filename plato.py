@@ -313,6 +313,24 @@ class PlateForces():
 
                     if self.plates[reconstruction_time][entry]["omega_rms"].mean() == 0:
                         self.plates[reconstruction_time][entry]["omega_rms"] = self.plates[reconstruction_time][key]["omega_rms"]
+
+        # Load or initialise globe
+        # self.globe = setup.load_globe(
+        #     self.glob e,
+        #     self.reconstruction,
+        #     self.name,
+        #     self.times,
+        #     "Globe",
+        #     self.cases,
+        #     self.options,
+        #     self.cases,
+        #     files_dir,
+        #     plates = self.plates,
+        #     slabs = self.slabs,
+        #     points = self.points,
+        #     DEBUG_MODE = self.DEBUG_MODE,
+        #     PARALLEL_MODE = self.PARALLEL_MODE,
+        # )
             
         # Load or initialise seafloor
         self.seafloor = setup.load_grid(

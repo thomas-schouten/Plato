@@ -383,7 +383,83 @@ def get_points(
     
     return points
 
+def get_globe(
+        _plates: dict,
+        _slabs: dict,
+        _points: dict,
+        _seafloor_grid: dict,
+        _ages: _numpy.array,
+        _case: str,
+    ):
+    """
+    Function to get relevant geodynamic data for the entire globe.
+
+    :param plates:                plates
+    :type plates:                 dict
+    :param slabs:                 slabs
+    :type slabs:                  dict
+    :param points:                points
+    :type points:                 dict
+    :param seafloor_grid:         seafloor grid
+    :type seafloor_grid:          dict
+
+    :return:                      globe
+    :rtype:                       pandas.DataFrame
+    """
+    # Initialise empty arrays
+    num_plates = _numpy.zeros_like(_ages)
+    slab_length = _numpy.zeros_like(_ages)
+    v_rms_mag = _numpy.zeros_like(_ages)
+    v_rms_azi = _numpy.zeros_like(_ages)
+    mean_seafloor_age = _numpy.zeros_like(_ages)
+
+    for i, _age in enumerate(_ages):
+        # Get number of plates
+        num_plates[i] = len(_plates[_age][_case].plateID.values)
+
+        # Get slab length
+        slab_length[i] = _slabs[_age][_case].trench_segment_length.sum()
+
+        # Get global RMS velocity
+        # Get area for each grid point as well as total area
+        areas = _points[_age][_case].segment_length_lat.values * _points[_age][_case].segment_length_lon.values
+        total_area = _numpy.sum(areas)
+
+        # Calculate RMS speed
+        v_rms_mag[i] = _numpy.sum(_points[_age][_case].v_mag * areas) / total_area
+
+        # Calculate RMS azimuth
+        v_rms_sin = _numpy.sum(_numpy.sin(_points[_age][_case].v_lat) * areas) / total_area
+        v_rms_cos = _numpy.sum(_numpy.cos(_points[_age][_case].v_lat) * areas) / total_area
+        v_rms_azi[i] = _numpy.rad2deg(
+            -1 * (_numpy.arctan2(v_rms_sin, v_rms_cos) + 0.5 * _numpy.pi)
+        )
+
+        # Get mean seafloor age
+        mean_seafloor_age[i] = _numpy.nanmean(_seafloor_grid[_age].seafloor_age.values)
+
+    # Organise as pd.DataFrame
+    globe = _pandas.DataFrame({
+        "number_of_plates": num_plates,
+        "total_slab_length": slab_length,
+        "v_rms_mag": v_rms_mag,
+        "v_rms_azi": v_rms_azi,
+        "mean_seafloor_age": mean_seafloor_age,
+    })
+        
+    return globe
+
+
 def extract_geometry_data(topology_geometries):
+    """
+    Function to extract only the geometry and plateID from topology geometries.
+
+    :param topology_geometries:        topology geometries
+    :type topology_geometries:         geopandas.GeoDataFrame
+
+    :return:                           geometries_data
+    :rtype:                            list
+    """
     return [(geom, plateID) for geom, plateID in zip(topology_geometries.geometry, topology_geometries.PLATEID1)]
 
 def process_plateIDs(
@@ -391,6 +467,19 @@ def process_plateIDs(
         lats_chunk: _numpy.array,
         lons_chunk: _numpy.array,
     ) -> list:
+    """
+    Function to process plateIDs for a chunk of latitudes and longitudes.
+
+    :param geometries_data:        geometry data
+    :type geometries_data:         list
+    :param lats_chunk:             chunk of latitudes
+    :type lats_chunk:              numpy.array
+    :param lons_chunk:             chunk of longitudes
+    :type lons_chunk:              numpy.array
+
+    :return:                       plateIDs
+    :rtype:                        numpy.array
+    """
     plateIDs = _numpy.zeros(len(lats_chunk))
     
     for topology_geometry, topology_plateID in geometries_data:

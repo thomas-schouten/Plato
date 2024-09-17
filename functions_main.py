@@ -728,7 +728,7 @@ def compute_rms_velocity(plates, points):
         cos_azi = _numpy.sum(_numpy.cos(selected_points.v_azi) * segment_areas) / total_area
 
         v_rms_azi = _numpy.rad2deg(
-            _numpy.arctan2(sin_azi, cos_azi)
+            -1 * (_numpy.arctan2(sin_azi, cos_azi) + 0.5 * _numpy.pi)
         )
         # Ensure azimuth is within the range [0, 360]
         v_rms_azi = _numpy.where(v_rms_azi < 0, v_rms_azi + 360, v_rms_azi)
@@ -1036,7 +1036,7 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     position = lat_lon2xyz(lat, lon, constants)
     
     # Calculate torques in Cartesian coordinates
-    torques_cartesian = torques2xyz(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon)
+    torques_cartesian = force2torque(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon)
     
     # Assign the calculated torques to the new torque_variable columns
     data[torque_variable + "_x"] = torques_cartesian[0]
@@ -1177,9 +1177,9 @@ def lat_lon2xyz(lat, lon, constants):
 
     return position
 
-def torques2xyz(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon):
+def force2torque(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon):
     """
-    Calculate torque vectors in Cartesian coordinates.
+    Calculate plate torque vector from force vectors.
 
     :param position:            Position vector in Cartesian coordinates.
     :type position:             numpy.array
