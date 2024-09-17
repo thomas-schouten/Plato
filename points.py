@@ -1,8 +1,9 @@
 from typing import Optional, Union, List
 
 import numpy as _numpy
+import tqdm as _tqdm
 
-import setup
+import setup, functions_main
 
 class Points(object):
     def __init__(
@@ -37,6 +38,62 @@ class Points(object):
             DEBUG_MODE = self.DEBUG_MODE,
             PARALLEL_MODE = self.PARALLEL_MODE,
         )
+
+    def sample_points(
+            self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
+        ):
+        """
+        Samples seafloor age at points
+        The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and reconstruction time.
+
+        :param reconstruction_times:    reconstruction times to sample points for
+        :type reconstruction_times:     list
+        :param cases:                   cases to sample points for (defaults to gpe cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
+        """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
+        # Make iterable
+        if cases is None:
+            iterable = self.gpe_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
+
+        # Loop through valid times
+        for reconstruction_time in _tqdm(reconstruction_times, desc="Sampling points", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.DEBUG_MODE:
+                print(f"Sampling points at {reconstruction_time} Ma")
+
+            for key, entries in iterable.items():
+                if self.DEBUG_MODE:
+                    print(f"Sampling points for case {key} and entries {entries}...")
+
+                # Select dictionaries
+                self.seafloor[reconstruction_time] = self.seafloor[reconstruction_time]
+                
+                # Sample seafloor age at points
+                self.points[reconstruction_time][key]["seafloor_age"] = functions_main.sample_ages(self.points[reconstruction_time][key].lat, self.points[reconstruction_time][key].lon, self.seafloor[reconstruction_time]["seafloor_age"])
+                
+                # Copy DataFrames to other cases
+                if len(entries) > 1 and cases is None:
+                    for entry in entries[1:]:
+                        self.points[reconstruction_time][entry]["seafloor_age"] = self.points[reconstruction_time][key]["seafloor_age"]
+
+        # Set flag to True
+        self.sampled_points = True
     
     def compute_gpe_torque(
             self,
@@ -75,7 +132,7 @@ class Points(object):
             iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(_ages), desc="Computing GPE torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+        for i, _age in _tqdm(enumerate(_ages), desc="Computing GPE torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing slab bend torques at {_age} Ma")
 
@@ -142,7 +199,7 @@ class Points(object):
             iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(_ages), desc="Computing mantle drag torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+        for i, _age in _tqdm(enumerate(_ages), desc="Computing mantle drag torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Computing mantle drag torques at {_age} Ma")
 

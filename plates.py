@@ -125,3 +125,263 @@ class Plates:
 
                         if self.plates[_age][entry]["omega_rms"].mean() == 0:
                             self.plates[_age][entry]["omega_rms"] = self.plates[_age][key]["omega_rms"]
+
+
+    def optimise_torques(
+            self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plates: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
+        ):
+        """
+        Function to optimise torques
+
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
+        :param cases:                   cases to compute driving torque for
+        :type cases:                    list
+        :param plates:                  plates to optimise torques for
+        :type plates:                   list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
+        """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
+        # Make iterable
+        if cases is None:
+            slab_iterable = self.slab_pull_cases
+            mantle_iterable = self.mantle_drag_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            slab_iterable = {case: [] for case in cases}
+            mantle_iterable = {case: [] for case in cases}
+
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Optimising torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.DEBUG_MODE:
+                print(f"Optimising torques at {reconstruction_time} Ma")            
+            
+            # Optimise torques for slab pull cases
+            for key, entries in slab_iterable.items():
+                if self.options[key]["Slab pull torque"]:
+                    # Select plates
+                    selected_plates = self.plates[reconstruction_time][key].copy()
+                    if plates is not None:
+                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                        selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
+                    
+                    # Optimise torques
+                    selected_plates = functions_main.optimise_torques(
+                        selected_plates,
+                        self.mech,
+                        self.options[key],
+                    )
+
+                    # Feed back into plates
+                    if plates is not None:
+                        mask = self.plates[reconstruction_time][key].plateID.isin(plates)
+                        self.plates[reconstruction_time][key].loc[mask, :] = selected_plates
+                    else:
+                        self.plates[reconstruction_time][key] = selected_plates
+
+                    # Copy DataFrames
+                    if len(entries) > 1 and cases is None:
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"slab_pull_torque_opt_" + axis: self.plates[reconstruction_time][key]["slab_pull_torque_opt_" + axis]}
+                        ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+
+            # Optimise torques for mantle drag cases
+            for key, entries in mantle_iterable.items():
+                if self.options[key]["Mantle drag torque"]:
+                    # Select plates
+                    selected_plates = self.plates[reconstruction_time][key].copy()
+                    if plates is not None:
+                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                        selected_plates = selected_plates[selected_plates.plateID.isin(plates)].copy()
+
+                    selected_plates = functions_main.optimise_torques(
+                        selected_plates,
+                        self.mech,
+                        self.options[key],
+                    )
+
+                    # Feed back into plates
+                    if plates is not None:
+                        self.plates[reconstruction_time][key][self.plates[reconstruction_time][key].plateID.isin(plates)] = selected_plates
+
+                    # Copy DataFrames
+                    if len(entries) > 1 and cases is None:
+                        [[self.plates[reconstruction_time][entry].update(
+                            {"mantle_drag_torque_opt_" + axis: self.plates[reconstruction_time][key]["mantle_drag_torque_opt_" + axis]}
+                        ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+
+    def compute_driving_torque(
+            self,
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            PROGRESS_BAR: Optional[bool] = True,
+        ):
+        """
+        Function to calculate driving torque
+
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
+        :param cases:                   cases to compute driving torque for
+        :type cases:                    list
+        :param plates:                  plates to compute driving torque for
+        :type plates:                   list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
+        """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
+        # Define cases if not provided
+        if cases is None:
+            cases = self.cases
+
+        # Loop through reconstruction times
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Computing driving torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.DEBUG_MODE:
+                print(f"Computing driving torques at {reconstruction_time} Ma")
+
+            for case in cases:
+                # Select plates
+                selected_plates = self.plates[reconstruction_time][case].copy()
+                if plates is not None:
+                    if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                    selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
+
+                # Calculate driving torque
+                selected_plates = functions_main.sum_torque(selected_plates, "driving", self.constants)
+
+                # Feed back into plates
+                if plates is not None:
+                    mask = self.plates[reconstruction_time][case].plateID.isin(plates)
+                    self.plates[reconstruction_time][case].loc[mask, :] = selected_plates
+                else:
+                    self.plates[reconstruction_time][case] = selected_plates
+
+    def compute_residual_torque(
+            self, 
+            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plates: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            PROGRESS_BAR: Optional[bool] = True,            
+        ):
+        """
+        Function to calculate residual torque
+
+        :param reconstruction_times:    reconstruction times to compute residual torque for
+        :type reconstruction_times:     list
+        :param cases:                   cases to compute driving torque for
+        :type cases:                    str or list
+        :param plates:                  plates to compute driving torque for
+        :type plates:                   list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
+        """
+        # Define reconstruction times if not provided
+        if reconstruction_times is None:
+            reconstruction_times = self.times
+
+        # Check if reconstruction times is a single value
+        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
+            reconstruction_times = [reconstruction_times]
+
+        # Define cases if not provided
+        if cases is None:
+            cases = self.cases
+
+        # Loop through reconstruction times
+        for i, reconstruction_time in tqdm(enumerate(reconstruction_times), desc="Computing residual torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.DEBUG_MODE:
+                print(f"Computing residual torques at {reconstruction_time} Ma")
+
+            for case in self.cases:
+                # Select cases that require residual torque computation
+                if self.options[case]["Reconstructed motions"]:
+                    # Select plates
+                    selected_plates = self.plates[reconstruction_time][case].copy()
+                    if plates is not None:
+                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plates]
+                        selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
+
+                    # Calculate driving torque
+                    selected_plates = functions_main.sum_torque(selected_plates, "driving", self.constants)
+
+                    # Feed back into plates
+                    if plates is not None:
+                        mask = self.plates[reconstruction_time][case].plateID.isin(plates)
+                        self.plates[reconstruction_time][case].loc[mask, :] = selected_plates
+                    else:
+                        self.plates[reconstruction_time][case] = selected_plates
+
+                    # Select slabs
+                    selected_slabs = self.slabs[reconstruction_time][case]
+                    if plates is not None:
+                        selected_slabs = selected_slabs[selected_slabs.lower_plateID.isin(plates)].copy()
+
+                    # Calculate residual torque along subduction zones
+                    selected_slabs = functions_main.compute_residual_along_trench(
+                        selected_plates,
+                        selected_slabs,
+                        self.constants,
+                        DEBUG_MODE = self.DEBUG_MODE,
+                    )
+
+                    # Feed back into slabs
+                    if plates is not None:
+                        mask = self.self.slabs[reconstruction_time][case].lower_plateID.isin(plates)
+                        self.slabs[reconstruction_time][case].loc[mask, :] = selected_slabs
+                    else:
+                        self.slabs[reconstruction_time][case] = selected_slabs
+
+                else:
+                    # Set residual torque to zero
+                    for coord in ["x", "y", "z", "mag"]:
+                        self.plates[reconstruction_time][case]["residual_torque_" + coord] = 0

@@ -65,6 +65,12 @@ class Slabs:
             PARALLEL_MODE = self.PARALLEL_MODE,
         )
 
+        # Calculate total slab length as a function of age and slab tessellation spacing
+        self.total_slab_length = _numpy.zeros((len(self.settings.ages), len(self.settings.slab_pull_cases)))
+        for i, _age in enumerate(self.settings.ages):
+            for j, _case in enumerate(self.settings.slab_pull_cases):
+                self.total_slab_length[i] = self.data[_age][_case].trench_segment_length.sum()
+
         # Set flag for sampling slabs and upper plates
         self.sampled_slabs = False
         self.sampled_upper_plates = False
