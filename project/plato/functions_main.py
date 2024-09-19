@@ -1407,3 +1407,33 @@ def rotate_vector(vector, rotation, constants):
     rotated_vector = _numpy.dot(rotation_matrix, vector.values.T)
 
     return rotated_vector.T
+
+def copy_values(data, key, entries, columns, check=False):
+    """
+    Function to copy values from a column from one case to another.
+    
+    :param key:         Key to match entries.
+    :type key:          str
+    :param entries:     Entries to match.
+    :type entries:      list
+    :param ages:        Ages to match.
+    :type ages:         list or numpy.array
+    :param columns:     Columns to copy.
+    :type columns:      list
+
+    :return:            Data with copied columns.
+    :rtype:             dict
+    """
+    # Loop through entries
+    for entry in entries[1:]:
+        # Loop through columns
+        for column in columns:
+            # Check if mean column value is zero (a proxy for a column with no data)
+            if check is True:
+                if data[entry][column].mean() != 0:
+                    continue
+            
+            # Copy column
+            data[entry][column] = data[key][column]
+
+    return data
