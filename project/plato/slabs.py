@@ -36,11 +36,10 @@ import sys
 class Slabs:
     def __init__(
             self,
-            _reconstruction: object,
-            _ages: List or _numpy.ndarray,
-            _cases: List[str],
-            _options: dict,
-            _files_dir: str,
+            settings: object,
+            reconstruction: object,
+            plates: dict,
+            files_dir: str,
         ):
         """
         Slabs object. Contains all information on slabs
@@ -52,17 +51,17 @@ class Slabs:
         self.data = setup.load_data(
             self.data,
             self.reconstruction,
-            self.name,
-            self.times,
+            self.settings.name,
+            self.settings.ages,
             "Slabs",
-            self.cases,
-            self.options,
-            self.slab_cases,
-            _files_dir,
-            plates = self.plates,
-            resolved_geometries = self.resolved_geometries,
-            DEBUG_MODE = self.DEBUG_MODE,
-            PARALLEL_MODE = self.PARALLEL_MODE,
+            self.settings.cases,
+            self.settings.options,
+            self.settings.slab_cases,
+            files_dir,
+            plates = self.plates.data,
+            resolved_geometries = self.plates.resolved_geometries,
+            DEBUG_MODE = self.settings.DEBUG_MODE,
+            PARALLEL_MODE = self.settings.PARALLEL_MODE,
         )
 
         # Calculate total slab length as a function of age and slab tessellation spacing
@@ -77,8 +76,8 @@ class Slabs:
 
     def sample_slabs(
             self,
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            _cases: Optional[Union[List[str], str]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
             PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
@@ -93,23 +92,22 @@ class Slabs:
         :type PROGRESS_BAR:             bool
         """
         # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.settings.ages
+        if ages is None:
+            ages = self.settings.ages
         else:
-            # Check if reconstruction times is a single value
-            if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-                _ages = [_ages]
+            if isinstance(ages, str):
+                ages = [ages]
 
         # Make iterable
-        if _cases is None:
+        if cases is None:
             iterable = self.settings.slab_pull_cases
         else:
-            if isinstance(_cases, str):
-                _cases = [_cases]
-            iterable = {_case: [] for _case in _cases}
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {_case: [] for _case in cases}
 
         # Check options for slabs
-        for _age in tqdm(_ages, desc="Sampling slabs", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+        for _age in tqdm(ages, desc="Sampling slabs", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
             if self.DEBUG_MODE:
                 print(f"Sampling slabs at {_age} Ma")
 

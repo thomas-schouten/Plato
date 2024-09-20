@@ -37,8 +37,6 @@ class Reconstruction:
     def __init__(
             self,
             name: str,
-            ages: List[int],
-            dir_path: str,
             rotation_file: Optional[str] = None,
             topology_file: Optional[str] = None,
             polygon_file: Optional[str] = None,
@@ -102,6 +100,6 @@ class Reconstruction:
         else:
             self.coastlines, _, _ = gdownload.get_topology_geometries()
 
-        self.reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
+        self.plate_reconstruction = gplately.PlateReconstruction(self.rotations, self.topologies, self.polygons)
             
         print("Plate reconstruction ready!")

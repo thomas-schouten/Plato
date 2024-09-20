@@ -8,16 +8,24 @@ import setup, functions_main
 class Points(object):
     def __init__(
             self,
-            _settings: object,
+            settings: object,
+            reconstruction: object,
+            plates: dict,
         ):
         """
         Class to store and manipulate point data.
 
-        :param _settings:   settings object
-        :type _settings:    object
+        :param settings:   settings object
+        :type settings:    object
         """
         # Store settings
-        self.settings = _settings
+        self.settings = settings
+
+        # Store reconstruction object
+        self.reconstruction = reconstruction
+
+        # Store plates object
+        self.plates = plates
     
         # Initialise data
         self.data = {}
@@ -33,15 +41,20 @@ class Points(object):
             self.settings.options,
             self.settings.point_cases,
             self.settings.dir_path,
-            plates = self.plates,
-            resolved_geometries = self.resolved_geometries,
-            DEBUG_MODE = self.DEBUG_MODE,
-            PARALLEL_MODE = self.PARALLEL_MODE,
+            plates = self.plates.data,
+            resolved_geometries = self.plates.resolved_geometries,
+            DEBUG_MODE = self.settings.DEBUG_MODE,
+            PARALLEL_MODE = self.settings.PARALLEL_MODE,
         )
+
+        # Set flags
+        self.sampled_points = False
+        self.computed_gpe_torque = False
+        self.computed_mantle_drag_torque = False
 
     def sample_points(
             self,
-            reconstruction_times: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             PROGRESS_BAR: Optional[bool] = True,    
         ):
@@ -49,56 +62,55 @@ class Points(object):
         Samples seafloor age at points
         The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and reconstruction time.
 
-        :param reconstruction_times:    reconstruction times to sample points for
-        :type reconstruction_times:     list
+        :param ages:    reconstruction times to sample points for
+        :type ages:     list
         :param cases:                   cases to sample points for (defaults to gpe cases if not specified).
         :type cases:                    list
         :param PROGRESS_BAR:            whether or not to display a progress bar
         :type PROGRESS_BAR:             bool
         """
         # Define reconstruction times if not provided
-        if reconstruction_times is None:
-            reconstruction_times = self.times
-
-        # Check if reconstruction times is a single value
-        if isinstance(reconstruction_times, (int, float, _numpy.integer, _numpy.floating)):
-            reconstruction_times = [reconstruction_times]
+        if ages is None:
+            ages = self.settings.ages
+        else:
+            if isinstance(ages, str):
+                ages = [ages]
 
         # Make iterable
         if cases is None:
-            iterable = self.gpe_cases
+            iterable = self.settings.gpe_cases
         else:
             if isinstance(cases, str):
                 cases = [cases]
             iterable = {case: [] for case in cases}
 
         # Loop through valid times
-        for reconstruction_time in _tqdm(reconstruction_times, desc="Sampling points", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
-                print(f"Sampling points at {reconstruction_time} Ma")
+        for _age in _tqdm(ages, desc="Sampling points", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.settings.DEBUG_MODE:
+                print(f"Sampling points at {_age} Ma")
 
             for key, entries in iterable.items():
-                if self.DEBUG_MODE:
+                if self.settings.DEBUG_MODE:
                     print(f"Sampling points for case {key} and entries {entries}...")
 
                 # Select dictionaries
-                self.seafloor[reconstruction_time] = self.seafloor[reconstruction_time]
+                self.seafloor[_age] = self.seafloor[_age]
                 
                 # Sample seafloor age at points
-                self.points[reconstruction_time][key]["seafloor_age"] = functions_main.sample_ages(self.points[reconstruction_time][key].lat, self.points[reconstruction_time][key].lon, self.seafloor[reconstruction_time]["seafloor_age"])
+                self.points[_age][key]["seafloor_age"] = functions_main.sample_ages(self.points[_age][key].lat, self.points[_age][key].lon, self.seafloor[_age]["seafloor_age"])
                 
                 # Copy DataFrames to other cases
                 if len(entries) > 1 and cases is None:
                     for entry in entries[1:]:
-                        self.points[reconstruction_time][entry]["seafloor_age"] = self.points[reconstruction_time][key]["seafloor_age"]
+                        self.points[_age][entry]["seafloor_age"] = self.points[_age][key]["seafloor_age"]
 
         # Set flag to True
         self.sampled_points = True
     
     def compute_gpe_torque(
             self,
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            _cases: Optional[Union[List[str], str]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
             PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
@@ -112,16 +124,15 @@ class Points(object):
         :type PROGRESS_BAR:             bool
         """
         # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.times
-
-        # Check if reconstruction times is a single value
-        if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-            _ages = [_ages]
+        if ages is None:
+            ages = self.settings.ages
+        else:
+            if isinstance(ages, str):
+                ages = [ages]
 
         # Check if points have been sampled
         if self.sampled_points == False:
-            self.sample_points(_ages, cases)
+            self.sample_points(ages, cases)
 
         # Make iterable
         if cases is None:
@@ -132,13 +143,13 @@ class Points(object):
             iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
-        for i, _age in _tqdm(enumerate(_ages), desc="Computing GPE torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
+        for i, _age in _tqdm(enumerate(_ages), desc="Computing GPE torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.settings.DEBUG_MODE:
                 print(f"Computing slab bend torques at {_age} Ma")
 
             # Loop through gpe cases
             for key, entries in iterable.items():
-                if self.DEBUG_MODE:
+                if self.settings.DEBUG_MODE:
                     print(f"Computing GPE torque for cases {entries}")
 
                 # Calculate GPE torque
@@ -168,7 +179,7 @@ class Points(object):
 
     def compute_mantle_drag_torque(
             self,
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             PROGRESS_BAR: Optional[bool] = True,    
         ):
@@ -183,12 +194,11 @@ class Points(object):
         :type PROGRESS_BAR:             bool
         """
         # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.times
-
-        # Check if reconstruction times is a single value
-        if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-            _ages = [_ages]
+        if ages is None:
+            ages = self.settings.ages
+        else:
+            if isinstance(ages, str):
+                ages = [ages]
 
         # Make iterable
         if cases is None:
@@ -199,32 +209,32 @@ class Points(object):
             iterable = {case: [] for case in cases}
 
         # Loop through reconstruction times
-        for i, _age in _tqdm(enumerate(_ages), desc="Computing mantle drag torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
+        for i, _age in _tqdm(enumerate(ages), desc="Computing mantle drag torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.settings.DEBUG_MODE:
                 print(f"Computing mantle drag torques at {_age} Ma")
 
             # Loop through mantle drag cases
             for key, entries in iterable.items():
                 if self.options[key]["Reconstructed motions"]:
-                    if self.DEBUG_MODE:
+                    if self.settings.DEBUG_MODE:
                         print(f"Computing mantle drag torque from reconstructed motions for cases {entries}")
 
                     # Calculate Mantle drag torque
                     if self.options[key]["Mantle drag torque"]:
                         # Calculate mantle drag force
-                        self.plates[_age][key], self.points[_age][key], self.slabs[_age][key] = functions_main.compute_mantle_drag_force(
-                            self.plates[_age][key],
+                        self.plates.data[_age][key], self.points[_age][key], self.slabs[_age][key] = functions_main.compute_mantle_drag_force(
+                            self.plates.data[_age][key],
                             self.points[_age][key],
                             self.slabs[_age][key],
                             self.options[key],
                             self.mech,
                             self.constants,
-                            self.DEBUG_MODE,
+                            self.settings.DEBUG_MODE,
                         )
 
                         # Calculate mantle drag torque
-                        self.plates[_age][key] = functions_main.compute_torque_on_plates(
-                            self.plates[_age][key], 
+                        self.plates.data[_age][key] = functions_main.compute_torque_on_plates(
+                            self.plates.data[_age][key], 
                             self.points[_age][key].lat, 
                             self.points[_age][key].lon, 
                             self.points[_age][key].plateID, 
@@ -248,24 +258,24 @@ class Points(object):
             # Loop through all cases
             for case in self.cases:
                 if not self.options[case]["Reconstructed motions"]:
-                    if self.DEBUG_MODE:
+                    if self.settings.DEBUG_MODE:
                         print(f"Computing mantle drag torque using torque balance for case {case}")
 
                     if self.options[case]["Mantle drag torque"]:
                         # Calculate mantle drag force
-                        self.plates[_age][case], self.points[_age][case], self.slabs[_age][case] = functions_main.compute_mantle_drag_force(
-                            self.plates[_age][case],
+                        self.plates.data[_age][case], self.points[_age][case], self.slabs[_age][case] = functions_main.compute_mantle_drag_force(
+                            self.plates.data[_age][case],
                             self.points[_age][case],
                             self.slabs[_age][case],
                             self.options[case],
                             self.mech,
                             self.constants,
-                            self.DEBUG_MODE,
+                            self.settings.DEBUG_MODE,
                         )
 
                         # Calculate mantle drag torque
-                        self.plates[_age][case] = functions_main.compute_torque_on_plates(
-                            self.plates[_age][case], 
+                        self.plates.data[_age][case] = functions_main.compute_torque_on_plates(
+                            self.plates.data[_age][case], 
                             self.points[_age][case].lat, 
                             self.points[_age][case].lon, 
                             self.points[_age][case].plateID, 
@@ -283,8 +293,8 @@ class Points(object):
                             self.seafloor[_age]
                         )
 
-                        # Compute RMS speeds
-                        self.plates[_age][case] = functions_main.compute_rms_velocity(
-                            self.plates[_age][case],
+                        # Compute RMS velocity
+                        self.plates.data[_age][case] = functions_main.compute_rms_velocity(
+                            self.plates.data[_age][case],
                             self.points[_age][case]
                         )

@@ -7,11 +7,11 @@ import setup
 class Settings():
     def __init__(
             self,
-            _name,
-            _ages,
-            _cases_file,
-            _cases_sheet="Sheet1",
-            _files_dir=None,
+            name,
+            ages,
+            cases_file,
+            cases_sheet="Sheet1",
+            files_dir=None,
             PARALLEL_MODE = False,
             DEBUG_MODE = False,
         ):
@@ -19,14 +19,14 @@ class Settings():
         Object to store the settings of the plato simulation
         """
         # Store reconstruction name and valid reconstruction times
-        self.name = _name
-        self.times = _numpy.array(_ages)
+        self.name = name
+        self.ages = _numpy.array(ages)
 
         # Store cases and case options
-        self.cases, self.options = setup.get_options(_cases_file, _cases_sheet)
+        self.cases, self.options = setup.get_options(cases_file, cases_sheet)
         
         # Set files directory
-        self.dir_path = os.path.join(os.getcwd(), _files_dir)
+        self.dir_path = os.path.join(os.getcwd(), files_dir)
         if not os.path.exists(self.dir_path):
             os.makedirs(self.dir_path)
 
