@@ -1,7 +1,6 @@
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATO
 # Algorithm to calculate plate forces from tectonic reconstructions
-# Plates object
 # Thomas Schouten and Edward Clennett, 2023
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -34,6 +33,9 @@ import sys
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class Plates:
+    """
+    Class that contains all information for the plates in a reconstruction.
+    """
     def __init__(
             self,
             settings,
@@ -48,7 +50,7 @@ class Plates:
         self.resolved_topologies, self.resolved_geometries = {}, {}
 
         # Load or initialise plate geometries
-        for _age in tqdm(self.settings.ages, desc="Loading geometries", disable=self.DEBUG_MODE):
+        for _age in tqdm(self.settings.ages, desc="Loading geometries", disable=self.settings.DEBUG_MODE):
             
             # Load resolved geometries if they are available
             self.resolved_geometries[_age] = setup.GeoDataFrame_from_geoparquet(
@@ -75,8 +77,8 @@ class Plates:
                 )
                 self.resolved_topologies[_age] = []
                 _pygplates.resolve_topologies(
-                    self.reconstruction.topologies,
-                    self.reconstruction.rotations, 
+                    self.reconstruction.topology_features,
+                    self.reconstruction.rotation_model, 
                     self.resolved_topologies[_age], 
                     _age, 
                     anchor_plate_id=0
@@ -84,6 +86,7 @@ class Plates:
 
         # DATA
         # Load or initialise plate data
+        self.data = {}
         self.data = setup.load_data(
             self.data,
             self.reconstruction,
@@ -92,7 +95,7 @@ class Plates:
             "Plates",
             self.settings.cases,
             self.settings.options,
-            self.plate_cases,
+            self.settings.plate_cases,
             self.settings.dir_path,
             resolved_topologies = self.resolved_topologies,
             resolved_geometries = self.resolved_geometries,
@@ -102,11 +105,31 @@ class Plates:
 
     def calculate_rms_velocity(
                 self,
+                ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+                cases: Optional[Union[List[str], str]] = None,
             ):
             """
             Function to calculate the root mean square (RMS) velocity of the plates.
             """
-            for _age in self.settings.ages:
+            # Define ages if not provided
+            if ages is not None:
+                # Check if ages is a single value
+                if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
+                    ages = [ages]
+            else:
+                # Otherwise, use all ages from the settings
+                ages = self.settings.ages
+            
+            # Define cases if not provided
+            if cases is not None:
+                # Check if cases is a single value
+                if isinstance(cases, str):
+                    cases = [cases]
+            else:
+                # Otherwise, use all cases from the settings
+                cases = self.settings.cases
+
+            for _age in ages:
                 # Calculate rms velocity
                 for key, entries in self.settings.gpe_cases.items():
                     if self.data[self.settings.ages][key]["v_rms_mag"].mean() == 0:
@@ -136,9 +159,9 @@ class Plates:
 
     def optimise_torques(
             self,
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            plates: Optional[
+            plate_IDs: Optional[
                 Union[
                     int,
                     float,
@@ -153,8 +176,8 @@ class Plates:
         """
         Function to optimise torques
 
-        :param _ages:    reconstruction times to compute residual torque for
-        :type _ages:     list
+        :param ages:    reconstruction times to compute residual torque for
+        :type ages:     list
         :param cases:                   cases to compute driving torque for
         :type cases:                    list
         :param plates:                  plates to optimise torques for
@@ -162,13 +185,14 @@ class Plates:
         :param PROGRESS_BAR:            whether or not to display a progress bar
         :type PROGRESS_BAR:             bool
         """
-        # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.times
-
-        # Check if reconstruction times is a single value
-        if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-            _ages = [_ages]
+        # Define ages if not provided
+        if ages is not None:
+            # Check if ages is a single value
+            if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
+                ages = [ages]
+        else:
+            # Otherwise, use all ages from the settings
+            ages = self.settings.ages
 
         # Make iterable
         if cases is None:
@@ -180,19 +204,19 @@ class Plates:
             slab_iterable = {case: [] for case in cases}
             mantle_iterable = {case: [] for case in cases}
 
-        for i, _age in tqdm(self.settings.ages, desc="Optimising torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
+        for i, _age in tqdm(self.settings.ages, desc="Optimising torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.settings.DEBUG_MODE:
                 print(f"Optimising torques at {_age} Ma")            
             
             # Optimise torques for slab pull cases
             for key, entries in slab_iterable.items():
                 if self.options[key]["Slab pull torque"]:
                     # Select plates
-                    selected_plates = self.plates[_age][key].copy()
+                    selected_data = self.plates[_age][key].copy()
                     if plates is not None:
                         if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
                             plates = [plates]
-                        selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
+                        selected_data = selected_data.loc[selected_data.plateID.isin(plate_IDs)].copy()
                     
                     # Optimise torques
                     selected_plates = functions_main.optimise_torques(
@@ -204,12 +228,12 @@ class Plates:
                     # Feed back into plates
                     if plates is not None:
                         mask = self.plates[_age][key].plateID.isin(plates)
-                        self.plates[_age][key].loc[mask, :] = selected_plates
+                        self.data[_age][key].loc[mask, :] = selected_plates
                     else:
-                        self.plates[_age][key] = selected_plates
+                        self.data[_age][key] = selected_plates
 
                     # Copy DataFrames, if necessary
-                    if len(entries) > 1 and cases is None
+                    if len(entries) > 1 and cases is None:
                         columns = ["slab_pull_torque_opt" + axis for axis in ["x", "y", "z", "mag"]]
                         self.data[_age] = functions_main.copy_values(
                             self.data[_age], 
@@ -222,21 +246,21 @@ class Plates:
             for key, entries in mantle_iterable.items():
                 if self.options[key]["Mantle drag torque"]:
                     # Select plates
-                    selected_plates = self.plates[_age][key].copy()
+                    selected_data = self.data[_age][key].copy()
                     if plates is not None:
-                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
-                            plates = [plates]
-                        selected_plates = selected_plates[selected_plates.plateID.isin(plates)].copy()
+                        if isinstance(plate_IDs, (int, float, _numpy.floating, _numpy.integer)):
+                            plates = [plate_IDs]
+                        selected_data = selected_data[selected_data.plateID.isin(plate_IDs)].copy()
 
-                    selected_plates = functions_main.optimise_torques(
-                        selected_plates,
+                    selected_data = functions_main.optimise_torques(
+                        selected_data,
                         self.mech,
                         self.options[key],
                     )
 
                     # Feed back into plates
                     if plates is not None:
-                        self.plates[_age][key][self.plates[_age][key].plateID.isin(plates)] = selected_plates
+                        self.data[_age][key][self.plates[_age][key].plateID.isin(plates)] = selected_data
 
                     # Copy DataFrames, if necessary
                     if len(entries) > 1 and cases is None:
@@ -250,7 +274,7 @@ class Plates:
 
     def compute_driving_torque(
             self,
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             plateIDs: Optional[
                 Union[
@@ -276,21 +300,22 @@ class Plates:
         :param PROGRESS_BAR:            whether or not to display a progress bar
         :type PROGRESS_BAR:             bool
         """
-        # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.times
-
-        # Check if reconstruction times is a single value
-        if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-            _ages = [_ages]
+        # Define ages if not provided
+        if ages is not None:
+            # Check if ages is a single value
+            if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
+                ages = [ages]
+        else:
+            # Otherwise, use all ages from the settings
+            ages = self.settings.ages
 
         # Define cases if not provided
         if cases is None:
             cases = self.cases
 
         # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(_ages), desc="Computing driving torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
+        for i, _age in tqdm(enumerate(ages), desc="Computing driving torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.settings.DEBUG_MODE:
                 print(f"Computing driving torques at {_age} Ma")
 
             for case in cases:
@@ -313,7 +338,7 @@ class Plates:
 
     def compute_residual_torque(
             self, 
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             plates: Optional[
                 Union[
@@ -330,8 +355,8 @@ class Plates:
         """
         Function to calculate residual torque
 
-        :param _ages:    reconstruction times to compute residual torque for
-        :type _ages:     list
+        :param ages:    reconstruction times to compute residual torque for
+        :type ages:     list
         :param cases:                   cases to compute driving torque for
         :type cases:                    str or list
         :param plates:                  plates to compute driving torque for
@@ -339,21 +364,22 @@ class Plates:
         :param PROGRESS_BAR:            whether or not to display a progress bar
         :type PROGRESS_BAR:             bool
         """
-        # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.times
-
-        # Check if reconstruction times is a single value
-        if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-            _ages = [_ages]
+        # Define ages if not provided
+        if ages is not None:
+            # Check if ages is a single value
+            if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
+                ages = [ages]
+        else:
+            # Otherwise, use all ages from the settings
+            ages = self.settings.ages
 
         # Define cases if not provided
         if cases is None:
             cases = self.cases
 
         # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(_ages), desc="Computing residual torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
+        for i, _age in tqdm(enumerate(ages), desc="Computing residual torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.settings.DEBUG_MODE:
                 print(f"Computing residual torques at {_age} Ma")
 
             for case in self.cases:
@@ -386,7 +412,7 @@ class Plates:
                         selected_plates,
                         selected_slabs,
                         self.constants,
-                        DEBUG_MODE = self.DEBUG_MODE,
+                        DEBUG_MODE = self.settings.DEBUG_MODE,
                     )
 
                     # Feed back into slabs
@@ -406,7 +432,7 @@ class Plates:
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            plates: Optional[
+            plate_IDs: Optional[
                 Union[
                     int,
                     float,
@@ -420,19 +446,43 @@ class Plates:
         ):
         """
         Function to calculate the torque on plates
-        """"
+        """
+        # Define ages if not provided
+        if ages is not None:
+            # Check if ages is a single value
+            if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
+                ages = [ages]
+        else:
+            # Otherwise, use all ages from the settings
+            ages = self.settings.ages
+
         # Select plates
+        if plate_IDs is not None:
+            if isinstance(plate_IDs, (int, float, _numpy.floating, _numpy.integer)):
+                plate_IDs = [plate_IDs]
         
-        # Compute torque on plates
-        self.data[_age][key] = functions_main.compute_torque_on_plates(
-            self.data[_age][key], 
-            self.data[_age][key].lat, 
-            self.data[_age][key].lon, 
-            self.data[_age][key].lower_plateID, 
-            self.data[_age][key].slab_pull_force_lat, 
-            self.data[_age][key].slab_pull_force_lon,
-            self.data[_age][key].trench_segment_length,
-            1,
-            self.constants,
-            torque_variable="slab_pull_torque"
-        )
+        # Loop through ages
+        for _age in tqdm(ages, desc="Calculating torque on plates", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.settings.DEBUG_MODE:
+                print(f"Calculating torque on plates at {_age} Ma")
+
+            for key in cases:
+                # Select plates, if necessary
+                selected_data = self.data[_age][key].copy()
+                if plate_IDs is not None:
+                    selected_data = selected_data.loc[selected_data.plateID.isin(plate_IDs)].copy()
+
+                
+                # Calculate torques
+                selected_data = functions_main.calculate_torque_on_plates(
+                    selected_data,
+                    self.constants,
+                    self.options[key],
+                )
+
+                # Feed back into plates
+                if plate_IDs is not None:
+                    mask = self.data[_age][key].plateID.isin(plate_IDs)
+                    self.data[_age][key].loc[mask, :] = selected_data
+                else:
+                    self.data[_age][key] = selected_data

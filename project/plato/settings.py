@@ -1,70 +1,141 @@
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# PLATO
+# Algorithm to calculate plate forces from tectonic reconstructions
+# Thomas Schouten, 2024
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 import os
+import logging
+from typing import List, Optional
 
 import numpy as _numpy
 
 import setup
 
-class Settings():
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# SETTINGS OBJECT
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class Settings:
     def __init__(
-            self,
-            name,
-            ages,
-            cases_file,
-            cases_sheet="Sheet1",
-            files_dir=None,
-            PARALLEL_MODE = False,
-            DEBUG_MODE = False,
-        ):
+        self,
+        name: str,
+        ages: List[float],
+        cases_file: str,
+        cases_sheet: str = "Sheet1",
+        files_dir: Optional[str] = None,
+        PARALLEL_MODE: bool = False,
+        DEBUG_MODE: bool = False,
+    ):
         """
-        Object to store the settings of the plato simulation
+        Object to store the settings of a plato simulation.
+
+        :param name: Reconstruction name.
+        :type name: str
+        :param ages: List of valid reconstruction times.
+        :type ages: List[float]
+        :param cases_file: Path to the cases file.
+        :type cases_file: str
+        :param cases_sheet: Sheet name in the cases file (default: "Sheet1").
+        :type cases_sheet: str
+        :param files_dir: Directory path for output files (default: None, current working directory will be used).
+        :type files_dir: Optional[str]
+        :param PARALLEL_MODE: Flag to enable parallel computation mode (default: False).
+        :type PARALLEL_MODE: bool
+        :param DEBUG_MODE: Flag to enable debugging mode (default: False).
+        :type DEBUG_MODE: bool
+
+        :raises ValueError: If the ages list is empty.
+        :raises FileNotFoundError: If the cases file is not found.
+        :raises Exception: If an error occurs during cases loading.
         """
+        
+        logging.info(f"Initialising settings for simulation: {name}")
+
         # Store reconstruction name and valid reconstruction times
         self.name = name
         self.ages = _numpy.array(ages)
 
+        # Validate ages
+        if not self.ages.size:
+            logging.error("Ages list cannot be empty.")
+            raise ValueError("Ages list cannot be empty.")
+        logging.debug(f"Valid ages: {self.ages}")
+
         # Store cases and case options
-        self.cases, self.options = setup.get_options(cases_file, cases_sheet)
-        
+        try:
+            self.cases, self.options = setup.get_options(cases_file, cases_sheet)
+            logging.info(f"Cases loaded successfully from {cases_file}, sheet: {cases_sheet}")
+        except FileNotFoundError as e:
+            logging.error(f"Cases file not found: {cases_file} - {e}")
+            raise
+        except Exception as e:
+            logging.error(f"Error loading cases from file: {cases_file}, sheet: {cases_sheet} - {e}")
+            raise
+
         # Set files directory
-        self.dir_path = os.path.join(os.getcwd(), files_dir)
-        if not os.path.exists(self.dir_path):
-            os.makedirs(self.dir_path)
+        self.dir_path = os.path.join(os.getcwd(), files_dir or "")
+        try:
+            os.makedirs(self.dir_path, exist_ok=True)
+            logging.info(f"Output directory set to: {self.dir_path}")
+        except OSError as e:
+            logging.error(f"Error creating directory: {self.dir_path} - {e}")
+            raise
 
-        # Set flag for debugging mode
+        # Set debug and parallel modes
         self.DEBUG_MODE = DEBUG_MODE
-
-        # Set flag for parallel mode
-        # TODO: Actually implement parallel mode
         self.PARALLEL_MODE = PARALLEL_MODE
+        logging.debug(f"DEBUG_MODE: {self.DEBUG_MODE}, PARALLEL_MODE: {self.PARALLEL_MODE}")
 
-        # Subdivide cases to accelerate computation
-        # Group cases for initialisation of plates, slabs, and points
-        plate_options = ["Minimum plate area"]
-        self.plate_cases = setup.process_cases(self.cases, self.options, plate_options)
-        slab_options = ["Slab tesselation spacing"]
-        self.slab_cases = setup.process_cases(self.cases, self.options, slab_options)
-        point_options = ["Grid spacing"]
-        self.point_cases = setup.process_cases(self.cases, self.options, point_options)
+        # Process case groups
+        self.plate_cases = self.process_cases(["Minimum plate area"])
+        self.slab_cases = self.process_cases(["Slab tesselation spacing"])
+        self.point_cases = self.process_cases(["Grid spacing"])
 
-        # Group cases for torque computation
-        slab_pull_options = [
-            "Slab pull torque",
-            "Seafloor age profile",
-            "Sample sediment grid",
-            "Active margin sediments",
-            "Sediment subduction",
-            "Sample erosion grid",
-            "Slab pull constant",
-            "Shear zone width",
-            "Slab length"
-        ]
-        self.slab_pull_cases = setup.process_cases(self.cases, self.options, slab_pull_options)
+        # Process torque computation groups
+        self.slab_pull_cases = self.process_cases([
+            "Slab pull torque", "Seafloor age profile", "Sample sediment grid", 
+            "Active margin sediments", "Sediment subduction", "Sample erosion grid", 
+            "Slab pull constant", "Shear zone width", "Slab length"
+        ])
+        self.slab_bend_cases = self.process_cases(["Slab bend torque", "Seafloor age profile"])
+        self.gpe_cases = self.process_cases(["Continental crust", "Seafloor age profile", "Grid spacing"])
+        self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing"])
 
-        slab_bend_options = ["Slab bend torque", "Seafloor age profile"]
-        self.slab_bend_cases = setup.process_cases(self.cases, self.options, slab_bend_options)
+        logging.info("Settings initialisation complete.")
 
-        gpe_options = ["Continental crust", "Seafloor age profile", "Grid spacing"]
-        self.gpe_cases = setup.process_cases(self.cases, self.options, gpe_options)
+    def process_cases(self, option_keys: List[str]) -> List:
+        """
+        Process and return cases based on given option keys.
 
-        mantle_drag_options = ["Reconstructed motions", "Grid spacing"]
-        self.mantle_drag_cases = setup.process_cases(self.cases, self.options, mantle_drag_options)
+        :param option_keys: List of case option keys to group cases.
+        :type option_keys: List[str]
+
+        :return: Processed cases based on the provided option keys.
+        :rtype: List
+
+        :raises: Exception if case processing fails.
+        """
+        try:
+            processed_cases = setup.process_cases(self.cases, self.options, option_keys)
+            logging.debug(f"Processed cases for options: {option_keys}")
+            return processed_cases
+        except KeyError as e:
+            logging.error(f"Option key not found: {e}")
+            raise
+        except Exception as e:
+            logging.error(f"Error processing cases for options: {option_keys} - {e}")
+            raise
+
+    def run_parallel_mode(self):
+        """
+        Placeholder method to implement parallel mode.
+        Logs a warning if parallel mode is enabled but not yet implemented.
+        """
+        if self.PARALLEL_MODE:
+            logging.warning("Parallel mode is enabled but not yet implemented.")
+        else:
+            logging.info("Parallel mode is disabled.")
