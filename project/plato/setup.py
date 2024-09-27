@@ -76,7 +76,7 @@ def get_plates(
 
         # Get Euler rotations
         stage_rotation = rotations.get_rotation(
-            to_time=reconstruction_time,
+            to_time=_age,
             moving_plate_id=int(plates[n,0]),
             from_time=reconstruction_time + options["Velocity time step"],
             anchor_plate_id=options["Anchor plateID"]
@@ -178,7 +178,7 @@ def get_slabs(
     constants = set_constants()
 
     # Tesselate subduction zones and get slab pull and bend torques along subduction zones
-    slabs = reconstruction.tessellate_subduction_zones(reconstruction_time, ignore_warnings=True, tessellation_threshold_radians=(options["Slab tesselation spacing"]/constants.mean_Earth_radius_km))
+    slabs = reconstruction.tessellate_subduction_zones(_age, ignore_warnings=True, tessellation_threshold_radians=(options["Slab tesselation spacing"]/constants.mean_Earth_radius_km))
 
     # Convert to _pandas.DataFrame
     slabs = _pandas.DataFrame(slabs)
@@ -203,7 +203,7 @@ def get_slabs(
         topology_geometries,
         sampling_lat,
         sampling_lon,
-        reconstruction_time,
+        _age,
         PARALLEL_MODE=PARALLEL_MODE
     )
 
@@ -219,7 +219,7 @@ def get_slabs(
 
             if len(selected_plate) == 0:
                 stage_rotation = reconstruction.rotation_model.get_rotation(
-                    to_time=reconstruction_time,
+                    to_time=_age,
                     moving_plate_id=int(plateID),
                     from_time=reconstruction_time + options["Velocity time step"],
                     anchor_plate_id=options["Anchor plateID"]
@@ -317,7 +317,7 @@ def get_points(
         topology_geometries,
         lat_grid,
         lon_grid,
-        reconstruction_time,
+        _age,
         PARALLEL_MODE=PARALLEL_MODE
     )
 
@@ -336,7 +336,7 @@ def get_points(
 
         if len(selected_plate) == 0:
             stage_rotation = reconstruction.rotation_model.get_rotation(
-                to_time=reconstruction_time,
+                to_time=_age,
                 moving_plate_id=int(plateID),
                 from_time=reconstruction_time + options["Velocity time step"],
                 anchor_plate_id=options["Anchor plateID"]
@@ -415,22 +415,22 @@ def get_globe(
 
     for i, _age in enumerate(_ages):
         # Get number of plates
-        num_plates[i] = len(_plates[_age][_case].plateID.values)
+        num_plates[i] = len(_plates[_age][__case].plateID.values)
 
         # Get slab length
-        slab_length[i] = _slabs[_age][_case].trench_segment_length.sum()
+        slab_length[i] = _slabs[_age][__case].trench_segment_length.sum()
 
         # Get global RMS velocity
         # Get area for each grid point as well as total area
-        areas = _points[_age][_case].segment_length_lat.values * _points[_age][_case].segment_length_lon.values
+        areas = _points[_age][__case].segment_length_lat.values * _points[_age][__case].segment_length_lon.values
         total_area = _numpy.sum(areas)
 
         # Calculate RMS speed
-        v_rms_mag[i] = _numpy.sum(_points[_age][_case].v_mag * areas) / total_area
+        v_rms_mag[i] = _numpy.sum(_points[_age][__case].v_mag * areas) / total_area
 
         # Calculate RMS azimuth
-        v_rms_sin = _numpy.sum(_numpy.sin(_points[_age][_case].v_lat) * areas) / total_area
-        v_rms_cos = _numpy.sum(_numpy.cos(_points[_age][_case].v_lat) * areas) / total_area
+        v_rms_sin = _numpy.sum(_numpy.sin(_points[_age][__case].v_lat) * areas) / total_area
+        v_rms_cos = _numpy.sum(_numpy.cos(_points[_age][__case].v_lat) * areas) / total_area
         v_rms_azi[i] = _numpy.rad2deg(
             -1 * (_numpy.arctan2(v_rms_sin, v_rms_cos) + 0.5 * _numpy.pi)
         )
@@ -627,7 +627,7 @@ def get_topology_geometries(
             reconstruction.topology_features, 
             reconstruction.rotation_model, 
             topology_file, 
-            reconstruction_time, 
+            _age, 
             anchor_plate_id=anchor_plateID
         )
         if _os.path.exists(topology_file):
@@ -803,18 +803,18 @@ def get_options(
 
     # Loop over rows to obtain options from excel file
     for _, row in case_options.iterrows():
-        case = row["Name"]
-        cases.append(case)
-        options[case] = {}
+        _case = row["Name"]
+        cases.append(_case)
+        options[_case] = {}
         for i, option in enumerate(all_options):
             if option in case_options:
                 if option in boolean_options and row[option] == 1:
                     row[option] = True
                 elif option in boolean_options and row[option] == 0:
                     row[option] = False
-                options[case][option] = row[option]
+                options[_case][option] = row[option]
             else:
-                options[case][option] = default_values[i]
+                options[_case][option] = default_values[i]
 
     return cases, options
 
@@ -828,8 +828,8 @@ def get_seafloor_grid(
     
     :param reconstruction_name:    name of reconstruction
     :type reconstruction_name:     string
-    :param reconstruction_times:   reconstruction times
-    :type reconstruction_times:    list or numpy.array
+    :param ages:   reconstruction times
+    :type ages:    list or numpy.array
     :param DEBUG_MODE:             whether to run in debug mode
     :type DEBUG_MODE:              bool
 
@@ -932,26 +932,26 @@ def process_cases(cases, options, target_options):
     case_dict = {}
 
     # Loop through cases to process
-    for case in cases:
+    for _case in cases:
         # Ignore processed cases
-        if case in processed_cases:
+        if _case in processed_cases:
             continue
         
         # Initialise list to store similar cases
-        case_dict[case] = [case]
+        case_dict[_case] = [_case]
 
         # Add case to processed cases
-        processed_cases.add(case)
+        processed_cases.add(_case)
 
         # Loop through other cases to find similar cases
         for other_case in cases:
             # Ignore if it is the same case
-            if case == other_case:
+            if _case == other_case:
                 continue
             
             # Add case to processed cases if it is similar
-            if all(options[case][opt] == options[other_case][opt] for opt in target_options):
-                case_dict[case].append(other_case)
+            if all(options[_case][opt] == options[other_case][opt] for opt in target_options):
+                case_dict[_case].append(other_case)
                 processed_cases.add(other_case)
 
     return case_dict
@@ -1220,7 +1220,7 @@ def load_data(
         data: dict,
         reconstruction: _gplately.PlateReconstruction,
         reconstruction_name: str,
-        reconstruction_times: list,
+        ages: list,
         type: str,
         all_cases: list,
         all_options: dict,
@@ -1241,8 +1241,8 @@ def load_data(
     :type reconstruction:         gplately.PlateReconstruction
     :param reconstruction_name:   name of reconstruction
     :type reconstruction_name:    string
-    :param reconstruction_times:  reconstruction times
-    :type reconstruction_times:   list or _numpy.array
+    :param ages:  reconstruction times
+    :type ages:   list or _numpy.array
     :param type:                  type of data
     :type type:                   string
     :param all_cases:             all cases
@@ -1267,69 +1267,72 @@ def load_data(
     :return:                      data
     :rtype:                       dict
     """
-    def load_or_initialise_case(case, reconstruction_time):
+    def load_or_initialise_case(data, _age, _case):
         df = None
         if files_dir:
-            df = DataFrame_from_parquet(files_dir, type, reconstruction_name, case, reconstruction_time)
+            df = DataFrame_from_parquet(files_dir, type, reconstruction_name, _case, _age)
             if df is not None:
-                return case, df
-        
+                return _case, df
+    
         # Check for matching case and copy data
-        matching_key = next((key for key, cases in matching_case_dict.items() if case in cases), None)
+        matching_key = next((key for key, cases in matching_case_dict.items() if _case in cases), None)
         if matching_key:
             for matching_case in matching_case_dict[matching_key]:
-                if matching_case in data[reconstruction_time]:
-                    return case, data[reconstruction_time][matching_case].copy()
+                if matching_case in data[_age]:
+                    return _case, data[_age][matching_case].copy()
 
         # Initialize new DataFrame if not found
         if df is None:
             if DEBUG_MODE:
-                print(f"Initializing new DataFrame for {type} for {reconstruction_name} at {reconstruction_time} Ma for case {case}...")
+                print(f"Initializing new DataFrame for {type} for {reconstruction_name} at {_age} Ma for case {_case}...")
             if type == "Plates":
                 df = get_plates(
                     reconstruction.rotation_model,
-                    reconstruction_time,
-                    resolved_topologies[reconstruction_time],
-                    all_options[case]
+                    _age,
+                    resolved_topologies[_age],
+                    all_options[_case]
                 )
 
             elif type == "Slabs":
                 df = get_slabs(
                     reconstruction,
-                    reconstruction_time,
-                    plates[reconstruction_time][case],
-                    resolved_geometries[reconstruction_time],
-                    all_options[case],
+                    _age,
+                    plates[_age][_case],
+                    resolved_geometries[_age],
+                    all_options[_case],
                     PARALLEL_MODE=PARALLEL_MODE
                 )
 
             elif type == "Points":
                 df = get_points(
                     reconstruction,
-                    reconstruction_time,
-                    plates[reconstruction_time][case],
-                    resolved_geometries[reconstruction_time],
-                    all_options[case],
+                    _age,
+                    plates[_age][_case],
+                    resolved_geometries[_age],
+                    all_options[_case],
                     PARALLEL_MODE=PARALLEL_MODE
                 )
 
-        return case, df
+        return _case, df
 
-    # Sequential processing
-    # NOTE: Parallel processing increases computation time by a factor 1.5, so this function is kept sequential
-    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} DataFrames", disable=DEBUG_MODE):
-        data[reconstruction_time] = {}
-        
-        for case in all_cases:
-            case, df = load_or_initialise_case(case, reconstruction_time)
-            data[reconstruction_time][case] = df
+        # Sequential processing
+        # NOTE: Parallel processing increases computation time by a factor 1.5, so this function is kept sequential
+        for _age in tqdm(_ages, desc=f"Loading {type} DataFrames", disable=DEBUG_MODE):
+            for case in all_cases:
+                if isinstance(data, dict):
+                    if _age in data.keys():
+                        if _case in data[_age]:
+                            df = data[_age][__case].copy()
+                            
+                _case, df = load_or_initialise_case(data, _age, _case)
+                data[_age][__case] = df
 
-    return data 
+        return data 
 
 def load_grid(
         grid: dict,
         reconstruction_name: str,
-        reconstruction_times: list,
+        ages: list,
         type: str,
         files_dir: str,
         points: Optional[dict] = None,
@@ -1344,8 +1347,8 @@ def load_grid(
     :type grids:                   dict
     :param reconstruction_name:    name of reconstruction
     :type reconstruction_name:     string
-    :param reconstruction_times:   reconstruction times
-    :type reconstruction_times:    list or numpy.array
+    :param ages:   reconstruction times
+    :type ages:    list or numpy.array
     :param type:                   type of grid
     :type type:                    string
     :param files_dir:              files directory
@@ -1363,39 +1366,39 @@ def load_grid(
     :rtype:                        xarray.Dataset
     """
     # Loop through times
-    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} grids", disable=DEBUG_MODE):
+    for reconstruction_time in tqdm(ages, desc=f"Loading {type} grids", disable=DEBUG_MODE):
         # Check if the grid for the reconstruction time is already in the dictionary
         if reconstruction_time in grid:
             # Rename variables and coordinates in seafloor age grid for clarity
             if type == "Seafloor":
-                if "z" in grid[reconstruction_time].data_vars:
-                    grid[reconstruction_time] = grid[reconstruction_time].rename({"z": "seafloor_age"})
-                if "lat" in grid[reconstruction_time].coords:
-                    grid[reconstruction_time] = grid[reconstruction_time].rename({"lat": "latitude"})
-                if "lon" in grid[reconstruction_time].coords:
-                    grid[reconstruction_time] = grid[reconstruction_time].rename({"lon": "longitude"})
+                if "z" in grid[_age].data_vars:
+                    grid[_age] = grid[_age].rename({"z": "seafloor_age"})
+                if "lat" in grid[_age].coords:
+                    grid[_age] = grid[_age].rename({"lat": "latitude"})
+                if "lon" in grid[_age].coords:
+                    grid[_age] = grid[_age].rename({"lon": "longitude"})
 
             continue
 
         # Load grid if found
         if type == "Seafloor":
             # Load grid if found
-            grid[reconstruction_time] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name)
+            grid[_age] = Dataset_from_netCDF(files_dir, type, _age, reconstruction_name)
 
             # Download seafloor age grid from GPlately DataServer
-            grid[reconstruction_time] = get_seafloor_grid(reconstruction_name, reconstruction_time)
+            grid[_age] = get_seafloor_grid(reconstruction_name, reconstruction_time)
 
         elif type == "Velocity" and cases:
             # Initialise dictionary to store velocity grids for cases
-            grid[reconstruction_time] = {}
+            grid[_age] = {}
 
             # Loop through cases
             for case in cases:
                 # Load grid if found
-                grid[reconstruction_time][case] = Dataset_from_netCDF(files_dir, type, reconstruction_time, reconstruction_name, case=case)
+                grid[_age][_case] = Dataset_from_netCDF(files_dir, type, _age, reconstruction_name, case=case)
 
                 # If not found, initialise a new grid
-                if grid[reconstruction_time][case] is None:
+                if grid[_age][_case] is None:
                 
                     # Interpolate velocity grid from points
                     if type == "Velocity":
@@ -1404,7 +1407,7 @@ def load_grid(
                                 print(f"{type} grid for {reconstruction_name} at {reconstruction_time} Ma not found, interpolating from points...")
 
                             # Get velocity grid
-                            grid[reconstruction_time][case] = get_velocity_grid(points[reconstruction_time][case], seafloor_grid[reconstruction_time])
+                            grid[_age][_case] = get_velocity_grid(points[_age][_case], seafloor_grid[_age])
 
     return grid
 

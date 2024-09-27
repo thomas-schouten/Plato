@@ -3,18 +3,28 @@
 # Standard library imports
 import os
 import sys
+import logging
 
 # Import the test functions
 import test_functions
 
-# SET TESTS
-# Test the settings module
-# Last successful test: 2024-09-27
-TEST_SETTINGS = True
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Test the reconstruction module
-# Last successful test: 2024-09-27
-TEST_RECONSTRUCTION = True; TEST_LOCAL_FILES = True
+# SET TESTS
+# Test configurations
+TEST_CONFIGS = {
+    "TEST_SETTINGS": False,
+    "TEST_RECONSTRUCTION": False,
+    "TEST_LOCAL_FILES": True,
+    "TEST_PLATES": False,
+    "TEST_POINTS": False,
+    "TEST_SLABS": False,
+    "TEST_GLOBE": True,
+    "TEST_PLATE_TORQUES": False,
+}
+
+# Define reconstruction files
 reconstruction_files = (
     os.path.join("data", "Global_EarthByte_230-0Ma_GK07_AREPS.rot"),
     os.path.join("data", "Global_EarthByte_230-0Ma_GK07_AREPS_Topologies.gpml"),
@@ -22,39 +32,82 @@ reconstruction_files = (
     os.path.join("data", "Global_EarthByte_230-0Ma_GK07_AREPS_Coastlines.gpml"),
 )
 
-# Test the plates module
-# Last successful test:
-TEST_PLATES = False
+def run_tests():
+    """Run all specified tests based on the TEST_CONFIGS dictionary."""
+    # Test Settings
+    if TEST_CONFIGS["TEST_SETTINGS"]:
+        try:
+            logging.info("Running settings test...")
+            test_functions.test_settings()
+            logging.info("Settings test completed successfully.")
+        except Exception as e:
+            logging.error(f"Settings test failed: {e}")
 
-# Test the points module
-# Last successful test:
-TEST_POINTS = False
+    # Test Reconstruction
+    if TEST_CONFIGS["TEST_RECONSTRUCTION"]:
+        try:
+            logging.info("Running reconstruction test...")
+            if TEST_CONFIGS["TEST_LOCAL_FILES"]:
+                test_functions.test_reconstruction(reconstruction_files=reconstruction_files)
+            else:
+                test_functions.test_reconstruction()
+            logging.info("Reconstruction test completed successfully.")
+        except Exception as e:
+            logging.error(f"Reconstruction test failed: {e}")
 
-# Test the slabs module
-# Last successful test:
-TEST_SLABS = True
+    # Test Plates
+    if TEST_CONFIGS["TEST_PLATES"]:
+        try:
+            logging.info("Running plates test...")
+            if TEST_CONFIGS["TEST_LOCAL_FILES"]:
+                test_functions.test_plates(reconstruction_files=reconstruction_files)
+            else:
+                test_functions.test_plates()
+            logging.info("Plates test completed successfully.")
+        except Exception as e:
+            logging.error(f"Plates test failed: {e}")
 
-# Test the plate torques module
-# Last successful test:
-TEST_PLATE_TORQUES = True
+    # Test Points (if implemented)
+    if TEST_CONFIGS["TEST_POINTS"]:
+        try:
+            logging.info("Running points test...")
+            test_functions.test_points()
+            logging.info("Points test completed successfully.")
+        except Exception as e:
+            logging.error(f"Points test failed: {e}")
+
+    # Test Slabs
+    if TEST_CONFIGS["TEST_SLABS"]:
+        try:
+            logging.info("Running slabs test...")
+            test_functions.test_slabs()
+            logging.info("Slabs test completed successfully.")
+        except Exception as e:
+            logging.error(f"Slabs test failed: {e}")
+
+    # Test Plate Torques
+    if TEST_CONFIGS["TEST_PLATE_TORQUES"]:
+        try:
+            logging.info("Running plate torques test...")
+            test_functions.test_plate_torques()
+            logging.info("Plate torques test completed successfully.")
+        except Exception as e:
+            logging.error(f"Plate torques test failed: {e}")
+
+    # Test Globe
+    if TEST_CONFIGS["TEST_GLOBE"]:
+        try:
+            logging.info("Running globe test...")
+            if TEST_CONFIGS["TEST_LOCAL_FILES"]:
+                test_functions.test_globe(reconstruction_files=reconstruction_files)
+            else:
+                test_functions.test_globe()
+            logging.info("Globe test completed successfully.")
+        except Exception as e:
+            logging.error(f"Globe test failed: {e}")
 
 # RUN TESTS
-if TEST_SETTINGS:
-    test_functions.test_settings()
-
-# TEST RECONSTRUCTION
-if TEST_RECONSTRUCTION:
-    if TEST_LOCAL_FILES:
-        test_functions.test_reconstruction(reconstruction_files=reconstruction_files)
-    else:
-        test_functions.test_reconstruction()
-
-# TEST PLATES
-if TEST_PLATES:
-    test_functions.test_plates()
-
-# TEST POINTS
-if TEST_POINTS:
-    test_functions.test_points()
+if __name__ == "__main__":
+    run_tests()
 
 # %%

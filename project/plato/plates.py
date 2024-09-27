@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATO
 # Algorithm to calculate plate forces from tectonic reconstructions
-# Thomas Schouten and Edward Clennett, 2023
+# Thomas Schouten, 2024
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Import libraries
@@ -38,33 +38,65 @@ class Plates:
     """
     def __init__(
             self,
-            settings,
-            reconstruction,
+            settings = None,
+            reconstruction = None,
+            data = None,
+            resolved_geometries = None,
         ):
+        """
+        Initialise the Plates object with the required objects.
+
+        :param settings: Settings object (default: None)
+        :type settings: Optional[Settings]
+        :param reconstruction: Reconstruction object (default: None)
+        :type reconstruction: Optional[Reconstruction]
+        :param data: Data object (default: None)
+        :type data: Optional[Data]
+        :param resolved_geometries: Resolved geometries (default: None)
+        :type resolved_geometries: Optional[dict]
+        """
         # Store input variables
-        self.settings = settings
-        self.reconstruction = reconstruction
+        if settings:
+            self.settings = settings
+        
+        if reconstruction:
+            self.reconstruction = reconstruction
         
         # GEOMETRIES
         # Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries
         self.resolved_topologies, self.resolved_geometries = {}, {}
 
+        # Define ages if not provided
+        if ages is None:
+            ages = self.settings.ages
+        elif isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
+            ages = [ages]
+
         # Load or initialise plate geometries
         for _age in tqdm(self.settings.ages, desc="Loading geometries", disable=self.settings.DEBUG_MODE):
             
             # Load resolved geometries if they are available
-            self.resolved_geometries[_age] = setup.GeoDataFrame_from_geoparquet(
-                self.settings.dir_path,
-                "Geometries",
-                _age,
-                self.settings.name,
-            )
+            if resolved_geometries is not None:
+                # Check if resolved geometries are a dictionary
+                if not isinstance(resolved_geometries, dict):
+                    raise ValueError("Resolved geometries should be a dictionary.")
+                
+                # Check if the age is in the dictionary
+                if _age in resolved_geometries.keys():
+                    self.resolved_geometries[_age] = resolved_geometries[_age]
+                else:
+                    self.resolved_geometries[_age] = setup.GeoDataFrame_from_geoparquet(
+                        self.settings.dir_path,
+                        "Geometries",
+                        _age,
+                        self.settings.name,
+                    )
 
-            # Get new topologies if they are unavailable
-            if self.resolved_geometries[_age] is None:
-                self.resolved_geometries[_age] = setup.get_topology_geometries(
-                    self.reconstruction, _age, anchor_plateID=0
-                )
+                    # Get new topologies if they are unavailable
+                    if self.resolved_geometries[_age] is None:
+                        self.resolved_geometries[_age] = setup.get_topology_geometries(
+                            self.reconstruction, _age, anchor_plateID=0
+                        )
             
             # Resolve topologies to use to get plates
             # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
@@ -87,21 +119,33 @@ class Plates:
         # DATA
         # Load or initialise plate data
         self.data = {}
-        self.data = setup.load_data(
-            self.data,
-            self.reconstruction,
-            self.settings.name,
-            self.settings.ages,
-            "Plates",
-            self.settings.cases,
-            self.settings.options,
-            self.settings.plate_cases,
-            self.settings.dir_path,
-            resolved_topologies = self.resolved_topologies,
-            resolved_geometries = self.resolved_geometries,
-            DEBUG_MODE = self.settings.DEBUG_MODE,
-            PARALLEL_MODE = self.settings.PARALLEL_MODE,
-        )
+
+        # Load data if available
+        if data is not None:
+            # Check if data is a dictionary
+            if not isinstance(data, dict):
+                raise ValueError("Data should be a dictionary.")
+            
+            # Check if the age is in the dictionary
+            for _age in self.settings.ages:
+                if _age in data.keys():
+                    self.data[_age] = data[_age]
+                else:
+                    self.data[_age] = setup.load_data(
+                        self.data,
+                        self.reconstruction,
+                        self.settings.name,
+                        self.settings.ages,
+                        "Plates",
+                        self.settings.cases,
+                        self.settings.options,
+                        self.settings.plate_cases,
+                        self.settings.dir_path,
+                        resolved_topologies = self.resolved_topologies,
+                        resolved_geometries = self.resolved_geometries,
+                        DEBUG_MODE = self.settings.DEBUG_MODE,
+                        PARALLEL_MODE = self.settings.PARALLEL_MODE,
+                    )
 
     def calculate_rms_velocity(
                 self,
@@ -276,7 +320,7 @@ class Plates:
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[
+            plate_IDs: Optional[
                 Union[
                     int,
                     float,
@@ -291,8 +335,8 @@ class Plates:
         """
         Function to calculate driving torque
 
-        :param _ages:    reconstruction times to compute residual torque for
-        :type _ages:     list
+        :param ages:    reconstruction times to compute residual torque for
+        :type ages:     list
         :param cases:                   cases to compute driving torque for
         :type cases:                    list
         :param plates:                  plates to compute driving torque for

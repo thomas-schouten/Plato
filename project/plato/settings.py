@@ -107,7 +107,10 @@ class Settings:
 
         logging.info("Settings initialisation complete.")
 
-    def process_cases(self, option_keys: List[str]) -> List:
+    def process_cases(
+            self,
+            option_keys: List[str]
+        ) -> List:
         """
         Process and return cases based on given option keys.
 

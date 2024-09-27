@@ -1,36 +1,82 @@
-from typing import Optional, Union, List
+from typing import Dict, List, Optional, Union
 
 import numpy as _numpy
 import tqdm as _tqdm
 
 import setup, functions_main
 
-class Points(object):
+class Points:
     def __init__(
-            self,
-            settings: object,
-            reconstruction: object,
-            plates: dict,
-        ):
+        self,
+        settings: 'Settings',
+        reconstruction: 'Reconstruction',
+        plates: Optional[Dict] = None,
+        data: Optional[Dict] = None,
+    ):
         """
         Class to store and manipulate point data.
 
-        :param settings:   settings object
-        :type settings:    object
+        :param settings: Settings object containing simulation parameters.
+        :type settings: Settings
+        :param reconstruction: Reconstruction object containing tectonic model data.
+        :type reconstruction: Reconstruction
+        :param plates: Optional dictionary of plate data (default: None).
+        :type plates: Optional[Dict]
+        :param data: Optional dictionary of point data structured by age and case (default: None).
+        :type data: Optional[Dict]
         """
-        # Store settings
+        
+        # Store settings and reconstruction object
         self.settings = settings
-
-        # Store reconstruction object
         self.reconstruction = reconstruction
-
-        # Store plates object
-        self.plates = plates
-    
-        # Initialise data
+        
+        # Initialize data
         self.data = {}
+
+        # Validate and initialize data if provided
+        if data is not None:
+            self.load_data(data)
+
+        # Load or initialize points data
+        self.load_points_data(plates)
+
+        # Set flags for computed torques
+        self.sampled_points = False
+        self.computed_gpe_torque = False
+        self.computed_mantle_drag_torque = False
+
+    def validate_data(self, data: Dict) -> None:
+        """
+        Validate the structure of the provided data dictionary.
+
+        :param data: The data dictionary to validate.
+        :type data: Dict
+        :raises ValueError: If the data structure is invalid.
+        """
+        if not isinstance(data, dict):
+            raise ValueError("Data must be a dictionary.")
+        
+        for age in self.settings.ages:
+            if age not in data:
+                continue
+            
+            if not isinstance(data[age], dict):
+                raise ValueError(f"Data for age '{age}' must be a dictionary.")
+
+            for case in self.settings.cases:
+                if case not in data[age]:
+                    continue
+                
+                if not isinstance(data[age][case], dict):
+                    raise ValueError(f"Data for age '{age}' and case '{case}' must be a dictionary.")
     
-        # Load or initialise points
+    def load_points_data(self, plates: Optional[Dict] = None) -> None:
+        """
+        Load point data using the setup module.
+
+        :param plates: Optional dictionary of plate data.
+        :type plates: Optional[Dict]
+        """
         self.data = setup.load_data(
             self.data,
             self.reconstruction,
@@ -41,16 +87,11 @@ class Points(object):
             self.settings.options,
             self.settings.point_cases,
             self.settings.dir_path,
-            plates = self.plates.data,
-            resolved_geometries = self.plates.resolved_geometries,
-            DEBUG_MODE = self.settings.DEBUG_MODE,
-            PARALLEL_MODE = self.settings.PARALLEL_MODE,
+            plates=plates,
+            resolved_geometries=self.plates.resolved_geometries if plates else None,
+            DEBUG_MODE=self.settings.DEBUG_MODE,
+            PARALLEL_MODE=self.settings.PARALLEL_MODE,
         )
-
-        # Set flags
-        self.sampled_points = False
-        self.computed_gpe_torque = False
-        self.computed_mantle_drag_torque = False
 
     def sample_points(
             self,
