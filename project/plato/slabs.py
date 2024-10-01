@@ -77,6 +77,7 @@ class Slabs:
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            seafloor_grid: Optional[_xarray.Dataset] = None,
             PROGRESS_BAR: Optional[bool] = True,    
         ):
         """
@@ -239,8 +240,7 @@ class Slabs:
         # Set flag to True
         self.sampled_upper_plates = True
 
-
-    def compute_slab_pull_torque(
+    def compute_slab_pull_force(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
@@ -326,7 +326,7 @@ class Slabs:
                             {"slab_pull_torque_" + axis: self.plates[_age][key]["slab_pull_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-    def compute_slab_bend_torque(
+    def compute_slab_bend_force(
             self,
             _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             _cases: Optional[Union[List[str], str]] = None,

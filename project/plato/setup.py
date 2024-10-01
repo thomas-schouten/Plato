@@ -15,8 +15,7 @@ import shutil
 import warnings
 
 from collections import defaultdict
-from typing import Optional
-from typing import Union
+from typing import Dict, List, Optional, Union
 
 # Third-party libraries
 import geopandas as _geopandas
@@ -907,6 +906,97 @@ def get_velocity_grid(
     velocity_grid = velocity_grid.interpolate_na()
 
     return velocity_grid
+
+def get_ages(
+        ages: Union[None, int, float, list, _numpy.integer, _numpy.floating, _numpy.ndarray],
+        default_ages: _numpy.ndarray,
+    ) -> _numpy.ndarray:
+    """
+    Function to check and get ages.
+
+    :param ages:            ages
+    :type ages:             None, int, float, list, numpy.integer, numpy.floating, numpy.ndarray
+    :param default_ages:    settings ages
+    :type default_ages:     numpy.ndarray
+
+    :return:                ages
+    :rtype:                 numpy.ndarray
+    """
+    # Define ages
+    if ages is None:
+        # If no ages are provided, use default ages
+        _ages = default_ages
+
+    elif isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
+        # If a single value is provided, convert to numpy array
+        _ages = _numpy.array([ages])
+
+    elif isinstance(ages, list):
+        # If a list is provided, convert to numpy array
+        _ages = _numpy.array(ages)
+
+    elif isinstance(ages, _numpy.ndarray):
+        # If a numpy array is provided, use as is
+        _ages = ages
+
+    return _ages
+
+def get_cases(
+    cases: Union[None, str, List[str]],
+    default_cases: List[str],
+    ) -> List[str]:
+    """
+    Function to check and get cases.
+
+    :param cases:           cases (can be None, a single case as a string, or a list of cases)
+    :type cases:            None, str, or list of strings
+    :param default_cases:   default cases to use if cases is not provided
+    :type default_cases:    list of strings
+
+    :return:                 a list of cases
+    :rtype:                  list of strings
+    """
+    # Define cases
+    if cases is None:
+        # If no cases are provided, use default cases
+        _cases = default_cases
+
+    else:
+        # Check if cases is a single value (str), convert to list
+        if isinstance(cases, str):
+            _cases = [cases]
+
+    return _cases
+
+def get_iterable(
+        cases: Union[None, str, List[str]],
+        default_iterable: List[str],
+    ) -> Dict[str, List[str]]:
+    """
+    Function to check and get iterable.
+
+    :param cases:               cases (can be None, a single case as a string, or a list of cases)
+    :type cases:                None, str, or list of strings
+    :param default_iterable:    default iterable to use if cases is not provided
+    :type default_iterable:     list of strings
+
+    :return:                 iterable
+    :rtype:                  dict
+    """
+    # Define iterable
+    if cases is None:
+        # If no cases are provided, use the default iterable
+        _iterable = default_iterable
+
+    else:
+        # Check if cases is a single value (str), convert to list
+        if isinstance(cases, str):
+            cases = [cases]
+        
+        # Make dictionary of iterable
+        _iterable = {case: [] for case in cases}
+
+    return _iterable
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PROCESS CASES 

@@ -92,7 +92,7 @@ class Grids():
 
         return data_array
 
-    def make_grid(
+    def data_arrays2dataset(
             self,
             data_arrays: dict,
             grid_name: str,

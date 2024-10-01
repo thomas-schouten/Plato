@@ -148,7 +148,7 @@ class Points:
         # Set flag to True
         self.sampled_points = True
     
-    def compute_gpe_torque(
+    def compute_gpe_force(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
@@ -218,7 +218,7 @@ class Points:
                             {"GPE_torque_" + axis: self.plates[_age][key]["GPE_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
 
-    def compute_mantle_drag_torque(
+    def compute_mantle_drag_force(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,

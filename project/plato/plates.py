@@ -40,6 +40,7 @@ class Plates:
             self,
             settings = None,
             reconstruction = None,
+            ages = None,
             data = None,
             resolved_geometries = None,
         ):
@@ -67,13 +68,13 @@ class Plates:
         self.resolved_topologies, self.resolved_geometries = {}, {}
 
         # Define ages if not provided
-        if ages is None:
-            ages = self.settings.ages
-        elif isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
-            ages = [ages]
+        _ages = setup.get_ages(
+            ages,
+            self.settings.ages,
+        )
 
         # Load or initialise plate geometries
-        for _age in tqdm(self.settings.ages, desc="Loading geometries", disable=self.settings.DEBUG_MODE):
+        for _age in tqdm(_ages, desc="Loading geometries", disable=self.settings.DEBUG_MODE):
             
             # Load resolved geometries if they are available
             if resolved_geometries is not None:
@@ -156,13 +157,10 @@ class Plates:
             Function to calculate the root mean square (RMS) velocity of the plates.
             """
             # Define ages if not provided
-            if ages is not None:
-                # Check if ages is a single value
-                if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
-                    ages = [ages]
-            else:
-                # Otherwise, use all ages from the settings
-                ages = self.settings.ages
+            _ages = setup.get_ages(
+                ages,
+                self.settings.ages,
+            )
             
             # Define cases if not provided
             if cases is not None:
@@ -173,7 +171,7 @@ class Plates:
                 # Otherwise, use all cases from the settings
                 cases = self.settings.cases
 
-            for _age in ages:
+            for _age in _ages:
                 # Calculate rms velocity
                 for key, entries in self.settings.gpe_cases.items():
                     if self.data[self.settings.ages][key]["v_rms_mag"].mean() == 0:
