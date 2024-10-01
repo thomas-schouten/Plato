@@ -29,7 +29,7 @@ from globe import Globe
 from optimisation import Optimisation
 from plot import Plot
 
-def test_settings(print_results=False):
+def test_settings(settings_file=None, print_results=False):
     """Test the settings module of the plato package."""
     if print_results:
         print("Testing 'settings' module...")
@@ -39,8 +39,7 @@ def test_settings(print_results=False):
         settings_test = Settings(
             name="test",
             ages=[0, 1],
-            cases_file="test_cases.xlsx",
-            cases_sheet="Sheet1",
+            cases_file=settings_file,
             files_dir="output",
             PARALLEL_MODE=False,
             DEBUG_MODE=False,

@@ -7,26 +7,20 @@
 # Import libraries
 # Standard libraries
 import os
-import multiprocessing
 import warnings
-from typing import List, Optional, Union
-from copy import deepcopy
+from typing import Dict, List, Optional, Union
 
 # Third-party libraries
 import numpy as _numpy
-import matplotlib.pyplot as plt
-import geopandas as _gpd
-import gplately
+import pandas as _pandas
+import pygplates as _gplately
 from gplately import pygplates as _pygplates
-import cartopy.crs as ccrs
-import cmcrameri as cmc
 from tqdm import tqdm
-import xarray as _xarray
 
 # Local libraries
-import setup
-import functions_main
-import sys
+import functions_main, setup
+from reconstruction import Reconstruction
+from settings import Settings
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATES OBJECT
@@ -38,30 +32,41 @@ class Plates:
     """
     def __init__(
             self,
-            settings = None,
-            reconstruction = None,
+            settings: Optional[Union[None, Settings]]= None,
+            reconstruction: Optional[Union[None, _gplately.PlateReconstruction, 'Reconstruction']]= None,
+            reconstruction_name: Optional[str] = None,
+            cases = None,
             ages = None,
-            data = None,
-            resolved_geometries = None,
+            ages: Optional[list] = None,
+            data: Optional[Dict] = None,
+            resolved_geometries: Optional[Dict] = None,
         ):
         """
         Initialise the Plates object with the required objects.
 
-        :param settings: Settings object (default: None)
-        :type settings: Optional[Settings]
-        :param reconstruction: Reconstruction object (default: None)
-        :type reconstruction: Optional[Reconstruction]
-        :param data: Data object (default: None)
-        :type data: Optional[Data]
+        :param settings:            Settings object (default: None)
+        :type settings:             Optional[Settings]
+        :param reconstruction:      Reconstruction object (default: None)
+        :type reconstruction:       Optional[Reconstruction]
+        :param data:                Data object (default: None)
+        :type data:                 Optional[Data]
         :param resolved_geometries: Resolved geometries (default: None)
-        :type resolved_geometries: Optional[dict]
+        :type resolved_geometries:  Optional[dict]
         """
-        # Store input variables
-        if settings:
-            self.settings = settings
-        
-        if reconstruction:
-            self.reconstruction = reconstruction
+        # Store settings object
+        self.settings = setup.get_settings(
+            settings, 
+            ages, 
+            cases
+        )
+            
+        # Store reconstruction object
+        self.reconstruction = setup.get_reconstruction(
+            reconstruction, 
+            self.settings.ages, 
+            self.settings.cases, 
+            reconstruction_name
+        )
         
         # GEOMETRIES
         # Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries
@@ -148,6 +153,114 @@ class Plates:
                         PARALLEL_MODE = self.settings.PARALLEL_MODE,
                     )
 
+    def get_plate_data(
+        rotations: _pygplates.RotationModel,
+        age: int,
+        resolved_topologies: list, 
+        options: dict,
+        ):
+        """
+        Function to get data on plates in reconstruction.
+
+        :param rotations:           rotation model
+        :type rotations:            _pygplates.RotationModel object
+        :param age:                 reconstruction age
+        :type age:                  integer
+        :param resolved_topologies: resolved topologies
+        :type resolved_topologies:  list of resolved topologies
+        :param options:             options for the case
+        :type options:              dict
+
+        :return:                    plates
+        :rtype:                     pandas.DataFrame
+        """
+        # Set constants
+        constants = functions_main.set_constants()
+
+        # Make _pandas.df with all plates
+        # Initialise list
+        plates = _numpy.zeros([len(resolved_topologies),10])
+        
+        # Loop through plates
+        for n, topology in enumerate(resolved_topologies):
+
+            # Get plateID
+            plates[n,0] = topology.get_resolved_feature().get_reconstruction_plate_id()
+
+            # Get plate area
+            plates[n,1] = topology.get_resolved_geometry().get_area() * constants.mean_Earth_radius_m**2
+
+            # Get Euler rotations
+            stage_rotation = rotations.get_rotation(
+                to_time=age,
+                moving_plate_id=int(plates[n,0]),
+                from_time=age + options["Velocity time step"],
+                anchor_plate_id=options["Anchor plateID"]
+            )
+            pole_lat, pole_lon, pole_angle = stage_rotation.get_lat_lon_euler_pole_and_angle_degrees()
+            plates[n,2] = pole_lat
+            plates[n,3] = pole_lon
+            plates[n,4] = pole_angle
+
+            # Get plate centroid
+            centroid = topology.get_resolved_geometry().get_interior_centroid()
+            centroid_lat, centroid_lon = centroid.to_lat_lon_array()[0]
+            plates[n,5] = centroid_lon
+            plates[n,6] = centroid_lat
+
+            # Get velocity [cm/a] at centroid
+            centroid_velocity = get_velocities([centroid_lat], [centroid_lon], (pole_lat, pole_lon, pole_angle))
+        
+            plates[n,7] = centroid_velocity[1]
+            plates[n,8] = centroid_velocity[0]
+            plates[n,9] = centroid_velocity[2]
+
+        # Convert to DataFrame    
+        plates = _pandas.DataFrame(plates)
+
+        # Initialise columns
+        plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_v_lon", "centroid_v_lat", "centroid_v_mag"]
+
+        # Merge topological networks with main plate; this is necessary because the topological networks have the same PlateID as their host plate and this leads to computational issues down the road
+        main_plates_indices = plates.groupby("plateID")["area"].idxmax()
+
+        # Create new DataFrame with the main plates
+        merged_plates = plates.loc[main_plates_indices]
+
+        # Aggregating the area column by summing the areas of all plates with the same plateID
+        merged_plates["area"] = plates.groupby("plateID")["area"].sum().values
+
+        # Get plate names
+        merged_plates["name"] = _numpy.nan; merged_plates.name = get_plate_names(merged_plates.plateID)
+        merged_plates["name"] = merged_plates["name"].astype(str)
+
+        # Sort and index by plate ID
+        merged_plates = merged_plates.sort_values(by="plateID")
+        merged_plates = merged_plates.reset_index(drop=True)
+
+        # Initialise columns to store other whole-plate properties
+        merged_plates["trench_length"] = 0.; merged_plates["zeta"] = 0.
+        merged_plates["v_rms_mag"] = 0.; merged_plates["v_rms_azi"] = 0.; merged_plates["omega_rms"] = 0.
+        merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
+
+        # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
+        torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "driving", "residual"]
+        axes = ["x", "y", "z", "mag"]
+        coords = ["lat", "lon", "mag", "azi"]
+        
+        merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0.] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["driving_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["residual_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+        merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0.] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["driving_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+        merged_plates[["residual_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+
+        return merged_plates
+
     def calculate_rms_velocity(
                 self,
                 ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
@@ -162,18 +275,15 @@ class Plates:
                 self.settings.ages,
             )
             
-            # Define cases if not provided
-            if cases is not None:
-                # Check if cases is a single value
-                if isinstance(cases, str):
-                    cases = [cases]
-            else:
-                # Otherwise, use all cases from the settings
-                cases = self.settings.cases
+            # Define cases if not provided, default to GPE cases because it only depends on point resolution
+            _iterable = setup.get_iterable(
+                cases,
+                self.settings.gpe_cases,
+            )
 
             for _age in _ages:
                 # Calculate rms velocity
-                for key, entries in self.settings.gpe_cases.items():
+                for key, entries in _iterable.items():
                     if self.data[self.settings.ages][key]["v_rms_mag"].mean() == 0:
                         self.data[self.settings.ages][key] = functions_main.compute_rms_velocity(
                             self.data[self.settings.ages][key],
@@ -189,15 +299,14 @@ class Plates:
                 
                     # Copy DataFrames to other cases
                     for entry in entries[1:]:
-                        if self.plates[_age][entry]["v_rms_mag"].mean() == 0:
-                            self.plates[_age][entry]["v_rms_mag"] = self.plates[_age][key]["v_rms_mag"]
+                        if self.data[_age][entry]["v_rms_mag"].mean() == 0:
+                            self.data[_age][entry]["v_rms_mag"] = self.data[_age][key]["v_rms_mag"]
 
-                        if self.plates[_age][entry]["v_rms_azi"].mean() == 0:
-                            self.plates[_age][entry]["v_rms_azi"] = self.plates[_age][key]["v_rms_azi"]
+                        if self.data[_age][entry]["v_rms_azi"].mean() == 0:
+                            self.data[_age][entry]["v_rms_azi"] = self.data[_age][key]["v_rms_azi"]
 
-                        if self.plates[_age][entry]["omega_rms"].mean() == 0:
-                            self.plates[_age][entry]["omega_rms"] = self.plates[_age][key]["omega_rms"]
-
+                        if self.data[_age][entry]["omega_rms"].mean() == 0:
+                            self.data[_age][entry]["omega_rms"] = self.data[_age][key]["omega_rms"]
 
     def optimise_torques(
             self,
@@ -228,6 +337,20 @@ class Plates:
         :type PROGRESS_BAR:             bool
         """
         # Define ages if not provided
+        _ages = setup.get_ages(
+            ages,
+            self.settings.ages,
+        )
+
+        # Define iterable if cases not provided
+        _slab_iterable = setup.get_iterable(
+            cases,
+            self.settings.slab_cases,
+        )
+        _mantle_iterable = setup.get_iterable(
+            cases,
+            self.settings.mantle_drag_cases,
+        )
         if ages is not None:
             # Check if ages is a single value
             if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
@@ -343,26 +466,25 @@ class Plates:
         :type PROGRESS_BAR:             bool
         """
         # Define ages if not provided
-        if ages is not None:
-            # Check if ages is a single value
-            if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
-                ages = [ages]
-        else:
-            # Otherwise, use all ages from the settings
-            ages = self.settings.ages
+        _ages = setup.get_ages(
+            ages,
+            self.settings.ages,
+        )
 
         # Define cases if not provided
-        if cases is None:
-            cases = self.cases
+        _cases = setup.get_cases(
+            cases,
+            self.settings.cases,
+        )
 
         # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(ages), desc="Computing driving torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+        for i, _age in tqdm(enumerate(_ages), desc="Computing driving torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
             if self.settings.DEBUG_MODE:
                 print(f"Computing driving torques at {_age} Ma")
 
-            for case in cases:
+            for _case in _cases:
                 # Select plates
-                selected_plates = self.plates[_age][case].copy()
+                selected_plates = self.plates[_age][_case].copy()
                 if plates is not None:
                     if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
                             plates = [plates]
@@ -373,10 +495,10 @@ class Plates:
 
                 # Feed back into plates
                 if plates is not None:
-                    mask = self.plates[_age][case].plateID.isin(plates)
-                    self.plates[_age][case].loc[mask, :] = selected_plates
+                    mask = self.plates[_age][_case].plateID.isin(plates)
+                    self.plates[_age][_case].loc[mask, :] = selected_plates
                 else:
-                    self.plates[_age][case] = selected_plates
+                    self.plates[_age][_case] = selected_plates
 
     def compute_residual_torque(
             self, 
