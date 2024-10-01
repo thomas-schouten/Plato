@@ -8,8 +8,9 @@ import setup, functions_main
 class Points:
     def __init__(
         self,
-        settings: 'Settings',
-        reconstruction: 'Reconstruction',
+        settings: 'Settings' = None,
+        reconstruction: 'Reconstruction' = None,
+        ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
         plates: Optional[Dict] = None,
         data: Optional[Dict] = None,
     ):
@@ -27,6 +28,8 @@ class Points:
         """
         
         # Store settings and reconstruction object
+        if not settings and not plates:
+            raise ValueError("At least one of ")
         self.settings = settings
         self.reconstruction = reconstruction
         

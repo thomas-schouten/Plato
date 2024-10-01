@@ -24,12 +24,12 @@ class Settings:
         self,
         name: str,
         ages: List[float],
-        cases_file: str,
-        cases_sheet: str = "Sheet1",
+        cases_file: Optional[str] = None,
+        cases_sheet: Optional[str] = "Sheet1",
         files_dir: Optional[str] = None,
         PARALLEL_MODE: bool = False,
         DEBUG_MODE: bool = False,
-    ):
+        ):
         """
         Object to store the settings of a plato simulation.
 
