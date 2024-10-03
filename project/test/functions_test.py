@@ -1,11 +1,13 @@
 # IMPORT MODULES
 # Standard library imports
 import os
+import logging
 import sys
 import traceback
 
 # Third-party imports
 import numpy as np
+import gplately
 import pandas as pd
 
 # Local application imports
@@ -19,7 +21,6 @@ if new_path not in sys.path:
         raise RuntimeError("Error: Path not added")
 
 from settings import Settings
-from reconstruction import Reconstruction
 from plates import Plates
 from points import Points
 from slabs import Slabs
@@ -29,10 +30,9 @@ from globe import Globe
 from optimisation import Optimisation
 from plot import Plot
 
-def test_settings(settings_file=None, print_results=False):
+def test_settings(settings_file=None):
     """Test the settings module of the plato package."""
-    if print_results:
-        print("Testing 'settings' module...")
+    logging.info("Testing settings module...")
     
     # Test initialisation of the Settings object
     try:
@@ -44,136 +44,76 @@ def test_settings(settings_file=None, print_results=False):
             PARALLEL_MODE=False,
             DEBUG_MODE=False,
         )
-
-        if print_results:
-            print(f"Reconstruction name: {settings_test.name}")
-            print(f"Valid reconstruction ages: {settings_test.ages}")
-            print(f"Cases: {settings_test.cases}")
-            print(f"Options: {settings_test.options}")
-            print(f"Directory path: {settings_test.dir_path}")
-            print(f"Debug mode: {settings_test.DEBUG_MODE}")
-            print(f"Parallel mode: {settings_test.PARALLEL_MODE}")
-            print(f"Slab cases: {settings_test.slab_cases}")
-            print(f"Point cases: {settings_test.point_cases}")
-            print("Settings module test complete.")
+        logging.info("Successfully initialised 'Settings' object.")
 
     except Exception as e:
-        print(f"An error occurred during initialisation of the Settings object: {e}")
+        logging.error(f"Settings test failed: {e}")
         traceback.print_exc()
 
-    if print_results:
-        print(f"Testing of the 'settings' module complete.")
+    logging.info("Successfully tested settings module.")
 
     return settings_test
 
-def test_reconstruction(reconstruction_files=None, model_name="Muller2016", print_results=False):
-    """Test the reconstruction module of the plato package."""
-    if print_results:
-        print("Testing 'reconstruction' module...")
-
-    # Test initialisation of the Reconstruction object
-    try:
-        reconstruction_test = Reconstruction(
-            model_name,
-            rotation_file=reconstruction_files[0] if reconstruction_files else None,
-            topology_file=reconstruction_files[1] if reconstruction_files else None,
-            polygon_file=reconstruction_files[2] if reconstruction_files else None,
-            coastline_file=reconstruction_files[3] if reconstruction_files else None,
-        )
-        
-        if print_results:
-            print(f"PlateReconstruction object: {reconstruction_test.plate_reconstruction}")
-            print(f"Polygons object: {reconstruction_test.polygons}")
-            print(f"Topologies object: {reconstruction_test.topology_features}")
-            print(f"Coastlines object: {reconstruction_test.coastlines}")
-
-    except Exception as e:
-        print(f"An error occurred during initialisation of the Reconstruction object: {e}")
-        traceback.print_exc()
-
-    if print_results:
-        print(f"Testing of the 'reconstruction' module complete.")
-
-    return reconstruction_test
-
-def test_plates(settings=None, reconstruction_files=None, plates_files=None, print_results=False):
+def test_plates(settings=None, settings_file=None, reconstruction_files=None, plates_files=None):
     """Test the plates module of the plato package."""
-    if print_results:
-        print("Testing 'plates' module...")
+    logging.info("Testing plates module...")
 
-    # Get settings if not provided
-    if settings is None:
-        settings = test_settings(print_results=False)
-    
-    # Get reconstruction if not provided
+    # Make a PlateReconstruction object if files are provided
     if reconstruction_files:
-        reconstruction = test_reconstruction(reconstruction_files=reconstruction_files, print_results=False)
-    else:
-        reconstruction = test_reconstruction(print_results=False)
+        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
 
     # Test initialisation of Plates object
     try:
-        if plates_files:
-            plates_test = Plates(
-                settings=settings,
-                reconstruction=reconstruction,
-                data_files=plates_files,
-            )
-        else:
-            plates_test = Plates(
-                settings=settings,
-                reconstruction=reconstruction,
-            )
-
-        # Select first entry in the ages list
-        test_age = plates_test.settings.ages[0]
-        test_case = plates_test.settings.cases[0]
-        if print_results:
-            print(f"Plates for reconstruction: {plates_test.settings.name}")
-            print(f"Plate data at {test_age} Ma for case {test_case}:\n{plates_test.data[test_age][test_case]}")
-            print(f"Plate geometry at {test_age} for case {test_case}:\n{plates_test.resolved_geometries[test_age]}")
+        plates_test = Plates(
+            settings=settings,
+            ages=[0, 1], 
+            cases_file=settings_file,
+            reconstruction=reconstruction,
+            files_dir="output",
+            data=plates_files,
+        )
+        logging.info("Successfully initialised 'Plates' object.")
 
     except Exception as e:
-        print(f"An error occurred during initialisation of the 'Plates' object: {e}")
+        logging.error(f"An error occurred during initialisation of the 'Plates' object: {e}")
         traceback.print_exc()
 
+        # Set plates_test to None if an error occurs
+        plates_test = None
+
     # Test various functions of the Plates class
-    if plates_test in locals():
+    if plates_test is not None:
         # Test calculation of RMS plate velocities
         try:
             plates_test.calculate_rms_velocity()
-            if print_results:
-                print(f"RMS velocities: {plates_test.rms_velocities}")
+            logging.info("Successfully calculated RMS velocities.")
 
         except Exception as e:
-            print(f"An error occurred during RMS velocity calculation: {e}")
+            logging.error(f"An error occurred during RMS velocity calculation: {e}")
             traceback.print_exc()
 
         # Test calculation of plate torques
         try:
             plates_test.calculate_plate_torques()
-            if print_results:
-                print(f"Plate torques: {plates_test.plate_torques}")
+            logging.info("Successfully calculated plate torques.")
 
         except Exception as e:
-            print(f"An error occurred during plate torque calculation: {e}")
+            logging.error(f"An error occurred during plate torque calculation: {e}")
             traceback.print_exc()
 
         # Test calculation of plate driving torques
         try:
             plates_test.calculate_driving_torques()
-            if print_results:
-                print(f"Driving torques: {plates_test.driving_torques}")
+            logging.info("Successfully calculated driving torques.")
 
         except Exception as e:
-            print(f"An error occurred during driving torque calculation: {e}")
+            logging.error(f"An error occurred during driving torque calculation: {e}")
             traceback.print_exc()
 
         # Test calculation of plate residual torques
         try:
             plates_test.calculate_residual_torques()
-            if print_results:
-                print(f"Residual torques: {plates_test.residual_torques}")
+            logging.info("Successfully calculated residual torques.")
 
         except Exception as e:
             print(f"An error occurred during residual torque calculation: {e}")
@@ -188,8 +128,7 @@ def test_plates(settings=None, reconstruction_files=None, plates_files=None, pri
         #     print(f"An error occurred during torque optimisation: {e}")
         #     traceback.print_exc()
 
-    if print_results:
-        print(f"Plates test complete.")
+    logging.info("Successfully completed plates test.")
     
     return plates_test
 
@@ -205,9 +144,10 @@ def test_points(data=None, seafloor_grid=None, print_results=False):
                 data=data,
             )
         points_test = Points()
+        logging.info("Points object initialised successfully.")
 
     except Exception as e:
-        print(f"An error occurred during initialisation of the 'Points' object: {e}")
+        logging.error(f"An error occurred during initialisation of the 'Points' object: {e}")
         traceback.print_exc()
     
     # Test functions of the Points class
@@ -218,29 +158,29 @@ def test_points(data=None, seafloor_grid=None, print_results=False):
                 points_test.sample_points(seafloor_grid = seafloor_grid)
 
             except Exception as e:
-                print(f"An error occurred during testing of the 'sample_points' function: {e}")
+                logging.error(f"An error occurred during testing of the 'sample_points' function: {e}")
                 traceback.print_exc()
         else:
-            print("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
+            logging.info("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
 
         # Test computation of GPE force
         try:
             points_test.compute_gpe_force()
 
         except Exception as e:
-            print(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
+            logging.error(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
             traceback.print_exc()
 
         # Test computation of mantle drag force
         try:
             points_test.compute_mantle_drag_force()
+            logging.info("Successfully computed mantle drag force.")
 
         except Exception as e:
             print(f"An error occurred during testing of the 'compute_mantle_drag_force' function: {e}")
             traceback.print_exc()
 
-    if print_results:
-        print("Testing of the 'points' module complete.")
+    logging.info("Testing of the 'points' module complete.")
 
     return points_test
 

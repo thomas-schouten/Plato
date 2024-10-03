@@ -1,15 +1,17 @@
 from typing import Dict, List, Optional, Union
 
+import gplately as _gplately
 import numpy as _numpy
 import tqdm as _tqdm
 
-import setup, functions_main
+import utils_data, utils_calc
+from settings import Settings
 
 class Points:
     def __init__(
         self,
         settings: 'Settings' = None,
-        reconstruction: 'Reconstruction' = None,
+        reconstruction: Optional[_gplately.PlateReconstruction] = None,
         ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
         plates: Optional[Dict] = None,
         data: Optional[Dict] = None,
@@ -17,10 +19,10 @@ class Points:
         """
         Class to store and manipulate point data.
 
-        :param settings: Settings object containing simulation parameters.
-        :type settings: Settings
-        :param reconstruction: Reconstruction object containing tectonic model data.
-        :type reconstruction: Reconstruction
+        :param settings: Simulation parameters.
+        :type settings: Settings object
+        :param reconstruction: Plate reconstruction.
+        :type reconstruction: Reconstruction object
         :param plates: Optional dictionary of plate data (default: None).
         :type plates: Optional[Dict]
         :param data: Optional dictionary of point data structured by age and case (default: None).
@@ -75,12 +77,12 @@ class Points:
     
     def load_points_data(self, plates: Optional[Dict] = None) -> None:
         """
-        Load point data using the setup module.
+        Load point data.
 
         :param plates: Optional dictionary of plate data.
         :type plates: Optional[Dict]
         """
-        self.data = setup.load_data(
+        self.data = utils_data.load_data(
             self.data,
             self.reconstruction,
             self.settings.name,
@@ -141,7 +143,7 @@ class Points:
                 self.seafloor[_age] = self.seafloor[_age]
                 
                 # Sample seafloor age at points
-                self.points[_age][key]["seafloor_age"] = functions_main.sample_ages(self.points[_age][key].lat, self.points[_age][key].lon, self.seafloor[_age]["seafloor_age"])
+                self.points[_age][key]["seafloor_age"] = utils_calc.sample_ages(self.points[_age][key].lat, self.points[_age][key].lon, self.seafloor[_age]["seafloor_age"])
                 
                 # Copy DataFrames to other cases
                 if len(entries) > 1 and cases is None:
@@ -198,8 +200,8 @@ class Points:
 
                 # Calculate GPE torque
                 if self.options[key]["GPE torque"]: 
-                    self.points[_age][key] = functions_main.compute_GPE_force(self.points[_age][key], self.seafloor[_age], self.options[key], self.mech)
-                    self.plates[_age][key] = functions_main.compute_torque_on_plates(
+                    self.points[_age][key] = utils_calc.compute_GPE_force(self.points[_age][key], self.seafloor[_age], self.options[key], self.mech)
+                    self.plates[_age][key] = utils_calc.compute_torque_on_plates(
                         self.plates[_age][key], 
                         self.points[_age][key].lat, 
                         self.points[_age][key].lon, 
@@ -266,7 +268,7 @@ class Points:
                     # Calculate Mantle drag torque
                     if self.options[key]["Mantle drag torque"]:
                         # Calculate mantle drag force
-                        self.plates.data[_age][key], self.points[_age][key], self.slabs[_age][key] = functions_main.compute_mantle_drag_force(
+                        self.plates.data[_age][key], self.points[_age][key], self.slabs[_age][key] = utils_calc.compute_mantle_drag_force(
                             self.plates.data[_age][key],
                             self.points[_age][key],
                             self.slabs[_age][key],
@@ -277,7 +279,7 @@ class Points:
                         )
 
                         # Calculate mantle drag torque
-                        self.plates.data[_age][key] = functions_main.compute_torque_on_plates(
+                        self.plates.data[_age][key] = utils_calc.compute_torque_on_plates(
                             self.plates.data[_age][key], 
                             self.points[_age][key].lat, 
                             self.points[_age][key].lon, 
@@ -307,7 +309,7 @@ class Points:
 
                     if self.options[case]["Mantle drag torque"]:
                         # Calculate mantle drag force
-                        self.plates.data[_age][case], self.points[_age][case], self.slabs[_age][case] = functions_main.compute_mantle_drag_force(
+                        self.plates.data[_age][case], self.points[_age][case], self.slabs[_age][case] = utils_calc.compute_mantle_drag_force(
                             self.plates.data[_age][case],
                             self.points[_age][case],
                             self.slabs[_age][case],
@@ -318,7 +320,7 @@ class Points:
                         )
 
                         # Calculate mantle drag torque
-                        self.plates.data[_age][case] = functions_main.compute_torque_on_plates(
+                        self.plates.data[_age][case] = utils_calc.compute_torque_on_plates(
                             self.plates.data[_age][case], 
                             self.points[_age][case].lat, 
                             self.points[_age][case].lon, 
@@ -332,13 +334,13 @@ class Points:
                         )
 
                         # Compute velocity grid
-                        self.velocity[_age][case] = setup.get_velocity_grid(
+                        self.velocity[_age][case] = utils_data.get_velocity_grid(
                             self.points[_age][case], 
                             self.seafloor[_age]
                         )
 
                         # Compute RMS velocity
-                        self.plates.data[_age][case] = functions_main.compute_rms_velocity(
+                        self.plates.data[_age][case] = utils_calc.compute_rms_velocity(
                             self.plates.data[_age][case],
                             self.points[_age][case]
                         )

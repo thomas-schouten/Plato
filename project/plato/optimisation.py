@@ -2,7 +2,7 @@ import numpy as _numpy
 import matplotlib.pyplot as plt
 
 # Import plato functions
-import functions_main
+import utils_calc
 
 class Optimisation():
     """
@@ -356,12 +356,12 @@ class Optimisation():
                     print(_numpy.mean(old_slabs["v_convergence_mag"].values))
                     # Compute interface shear force
                     if self.options[opt_case]["Interface shear torque"]:
-                        new_slabs = functions_main.compute_interface_shear_force(old_slabs, self.options[opt_case], self.mech, self.constants)
+                        new_slabs = utils_calc.compute_interface_shear_force(old_slabs, self.options[opt_case], self.mech, self.constants)
                     else:
                         new_slabs = old_slabs.copy()
 
                     # Compute interface shear torque
-                    new_plates = functions_main.compute_torque_on_plates(
+                    new_plates = utils_calc.compute_torque_on_plates(
                         old_plates,
                         new_slabs.lat,
                         new_slabs.lon,
@@ -375,10 +375,10 @@ class Optimisation():
                     )
 
                     # Compute mantle drag force
-                    new_plates, new_points, new_slabs = functions_main.compute_mantle_drag_force(old_plates, old_points, new_slabs, self.options[opt_case], self.mech, self.constants)
+                    new_plates, new_points, new_slabs = utils_calc.compute_mantle_drag_force(old_plates, old_points, new_slabs, self.options[opt_case], self.mech, self.constants)
 
                     # Compute mantle drag torque
-                    new_plates = functions_main.compute_torque_on_plates(
+                    new_plates = utils_calc.compute_torque_on_plates(
                         new_plates, 
                         new_points.lat, 
                         new_points.lon, 
@@ -407,7 +407,7 @@ class Optimisation():
                         break
                     else:
                         # Assign new values to latest slabs DataFrame
-                        new_slabs["v_convergence_lat"], new_slabs["v_convergence_lon"] = functions_main.mag_azi2lat_lon(v_convergence_mag, new_slabs.trench_normal_azimuth); new_slabs["v_convergence_mag"] = v_convergence_mag
+                        new_slabs["v_convergence_lat"], new_slabs["v_convergence_lon"] = utils_calc.mag_azi2lat_lon(v_convergence_mag, new_slabs.trench_normal_azimuth); new_slabs["v_convergence_mag"] = v_convergence_mag
                         
                         # Delecte old DataFrames
                         del old_plates, old_points, old_slabs

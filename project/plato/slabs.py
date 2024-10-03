@@ -8,6 +8,7 @@
 # Standard libraries
 import os
 import multiprocessing
+import sys
 import warnings
 from typing import List, Optional, Union
 from copy import deepcopy
@@ -25,9 +26,8 @@ from tqdm import tqdm
 import xarray as _xarray
 
 # Local libraries
-import setup
-import functions_main
-import sys
+import utils_calc, utils_data, utils_init
+from settings import Settings
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SLABS OBJECT
@@ -36,10 +36,12 @@ import sys
 class Slabs:
     def __init__(
             self,
-            settings: object,
-            reconstruction: object,
-            plates: dict,
-            files_dir: str,
+            settings: Optional['Settings'] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plates_data: Optional[dict] = None,
+            files_dir: Optional[str] = None,
         ):
         """
         Slabs object. Contains all information on slabs
@@ -48,7 +50,7 @@ class Slabs:
         self.data = {}
 
         # Load or initialise slabs
-        self.data = setup.load_data(
+        self.data = utils_data.load_data(
             self.data,
             self.reconstruction,
             self.settings.name,
@@ -249,7 +251,7 @@ class Slabs:
                     
                 if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
                     # Sample age and sediment thickness of lower plate from seafloor
-                    self.data[_age][key]["lower_plate_age"], self.data[_age][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
+                    self.data[_age][key]["lower_plate_age"], self.data[_age][key]["sediment_thickness"] = utils_calc.sample_slabs_from_seafloor(
                         self.data[_age][key].lat, 
                         self.data[_age][key].lon,
                         self.data[_age][key].trench_normal_azimuth,
@@ -261,7 +263,7 @@ class Slabs:
                     )
 
                     # Calculate lower plate thickness
-                    self.data[_age][key]["lower_plate_thickness"], _, _ = functions_main.compute_thicknesses(
+                    self.data[_age][key]["lower_plate_thickness"], _, _ = utils_calc.compute_thicknesses(
                         self.data[_age][key].lower_plate_age,
                         self.options[key],
                         crust = False, 
@@ -269,7 +271,7 @@ class Slabs:
                     )
 
                     # Calculate slab flux
-                    self.plates[_age][key] = functions_main.compute_subduction_flux(
+                    self.plates[_age][key] = utils_calc.compute_subduction_flux(
                         self.plates[_age][key],
                         self.data[_age][key],
                         type="slab"
@@ -277,7 +279,7 @@ class Slabs:
 
                     if self.options[key]["Sediment subduction"]:
                         # Calculate sediment subduction
-                        self.plates[_age][key] = functions_main.compute_subduction_flux(
+                        self.plates[_age][key] = utils_calc.compute_subduction_flux(
                             self.plates[_age][key],
                             self.data[_age][key],
                             type="sediment"
@@ -338,7 +340,7 @@ class Slabs:
                 # Check whether to output erosion rate and sediment thickness
                 if self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0 and self.options[key]["Sample erosion grid"] in self.seafloor[_age].data_vars:
                     # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
-                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"], self.data[_age][key]["erosion_rate"], self.data[_age][key]["sediment_thickness"] = functions_main.sample_slabs_from_seafloor(
+                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"], self.data[_age][key]["erosion_rate"], self.data[_age][key]["sediment_thickness"] = utils_calc.sample_slabs_from_seafloor(
                         self.data[_age][key].lat, 
                         self.data[_age][key].lon,
                         self.data[_age][key].trench_normal_azimuth,  
@@ -350,7 +352,7 @@ class Slabs:
 
                 elif self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0:
                     # Sample age and arc type of upper plate from seafloor
-                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"] = functions_main.sample_slabs_from_seafloor(
+                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"] = utils_calc.sample_slabs_from_seafloor(
                         self.data[_age][key].lat, 
                         self.data[_age][key].lon,
                         self.data[_age][key].trench_normal_azimuth,  
@@ -425,14 +427,14 @@ class Slabs:
 
                 if self.options[key]["Slab pull torque"]:
                     # Calculate slab pull torque
-                    self.data[_age][key] = functions_main.compute_slab_pull_force(self.data[_age][key], self.options[key], self.mech)
+                    self.data[_age][key] = utils_calc.compute_slab_pull_force(self.data[_age][key], self.options[key], self.mech)
                     
                     # Compute interface term if necessary
                     if self.options[key]["Sediment subduction"]:
-                        self.data[_age][key] = functions_main.compute_interface_term(self.data[_age][key], self.options[key], self.DEBUG_MODE)
+                        self.data[_age][key] = utils_calc.compute_interface_term(self.data[_age][key], self.options[key], self.DEBUG_MODE)
                     
                     # Compute torque on plates
-                    self.plates[_age][key] = functions_main.compute_torque_on_plates(
+                    self.plates[_age][key] = utils_calc.compute_torque_on_plates(
                         self.plates[_age][key], 
                         self.data[_age][key].lat, 
                         self.data[_age][key].lon, 
@@ -505,8 +507,8 @@ class Slabs:
 
                 # Calculate slab bending torque
                 if self.options[key]["Slab bend torque"]:
-                    self.data[_age][key] = functions_main.compute_slab_bend_force(self.data[_age][key], self.options[key], self.mech, self.constants)
-                    self.plates[_age][key] = functions_main.compute_torque_on_plates(
+                    self.data[_age][key] = utils_calc.compute_slab_bend_force(self.data[_age][key], self.options[key], self.mech, self.constants)
+                    self.plates[_age][key] = utils_calc.compute_torque_on_plates(
                         self.plates[_age][key], 
                         self.data[_age][key].lat, 
                         self.data[_age][key].lon, 

@@ -5,7 +5,6 @@ class Plot():
     def __init__(
             self,
             settings = None,
-            reconstruction = None,
             plates = None,
             slabs = None,
             points = None,
@@ -16,7 +15,6 @@ class Plot():
         """
         # Store the input data
         self.settings = settings
-        self.reconstruction = reconstruction
         self.plates = plates
         self.slabs = slabs
         self.points = points

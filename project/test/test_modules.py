@@ -1,5 +1,7 @@
 # %%
-# IMPORT MODULES
+# TEST PLATO MODULES
+
+# Import the functions to test
 # Standard library imports
 import os
 import sys
@@ -15,7 +17,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Test configurations
 TEST_CONFIGS = {
     "TEST_SETTINGS": False,
-    "TEST_RECONSTRUCTION": False,
     "TEST_LOCAL_FILES": True,
     "TEST_PLATES": True,
     "TEST_POINTS": False,
@@ -24,11 +25,8 @@ TEST_CONFIGS = {
     "TEST_PLATE_TORQUES": False,
 }
 
-# Define whether to print results
-PRINT_RESULTS = True
-
 # Define settings file
-settings_file = os.path.join("data", "cases_test.xlsx")
+settings_file = os.path.join("cases_test.xlsx")
 
 # Define reconstruction files
 reconstruction_files = (
@@ -42,39 +40,17 @@ def run_tests():
     """Run all specified tests based on the TEST_CONFIGS dictionary."""
     # Test Settings
     if TEST_CONFIGS["TEST_SETTINGS"]:
-        try:
-            logging.info("Running settings test...")
-            if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-                functions_test.test_settings(settings_file=settings_file, print_results=PRINT_RESULTS)
-            else:
-                functions_test.test_settings(print_results=PRINT_RESULTS)
-            logging.info("Settings test completed successfully.")
-        except Exception as e:
-            logging.error(f"Settings test failed: {e}")
-
-    # Test Reconstruction
-    if TEST_CONFIGS["TEST_RECONSTRUCTION"]:
-        try:
-            logging.info("Running reconstruction test...")
-            if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-                functions_test.test_reconstruction(reconstruction_files=reconstruction_files, print_results=PRINT_RESULTS)
-            else:
-                functions_test.test_reconstruction(print_results=PRINT_RESULTS)
-            logging.info("Reconstruction test completed successfully.")
-        except Exception as e:
-            logging.error(f"Reconstruction test failed: {e}")
+        if TEST_CONFIGS["TEST_LOCAL_FILES"]:
+            functions_test.test_settings(settings_file=settings_file)
+        else:
+            functions_test.test_settings()
 
     # Test Plates
     if TEST_CONFIGS["TEST_PLATES"]:
-        try:
-            logging.info("Running plates test...")
-            if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-                functions_test.test_plates(reconstruction_files=reconstruction_files, print_results=PRINT_RESULTS)
-            else:
-                functions_test.test_plates(print_results=PRINT_RESULTS)
-            logging.info("Plates test completed successfully.")
-        except Exception as e:
-            logging.error(f"Plates test failed: {e}")
+        if TEST_CONFIGS["TEST_LOCAL_FILES"]:
+            functions_test.test_plates(settings_file=settings_file, reconstruction_files=reconstruction_files, )
+        else:
+            functions_test.test_plates(settings_file=settings_file)
 
     # Test Points (if implemented)
     if TEST_CONFIGS["TEST_POINTS"]:

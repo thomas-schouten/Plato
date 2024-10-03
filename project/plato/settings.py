@@ -10,10 +10,7 @@ from typing import List, Optional
 
 import numpy as _numpy
 
-import setup
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+import utils_data
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SETTINGS OBJECT
@@ -52,7 +49,9 @@ class Settings:
         :raises FileNotFoundError: If the cases file is not found.
         :raises Exception: If an error occurs during cases loading.
         """
-        
+        # Set up logging configuration
+        self.configure_logger(DEBUG_MODE)
+
         logging.info(f"Initialising settings for simulation: {name}")
 
         # Store reconstruction name and valid reconstruction times
@@ -67,7 +66,7 @@ class Settings:
 
         # Store cases and case options
         try:
-            self.cases, self.options = setup.get_options(cases_file, cases_sheet)
+            self.cases, self.options = utils_data.get_options(cases_file, cases_sheet)
             logging.info(f"Cases loaded successfully from {cases_file}, sheet: {cases_sheet}")
         except FileNotFoundError as e:
             logging.error(f"Cases file not found: {cases_file} - {e}")
@@ -123,7 +122,7 @@ class Settings:
         :raises: Exception if case processing fails.
         """
         try:
-            processed_cases = setup.process_cases(self.cases, self.options, option_keys)
+            processed_cases = utils_data.process_cases(self.cases, self.options, option_keys)
             logging.debug(f"Processed cases for options: {option_keys}")
             return processed_cases
         except KeyError as e:
@@ -132,6 +131,33 @@ class Settings:
         except Exception as e:
             logging.error(f"Error processing cases for options: {option_keys} - {e}")
             raise
+
+    def configure_logger(
+            self,
+            DEBUG_MODE: bool = False
+        ):
+        """
+        Configures the logger for a module.
+        
+        :param DEBUG_MODE: Whether to set the logging level to DEBUG.
+        :type DEBUG_MODE: bool
+        """
+        # Get the logger
+        logger = logging.getLogger("plato")
+
+        # Set the logging level
+        if DEBUG_MODE:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
+
+        # Add a console handler if no handlers exist
+        if not logger.hasHandlers():
+            handler = logging.StreamHandler()
+            handler.setLevel(logging.DEBUG if DEBUG_MODE else logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
 
     def run_parallel_mode(self):
         """
