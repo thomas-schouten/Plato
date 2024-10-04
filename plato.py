@@ -324,18 +324,18 @@ class PlateForces():
             DEBUG_MODE = self.DEBUG_MODE
         )
 
-        # Load or initialise velocity grid
-        self.velocity = setup.load_grid(
-            self.velocity,
-            self.name,
-            self.times,
-            "Velocity",
-            files_dir,
-            points = self.points,
-            seafloor_grid = self.seafloor,
-            cases = self.cases,
-            DEBUG_MODE = self.DEBUG_MODE,
-        )
+        # # Load or initialise velocity grid
+        # self.velocity = setup.load_grid(
+        #     self.velocity,
+        #     self.name,
+        #     self.times,
+        #     "Velocity",
+        #     files_dir,
+        #     points = self.points,
+        #     seafloor_grid = self.seafloor,
+        #     cases = self.cases,
+        #     DEBUG_MODE = self.DEBUG_MODE,
+        # )
 
         # Set sampling flags to False:
         self.sampled_points = False
@@ -2416,10 +2416,24 @@ class PlateForces():
         # Set basemap
         gl = self.plot_basemap(ax)
 
+        # Get velocity grid
+        velocity_grid = {}
+        velocity_grid = setup.load_grid(
+            velocity_grid,
+            self.name,
+            [reconstruction_time],
+            "Velocity",
+            self.dir_path,
+            points = self.points,
+            seafloor_grid = self.seafloor,
+            cases = case,
+            DEBUG_MODE = self.DEBUG_MODE,
+        )
+                
         # Plot velocity difference grid
         im = self.plot_grid(
             ax,
-            self.velocity[reconstruction_time][case].velocity_magnitude.values,
+            velocity_grid.velocity_magnitude.values,
             cmap = cmap,
             vmin = vmin,
             vmax = vmax,
@@ -2502,9 +2516,24 @@ class PlateForces():
         
         # Set basemap
         gl = self.plot_basemap(ax)
+        
+        # Get velocity grids
+        velocity_grid = {}
+        for case in [case1, case2]:
+            velocity_grid[case] = setup.load_grid(
+                velocity_grid,
+                self.name,
+                [reconstruction_time],
+                "Velocity",
+                self.dir_path,
+                points = self.points,
+                seafloor_grid = self.seafloor,
+                cases = case,
+                DEBUG_MODE = self.DEBUG_MODE,
+            )
 
         # Get velocity difference grid
-        grid = self.velocity[reconstruction_time][case1].velocity_magnitude.values-self.velocity[reconstruction_time][case2].velocity_magnitude.values
+        grid = velocity_grid[reconstruction_time][case1].velocity_magnitude.values-velocity_grid[reconstruction_time][case2].velocity_magnitude.values
 
         # Plot velocity difference grid
         im = self.plot_grid(
@@ -2578,21 +2607,36 @@ class PlateForces():
         # Set basemap
         gl = self.plot_basemap(ax)
 
+        # Get velocity grids
+        velocity_grid = {}
+        for case in [case1, case2]:
+            velocity_grid[case] = setup.load_grid(
+                velocity_grid,
+                self.name,
+                [reconstruction_time],
+                "Velocity",
+                self.dir_path,
+                points = self.points,
+                seafloor_grid = self.seafloor,
+                cases = case,
+                DEBUG_MODE = self.DEBUG_MODE,
+            )
+
         # Get relative velocity difference grid
         # Ignore annoying warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             grid = _numpy.where(
-                (self.velocity[reconstruction_time][case1].velocity_magnitude.values == 0) | 
-                (self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0) | 
-                (_numpy.isnan(self.velocity[reconstruction_time][case1].velocity_magnitude.values)) | 
-                (_numpy.isnan(self.velocity[reconstruction_time][case2].velocity_magnitude.values)),
+                (velocity_grid[reconstruction_time][case1].velocity_magnitude.values == 0) | 
+                (velocity_grid[reconstruction_time][case2].velocity_magnitude.values == 0) | 
+                (_numpy.isnan(velocity_grid[reconstruction_time][case1].velocity_magnitude.values)) | 
+                (_numpy.isnan(velocity_grid[reconstruction_time][case2].velocity_magnitude.values)),
                 _numpy.nan,
-                (self.velocity[reconstruction_time][case1].velocity_magnitude.values / 
+                (velocity_grid[reconstruction_time][case1].velocity_magnitude.values / 
                 _numpy.where(
-                    self.velocity[reconstruction_time][case2].velocity_magnitude.values == 0,
+                    velocity_grid[reconstruction_time][case2].velocity_magnitude.values == 0,
                     1e-10,
-                    self.velocity[reconstruction_time][case2].velocity_magnitude.values)
+                    velocity_grid[reconstruction_time][case2].velocity_magnitude.values)
                 )
             )
 
