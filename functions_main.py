@@ -749,11 +749,8 @@ def compute_rms_velocity(plates, points):
             ) * rotation_angle / (total_area * constants.mean_Earth_radius_m)
 
         # Calculate the RMS spin rate
-        omega_rms = _numpy.sqrt(
-            _numpy.abs(
-                _numpy.sum(omegas * segment_areas) / total_area
-            )
-        )
+        omega_rms = _numpy.sum(omegas * segment_areas)
+
         plates.loc[plates.plateID == plateID, "omega_rms"] = omega_rms
 
     return plates
@@ -1173,7 +1170,10 @@ def lat_lon2xyz(lat, lon, constants):
     lon_rads = _numpy.deg2rad(lon)
 
     # Calculate position vectors
-    position = constants.mean_Earth_radius_m * _numpy.asarray([_numpy.cos(lat_rads) * _numpy.cos(lon_rads), _numpy.cos(lat_rads) * _numpy.sin(lon_rads), _numpy.sin(lat_rads)])
+    position = _numpy.asarray([_numpy.cos(lat_rads) * _numpy.cos(lon_rads), _numpy.cos(lat_rads) * _numpy.sin(lon_rads), _numpy.sin(lat_rads)])
+
+    # Convert to Earth radii
+    position *= constants.mean_Earth_radius_m
 
     return position
 
@@ -1407,3 +1407,95 @@ def rotate_vector(vector, rotation, constants):
     rotated_vector = _numpy.dot(rotation_matrix, vector.values.T)
 
     return rotated_vector.T
+
+def angle_between_vectors(vector1, vector2):
+    """
+    Function to calculate the angel between two vectors.
+
+    :param vector1:     First vector.
+    :type vector1:      numpy.array
+    :param vector2:     Second vector.
+    :type vector2:      numpy.array
+    """
+    # Calculate dot product
+    dot_product = _numpy.dot(vector1, vector2)
+
+    # Calculate magnitudes
+    magnitude1 = _numpy.linalg.norm(vector1)
+    magnitude2 = _numpy.linalg.norm(vector2)
+
+    # Calculate angle
+    angle = _numpy.arccos(dot_product / (magnitude1 * magnitude2))
+
+    return angle
+
+def compute_euler_rotation(plates, constants):
+    """
+    Function to calculate the Euler rotation of an object given two points with given velocities.
+    """
+    # Initialize arrays to store rotation poles and angles
+    axes_lat = _numpy.zeros(len(plates))
+    axes_lon = _numpy.zeros(len(plates))
+    angles = _numpy.zeros(len(plates))
+
+    for index, row in plates.iterrows():
+        if row["centroid_v_lat"] == 0 and row["centroid_v_lon"] == 0:
+            angles[index] = 0
+            axes_lat[index] = 0
+            axes_lon[index] = 0
+            continue
+        # Convert geographic positions to Cartesian coordinates
+        p1 = lat_lon2xyz(row["centroid_lat"], row["centroid_lon"], constants)
+        p2 = lat_lon2xyz(
+            row["centroid_lat"] + _numpy.rad2deg(row["centroid_v_lat"] * constants.cm_a2m_s * constants.m_s2rad_a * 1e6),
+            row["centroid_lon"] + _numpy.rad2deg(row["centroid_v_lon"] * constants.cm_a2m_s * constants.m_s2rad_a * 1e6),
+            constants
+        )
+
+        # Axis of rotation: cross product of p1 and p2
+        axis = _numpy.cross(p1, p2)
+        axis = axis / _numpy.linalg.norm(axis)
+
+        # Rotation angle: angle between the two positions
+        rotation_angle = _numpy.degrees(angle_between_vectors(p1, p2))
+
+        # Convert rotation axis from Cartesian back to latitude and longitude
+        axis_lat = _numpy.degrees(_numpy.arcsin(axis[2]))
+        axis_lon = _numpy.degrees(_numpy.arctan2(axis[1], axis[0]))
+
+        axes_lat[index] = axis_lat
+        axes_lon[index] = axis_lon
+        angles[index] = rotation_angle
+
+    plates["pole_lat"] = axes_lat
+    plates["pole_lon"] = axes_lon
+    plates["pole_angle"] = angles
+
+    return plates
+
+def compute_net_rotation(plates, constants):
+    """
+    Function to compute the net rotation of a plate.
+    """
+    # Convert Euler poles to Cartesian coordinates
+    poles = lat_lon2xyz(plates.pole_lat, plates.pole_lon, constants)
+
+    # Poles are weighted by the area of each plate
+    poles = poles/constants.mean_Earth_radius_m
+
+    # Ensure areas is a column vector for broadcasting (if plates.area is 1D)
+    weights = plates.area.values[_numpy.newaxis, :] * plates.pole_angle.values[_numpy.newaxis, :] / _numpy.sum(plates.area)
+
+    # Sum the Euler poles weighted by the area of each plate
+    net_pole = _numpy.sum(poles * weights, axis=1)
+
+    # Normalize the resulting net_pole vector
+    net_pole_normalized = net_pole / _numpy.linalg.norm(net_pole)
+
+    # Convert net pole to latitude and longitude
+    net_pole_lat, net_pole_lon = xyz2lat_lon(net_pole_normalized)
+
+    # Calculate the net rotation angle
+    net_angle = _numpy.linalg.norm(net_pole)
+
+    return net_pole_lat, net_pole_lon, net_angle

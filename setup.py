@@ -1246,7 +1246,8 @@ def load_grid(
         points: Optional[dict] = None,
         seafloor_grid: Optional[_xarray.Dataset] = None,
         cases: Optional[list] = None,
-        DEBUG_MODE: Optional[bool] = False
+        DEBUG_MODE: Optional[bool] = False,
+        PROGRESS_BAR: Optional[bool] = False,
     ) -> dict:
     """
     Function to load grid from a folder.
@@ -1274,7 +1275,7 @@ def load_grid(
     :rtype:                        xarray.Dataset
     """
     # Loop through times
-    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} grids", disable=DEBUG_MODE):
+    for reconstruction_time in tqdm(reconstruction_times, desc=f"Loading {type} grids", disable=(DEBUG_MODE, not PROGRESS_BAR)):
         # Check if the grid for the reconstruction time is already in the dictionary
         if reconstruction_time in grid:
             # Rename variables and coordinates in seafloor age grid for clarity

@@ -21,6 +21,7 @@ import gplately
 from gplately import pygplates as _pygplates
 import cartopy.crs as ccrs
 import cmcrameri as cmc
+import pandas as _pandas
 from tqdm import tqdm
 import xarray as _xarray
 
@@ -224,7 +225,7 @@ class PlateForces():
             self.seafloor = {}
         else:
             self.seafloor = seafloor_grids
-        self.velocity = {}
+        # self.velocity = {}
 
         # Load or initialise plates
         self.plates = setup.load_data(
@@ -348,6 +349,27 @@ class PlateForces():
         self.driving_torque = {};  self.driving_torque_normalised = {}
         self.opt_sp_const = {}; self.opt_visc = {}
         self.opt_i = {}; self.opt_j = {}
+
+        # Initialise dictionaries to store net lithospheric rotation
+        self.net_rotation = {
+            case: _pandas.DataFrame({
+                "age": self.times,
+                "pole_lat": _numpy.zeros(len(self.times)),
+                "pole_lon": _numpy.zeros(len(self.times)),
+                "pole_angle": _numpy.zeros(len(self.times)),
+            }) for case in self.cases
+        }
+
+        # Calculate net lithospheric rotation
+        for i, reconstruction_time in enumerate(self.times):
+            for case in self.plates[reconstruction_time]:
+                net_rotation = functions_main.compute_net_rotation(
+                    self.plates[reconstruction_time][case],
+                    self.constants
+                )
+                self.net_rotation[case].loc[i, "pole_lat"] = net_rotation[0]
+                self.net_rotation[case].loc[i, "pole_lon"] = net_rotation[1]
+                self.net_rotation[case].loc[i, "pole_angle"] = net_rotation[2]
 
         print("PlateForces object successfully instantiated!")
 
@@ -1059,11 +1081,27 @@ class PlateForces():
                             torque_variable="mantle_drag_torque"
                         )
 
-                        # Compute velocity grid
-                        self.velocity[reconstruction_time][case] = setup.get_velocity_grid(
-                            self.points[reconstruction_time][case], 
-                            self.seafloor[reconstruction_time]
+                        # # Compute velocity grid
+                        # self.velocity[reconstruction_time][case] = setup.get_velocity_grid(
+                        #     self.points[reconstruction_time][case], 
+                        #     self.seafloor[reconstruction_time]
+                        # )
+
+                        # Compute Euler rotation
+                        self.plates[reconstruction_time][case] = functions_main.compute_euler_rotation(
+                            self.plates[reconstruction_time][case],
+                            self.constants
                         )
+
+                        # Compute net rotation
+                        # Calculate net lithospheric rotation
+                        net_rotation = functions_main.compute_net_rotation(
+                            self.plates[reconstruction_time][case],
+                            self.constants
+                        )
+                        self.net_rotation[case].loc[i, "pole_lat"] = net_rotation[0]
+                        self.net_rotation[case].loc[i, "pole_lon"] = net_rotation[1]
+                        self.net_rotation[case].loc[i, "pole_angle"] = net_rotation[2]
 
                         # Compute RMS speeds
                         self.plates[reconstruction_time][case] = functions_main.compute_rms_velocity(
@@ -1295,8 +1333,8 @@ class PlateForces():
                             plates = [plates]
                         selected_plates = selected_plates.loc[selected_plates.plateID.isin(plates)].copy()
 
-                    # Calculate driving torque
-                    selected_plates = functions_main.sum_torque(selected_plates, "driving", self.constants)
+                    # Calculate residual torque
+                    selected_plates = functions_main.sum_torque(selected_plates, "residual", self.constants)
 
                     # Feed back into plates
                     if plates is not None:
@@ -1449,7 +1487,7 @@ class PlateForces():
 
                             # Copy magnitude of torque
                             self.plates[reconstruction_time][case].loc[self.plates[reconstruction_time][case].plateID == plateID, torque + "_mag"] = reference_plates[reconstruction_time][case].loc[reference_plates[reconstruction_time][case].plateID == plateID, torque + "_mag"].values[0]
-
+    
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OPTIMISATION 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1899,7 +1937,7 @@ class PlateForces():
                 setup.DataFrame_to_parquet(self.plates[reconstruction_time][case], "Plates", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
                 setup.DataFrame_to_parquet(self.slabs[reconstruction_time][case], "Slabs", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
                 setup.DataFrame_to_parquet(self.points[reconstruction_time][case], "Points", self.name, reconstruction_time, case, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
-                setup.Dataset_to_netcdf(self.velocity[reconstruction_time][case], "Velocity", self.name, reconstruction_time, self.dir_path, case=case, DEBUG_MODE=self.DEBUG_MODE)
+                # setup.Dataset_to_netcdf(self.velocity[reconstruction_time][case], "Velocity", self.name, reconstruction_time, self.dir_path, case=case, DEBUG_MODE=self.DEBUG_MODE)
             setup.GeoDataFrame_to_geoparquet(self.resolved_geometries[reconstruction_time], "Geometries", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
             setup.Dataset_to_netcdf(self.seafloor[reconstruction_time], "Seafloor", self.name, reconstruction_time, self.dir_path, DEBUG_MODE=self.DEBUG_MODE)
 
@@ -1939,12 +1977,12 @@ class PlateForces():
 
         print(f"Seafloor data saved to {self.dir_path}!")
 
-    def save_velocity(self, PROGRESS_BAR=True):
-        for reconstruction_time in tqdm(self.times, desc="Saving velocity", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            for case in self.cases:
-                setup.Dataset_to_netcdf(self.velocity[reconstruction_time][case], "Velocity", self.name, reconstruction_time, self.dir_path, case, DEBUG_MODE=self.DEBUG_MODE)
+    # def save_velocity(self, PROGRESS_BAR=True):
+    #     for reconstruction_time in tqdm(self.times, desc="Saving velocity", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+    #         for case in self.cases:
+    #             setup.Dataset_to_netcdf(self.velocity[reconstruction_time][case], "Velocity", self.name, reconstruction_time, self.dir_path, case, DEBUG_MODE=self.DEBUG_MODE)
 
-        print(f"Velocity data saved to {self.dir_path}!")
+    #     print(f"Velocity data saved to {self.dir_path}!")
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # EXPORTING 
@@ -2426,14 +2464,15 @@ class PlateForces():
             self.dir_path,
             points = self.points,
             seafloor_grid = self.seafloor,
-            cases = case,
+            cases = [case],
             DEBUG_MODE = self.DEBUG_MODE,
+            PROGRESS_BAR=False,
         )
                 
         # Plot velocity difference grid
         im = self.plot_grid(
             ax,
-            velocity_grid.velocity_magnitude.values,
+            velocity_grid[reconstruction_time][case].velocity_magnitude.values,
             cmap = cmap,
             vmin = vmin,
             vmax = vmax,
@@ -2519,18 +2558,18 @@ class PlateForces():
         
         # Get velocity grids
         velocity_grid = {}
-        for case in [case1, case2]:
-            velocity_grid[case] = setup.load_grid(
-                velocity_grid,
-                self.name,
-                [reconstruction_time],
-                "Velocity",
-                self.dir_path,
-                points = self.points,
-                seafloor_grid = self.seafloor,
-                cases = case,
-                DEBUG_MODE = self.DEBUG_MODE,
-            )
+        velocity_grid = setup.load_grid(
+            velocity_grid,
+            self.name,
+            [reconstruction_time],
+            "Velocity",
+            self.dir_path,
+            points = self.points,
+            seafloor_grid = self.seafloor,
+            cases = [case1, case2],
+            DEBUG_MODE = self.DEBUG_MODE,
+            PROGRESS_BAR=False,
+        )
 
         # Get velocity difference grid
         grid = velocity_grid[reconstruction_time][case1].velocity_magnitude.values-velocity_grid[reconstruction_time][case2].velocity_magnitude.values
@@ -2618,8 +2657,9 @@ class PlateForces():
                 self.dir_path,
                 points = self.points,
                 seafloor_grid = self.seafloor,
-                cases = case,
+                cases = [case],
                 DEBUG_MODE = self.DEBUG_MODE,
+                PROGRESS_BAR=False,
             )
 
         # Get relative velocity difference grid
