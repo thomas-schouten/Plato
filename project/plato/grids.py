@@ -3,7 +3,7 @@ from typing import Optional, Union
 import numpy as _numpy
 import xarray as _xarray
 
-import setup
+import utils_data
 
 class Grids():
     def __init__(

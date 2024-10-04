@@ -298,3 +298,131 @@ def initialise_plato(
 #     # Print the time taken to set up the model
 #     set_up_time = time() - start_time
 #     print(f"Time taken to set up the model: {set_up_time:.2e} seconds")
+
+
+def load_data(
+        _data: dict,
+        _age: Union[float, int, _numpy.floating, _numpy.integer], 
+        cases: List[str], 
+        matching_cases: dict, 
+        type: str,
+        rotations: _pygplates.RotationModel,
+        resolved_topologies: list,
+        options: dict,
+        data: Optional[Union[dict, str]] = None,
+    ):
+    """
+    Function to load or initialise data for the current simulation.
+    """
+    # Load the data if it is available
+    if data is not None:
+        # Check if data is a dictionary
+        if isinstance(data, dict):
+            if _age in data.keys():
+                # Initialise _age only if there's a matching case
+                matching_cases_list = [_case for _case in cases if _case in data[_age].keys()]
+
+                # Only initialise _data[_age] if there are matching cases
+                if matching_cases_list:
+                    _data[_age] = {}  # Initialise _age for matching cases
+
+                for _case in matching_cases_list:
+                    _data[_age][_case] = data[_age][_case]
+
+                # Get missing cases
+                existing_cases = set(data[_age].keys())
+                missing_cases = _numpy.array([_case for _case in cases if _case not in existing_cases])
+
+                # Loop through missing cases
+                for _case in missing_cases:
+                    # Check for matching case and copy data
+                    matching_key = next((key for key, cases in matching_cases.items() if _case in cases), None)
+                    if matching_key:
+                        for matching_case in matching_cases[matching_key]:  # Access the cases correctly
+                            if matching_case in _data[_age]:
+                                # Copy data from the matching case
+                                _data[_age][_case] = _data[_age][matching_case].copy()
+                                break  # Exit after copying to avoid overwriting
+
+                    else:
+                        # Use the provided data retrieval function if no matching case is found
+                        if type == "Plates":
+                            if type == "Plates":
+                                _data[_age][_case] = get_plate_data(
+                                    rotations,
+                                    _age,
+                                    resolved_topologies,
+                                    options
+                                    )
+                            if type == "Slabs":
+                                _data[_age][_case] = get_slab_data(
+                                    rotations,
+                                    _age,
+                                    resolved_topologies,
+                                    options
+                                    )
+                            if type == "Points":
+                                _data[_age][_case] = get_point_data(
+                                    _data,
+                                    _age,
+                                    resolved_topologies,
+                                    options
+                                    )
+
+        # TODO: Implement loading data from a file if needed
+        if isinstance(data, str):
+            pass
+
+        # Initialise data if it is not available
+        if _age not in _data.keys():
+            _data[_age] = {}
+            # Loop through cases
+            for _case in cases:
+                
+
+    return _data
+
+def get_data(
+        rotations: _pygplates.RotationModel,
+        resolved_topologies: list,
+        options: dict,
+        type: str,
+    ):
+    """
+    Function to get data for the current simulation.
+
+    :param rotations:           rotation model
+    :type rotations:            _pygplates.RotationModel object
+    :param resolved_topologies: resolved topologies
+    :type resolved_topologies:  list of resolved topologies
+    :param options:             options for the case
+    :type options:              dict
+    :param type:                type of data
+    :type type:                 str
+
+    :return:                    data
+    :rtype:                     dict
+    """
+    if type == "Plates":
+        data = get_plate_data(
+            rotations,
+            _age,
+            resolved_topologies,
+            options
+            )
+    if type == "Slabs":
+        data = get_slab_data(
+            rotations,
+            _age,
+            resolved_topologies,
+            options
+            )
+    if type == "Points":
+        data = get_point_data(
+            _data,
+            _age,
+            resolved_topologies,
+            options
+            )
+    
+    return data

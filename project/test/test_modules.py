@@ -18,8 +18,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 TEST_CONFIGS = {
     "TEST_SETTINGS": False,
     "TEST_LOCAL_FILES": True,
-    "TEST_PLATES": True,
-    "TEST_POINTS": False,
+    "TEST_PLATES": False,
+    "TEST_POINTS": True,
     "TEST_SLABS": False,
     "TEST_GLOBE": False,
     "TEST_PLATE_TORQUES": False,
@@ -54,12 +54,10 @@ def run_tests():
 
     # Test Points (if implemented)
     if TEST_CONFIGS["TEST_POINTS"]:
-        try:
-            logging.info("Running points test...")
-            functions_test.test_points(print_results=PRINT_RESULTS)
-            logging.info("Points test completed successfully.")
-        except Exception as e:
-            logging.error(f"Points test failed: {e}")
+        if TEST_CONFIGS["TEST_LOCAL_FILES"]:
+            functions_test.test_points(settings_file=settings_file, reconstruction_files=reconstruction_files, )
+        else:
+            functions_test.test_points(settings_file=settings_file)
 
     # Test Slabs
     if TEST_CONFIGS["TEST_SLABS"]:

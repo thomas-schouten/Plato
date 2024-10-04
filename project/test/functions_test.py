@@ -54,7 +54,7 @@ def test_settings(settings_file=None):
 
     return settings_test
 
-def test_plates(settings=None, settings_file=None, reconstruction_files=None, plates_files=None):
+def test_plates(settings=None, settings_file=None, reconstruction_files=None, plate_data=None):
     """Test the plates module of the plato package."""
     logging.info("Testing plates module...")
 
@@ -70,7 +70,7 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, pl
             cases_file=settings_file,
             reconstruction=reconstruction,
             files_dir="output",
-            data=plates_files,
+            data=plate_data,
         )
         logging.info("Successfully initialised 'Plates' object.")
 
@@ -94,7 +94,7 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, pl
 
         # Test calculation of plate torques
         try:
-            plates_test.calculate_plate_torques()
+            plates_test.calculate_torque_on_plates()
             logging.info("Successfully calculated plate torques.")
 
         except Exception as e:
@@ -128,59 +128,90 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, pl
         #     print(f"An error occurred during torque optimisation: {e}")
         #     traceback.print_exc()
 
-    logging.info("Successfully completed plates test.")
-    
-    return plates_test
+        logging.info("Successfully completed plates test.")
+        
+        return plates_test
 
-def test_points(data=None, seafloor_grid=None, print_results=False):
+def test_points(settings=None, settings_file=None, reconstruction_files=None, plate_data=None, seafloor_grid=None):
     """Test the points module of the plato package."""
-    if print_results:
-        print("Testing 'points' module...")
+    logging.info("Testing 'points' module...")
 
-    # Test initialisation of the Points object
-    try:
-        if data:
-            points_test = Points(
-                data=data,
+    # Make a PlateReconstruction object if files are provided
+    if reconstruction_files:
+        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+
+    # Get plate data if not provided
+    if not plate_data:
+        try:
+            plates_test = Plates(
+            settings=settings,
+            ages=[0, 1], 
+            cases_file=settings_file,
+            reconstruction=reconstruction,
+            files_dir="output",
+            data=plate_data,
             )
-        points_test = Points()
-        logging.info("Points object initialised successfully.")
 
-    except Exception as e:
-        logging.error(f"An error occurred during initialisation of the 'Points' object: {e}")
-        traceback.print_exc()
+            # Set plate data to the data attribute of the Plates object
+            plate_data = plates_test.data
+
+        except Exception as e:
+            logging.error(f"An error occurred during initialisation of the 'Plates' object: {e}")
+            traceback.print_exc()
+        
+            # Set plate data to None if an error occurs
+            plate_data = None
     
-    # Test functions of the Points class
-    if points_test in locals():
-        # Test sampling of seafloor age grid at points
-        if seafloor_grid:
+    if plate_data is not None:
+        # Test initialisation of the Points object
+        try:
+            points_test = Points(
+                settings=settings,
+                ages=[0, 1], 
+                cases_file=settings_file,
+                reconstruction=reconstruction,
+                files_dir="output",
+            )
+            logging.info("Points object initialised successfully.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during initialisation of the 'Points' object: {e}")
+            traceback.print_exc()
+
+            # Set points_test to None if an error occurs
+            points_test = None
+
+        # Test functions of the Points class
+        if points_test is not None:
+            # Test sampling of seafloor age grid at points
+            if seafloor_grid:
+                try:
+                    points_test.sample_points(seafloor_grid = seafloor_grid)
+
+                except Exception as e:
+                    logging.error(f"An error occurred during testing of the 'sample_points' function: {e}")
+                    traceback.print_exc()
+            else:
+                logging.info("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
+
+            # Test computation of GPE force
             try:
-                points_test.sample_points(seafloor_grid = seafloor_grid)
+                points_test.compute_gpe_force()
 
             except Exception as e:
-                logging.error(f"An error occurred during testing of the 'sample_points' function: {e}")
+                logging.error(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
                 traceback.print_exc()
-        else:
-            logging.info("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
 
-        # Test computation of GPE force
-        try:
-            points_test.compute_gpe_force()
+            # Test computation of mantle drag force
+            try:
+                points_test.compute_mantle_drag_force()
+                logging.info("Successfully computed mantle drag force.")
 
-        except Exception as e:
-            logging.error(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
-            traceback.print_exc()
+            except Exception as e:
+                print(f"An error occurred during testing of the 'compute_mantle_drag_force' function: {e}")
+                traceback.print_exc()
 
-        # Test computation of mantle drag force
-        try:
-            points_test.compute_mantle_drag_force()
-            logging.info("Successfully computed mantle drag force.")
-
-        except Exception as e:
-            print(f"An error occurred during testing of the 'compute_mantle_drag_force' function: {e}")
-            traceback.print_exc()
-
-    logging.info("Testing of the 'points' module complete.")
+        logging.info("Testing of the 'points' module complete.")
 
     return points_test
 

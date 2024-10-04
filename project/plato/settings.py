@@ -143,21 +143,21 @@ class Settings:
         :type DEBUG_MODE: bool
         """
         # Get the logger
-        logger = logging.getLogger("plato")
+        self.logger = logging.getLogger("plato")
 
         # Set the logging level
         if DEBUG_MODE:
-            logger.setLevel(logging.DEBUG)
+            self.logger.setLevel(logging.DEBUG)
         else:
-            logger.setLevel(logging.INFO)
+            self.logger.setLevel(logging.INFO)
 
         # Add a console handler if no handlers exist
-        if not logger.hasHandlers():
+        if not self.logger.hasHandlers():
             handler = logging.StreamHandler()
             handler.setLevel(logging.DEBUG if DEBUG_MODE else logging.INFO)
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
-            logger.addHandler(handler)
+            self.logger.addHandler(handler)
 
     def run_parallel_mode(self):
         """
