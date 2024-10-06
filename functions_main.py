@@ -523,23 +523,121 @@ def sample_ages(lat, lon, seafloor, coords=["latitude", "longitude"]):
 # BASAL TRACTIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+# def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, DEBUG_MODE=False):
+#     """
+#     Function to calculate mantle drag force at points
+
+#     :param torques:                 pandas.DataFrame containing
+#     :type torques:                  pandas.DataFrame
+#     :param points:                  pandas.DataFrame containing data of points including columns with latitude, longitude and plateID
+#     :type points:                   pandas.DataFrame
+#     :param options:                 dictionary with options
+#     :type options:                  dict
+#     :param mech:                    mechanical parameters used in calculations
+#     :type mech:                     class
+#     :param constants:               constants used in calculations
+#     :type constants:                class
+
+#     :return:                        torques, points
+#     :rtype:                         pandas.DataFrame, pandas.DataFrame
+#     """
+#     # Get velocities at points
+#     if options["Reconstructed motions"]:
+#         # Calculate mantle drag force
+#         points["mantle_drag_force_lat"] = -1 * points.v_lat * constants.cm_a2m_s
+#         points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s
+
+#     else:
+#         # Calculate residual torque
+#         for axis in ["_x", "_y", "_z"]:
+#             plates["mantle_drag_torque_opt" + axis] = (
+#                 _numpy.nan_to_num(plates["slab_pull_torque" + axis] * options["Slab pull constant"]) + 
+#                 _numpy.nan_to_num(plates["GPE_torque" + axis]) + 
+#                 _numpy.nan_to_num(plates["slab_bend_torque" + axis])) * -1
+#         plates["mantle_drag_torque_opt_mag"] = xyz2mag(plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"])
+        
+#         # Convert to centroid
+#         centroid_position = lat_lon2xyz(plates.centroid_lat, plates.centroid_lon, constants)
+#         centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
+        
+#         # Calculate force from cross product of plates with centroid position
+#         summed_torques_cartesian = _numpy.asarray([plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"]])
+#         summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.asarray(plates.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
+#         force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
+#         velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)
+
+#         # Calculate force at centroid
+#         if DEBUG_MODE:
+#             print(f"Computing mantle drag force at centroid: {force_at_centroid}")
+
+#         plates["mantle_drag_force_lat"], plates["mantle_drag_force_lon"], plates["mantle_drag_force_mag"], plates["mantle_drag_force_azi"] = vector_xyz2lat_lon(
+#             plates.centroid_lat, plates.centroid_lon, force_at_centroid, DEBUG_MODE,
+#         )
+
+#         # Calculate velocity at centroid and convert to cm/a
+#         plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"] = vector_xyz2lat_lon(plates.centroid_lat, plates.centroid_lon, velocity_at_centroid, constants)
+#         plates["centroid_v_lat"] *= constants.m_s2cm_a; plates["centroid_v_lon"] *= constants.m_s2cm_a; plates["centroid_v_mag"] *= constants.m_s2cm_a
+
+#         # Replace values with NaN for invalid plates
+#         for column in ["mantle_drag_force_lat", "mantle_drag_force_lon", "mantle_drag_force_mag", "mantle_drag_force_azi"]:
+#             plates.loc[~valid_plate_mask, column] = _numpy.nan
+
+#         for column in ["centroid_v_lat", "centroid_v_lon", "centroid_v_mag", "centroid_v_azi"]:
+#             plates.loc[~valid_plate_mask, column] = _numpy.nan
+
+#         # Get velocity of upper and lower plates
+#         converging_plates = ["upper", "lower"]
+#         for converging_plate in converging_plates:
+#             if DEBUG_MODE:
+#                 print(f"Calculating {converging_plate} plate velocities at trenches")
+
+#             slab_velocities = compute_velocities(
+#                 slabs.lat,
+#                 slabs.lon,
+#                 slabs[f"{converging_plate}_plateID"],
+#                 plates,
+#                 summed_torques_cartesian_normalised,
+#                 options,
+#                 constants,
+#                 DEBUG_MODE,
+#             )
+
+#             slabs[f"v_{converging_plate}_plate_lat"], slabs[f"v_{converging_plate}_plate_lon"], slabs[f"v_{converging_plate}_plate_mag"], slabs[f"v_{converging_plate}_plate_azi"] = slab_velocities
+
+#         # Calculate convergence rates
+#         slabs.v_convergence_lon = slabs.v_upper_plate_lon - slabs.v_lower_plate_lon
+#         slabs.v_convergence_lat = slabs.v_upper_plate_lat - slabs.v_lower_plate_lat
+#         slabs.v_convergence_mag = _numpy.sqrt(slabs.v_convergence_lon ** 2 + slabs.v_convergence_lat ** 2)
+
+#         # Get velocity at points
+#         if DEBUG_MODE:
+#             print(f"Calculating plate velocities at points")
+
+#         point_velocities = compute_velocities(
+#             points.lat,
+#             points.lon,
+#             points.plateID,
+#             plates,
+#             summed_torques_cartesian_normalised,
+#             options,
+#             constants,
+#             DEBUG_MODE,
+#         )
+
+#         points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"] = point_velocities
+
+#         # Calculate subduction fluxes
+#         if DEBUG_MODE:
+#             print(f"Calculating subduction fluxes")
+        
+#         for type in ["slab", "sediment"]:
+#             plates = compute_subduction_flux(plates, slabs, type)
+
+#     return plates, points, slabs
+
 def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, DEBUG_MODE=False):
     """
     Function to calculate mantle drag force at points
-
-    :param torques:                 pandas.DataFrame containing
-    :type torques:                  pandas.DataFrame
-    :param points:                  pandas.DataFrame containing data of points including columns with latitude, longitude and plateID
-    :type points:                   pandas.DataFrame
-    :param options:                 dictionary with options
-    :type options:                  dict
-    :param mech:                    mechanical parameters used in calculations
-    :type mech:                     class
-    :param constants:               constants used in calculations
-    :type constants:                class
-
-    :return:                        torques, points
-    :rtype:                         pandas.DataFrame, pandas.DataFrame
     """
     # Get velocities at points
     if options["Reconstructed motions"]:
@@ -548,37 +646,93 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
         points["mantle_drag_force_lon"] = -1 * points.v_lon * constants.cm_a2m_s
 
     else:
-        # Calculate residual torque
+        # Calculate residual torque for all plates (valid or not)
         for axis in ["_x", "_y", "_z"]:
             plates["mantle_drag_torque_opt" + axis] = (
                 _numpy.nan_to_num(plates["slab_pull_torque" + axis] * options["Slab pull constant"]) + 
                 _numpy.nan_to_num(plates["GPE_torque" + axis]) + 
-                _numpy.nan_to_num(plates["slab_bend_torque" + axis])) * -1
-        plates["mantle_drag_torque_opt_mag"] = xyz2mag(plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"])
+                _numpy.nan_to_num(plates["slab_bend_torque" + axis])
+            ) * -1
+
+        # Set invalid plates to NaN
+        valid_plate_mask = plates.area >= options["Minimum plate area"]
+        plates.loc[~valid_plate_mask, "mantle_drag_torque_opt_x"] = _numpy.nan
+        plates.loc[~valid_plate_mask, "mantle_drag_torque_opt_y"] = _numpy.nan
+        plates.loc[~valid_plate_mask, "mantle_drag_torque_opt_z"] = _numpy.nan
+
+        # Calculate the magnitude of the mantle drag torque
+        plates["mantle_drag_torque_opt_mag"] = xyz2mag(
+            plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"]
+        )
         
-        # Convert to centroid
+        # Convert centroid position to Cartesian coordinates
         centroid_position = lat_lon2xyz(plates.centroid_lat, plates.centroid_lon, constants)
         centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
-        
-        # Calculate force from cross product of plates with centroid position
-        summed_torques_cartesian = _numpy.asarray([plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"]])
-        summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.asarray(plates.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
-        force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
-        velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)
 
-        # Calculate force at centroid
+        # Calculate the summed torques in Cartesian coordinates
+        summed_torques_cartesian = _numpy.asarray([
+            plates["mantle_drag_torque_opt_x"], 
+            plates["mantle_drag_torque_opt_y"], 
+            plates["mantle_drag_torque_opt_z"]
+        ])
+
+        # Normalize the summed torques
+        summed_torques_cartesian_normalised = summed_torques_cartesian / (
+            _numpy.repeat(_numpy.asarray(plates.area)[_numpy.newaxis, :], 3, axis=0) * 
+            options["Mantle viscosity"]/mech.La
+            )
+
+        # Calculate force and velocity at centroid
+        force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
+
+        centroid_velocities = compute_velocities(
+            plates.centroid_lat,
+            plates.centroid_lon,
+            plates.plateID,
+            plates,
+            summed_torques_cartesian_normalised,
+            options,
+            constants,
+            DEBUG_MODE,
+        )
+
+        plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"] = centroid_velocities
+
+        # Debugging output
         if DEBUG_MODE:
             print(f"Computing mantle drag force at centroid: {force_at_centroid}")
 
-        plates["mantle_drag_force_lat"], plates["mantle_drag_force_lon"], plates["mantle_drag_force_mag"], plates["mantle_drag_force_azi"] = vector_xyz2lat_lon(
-            plates.centroid_lat, plates.centroid_lon, force_at_centroid, DEBUG_MODE,
+        # Convert force and velocity to latitude and longitude
+        plates["mantle_drag_force_lat"], plates["mantle_drag_force_lon"], \
+        plates["mantle_drag_force_mag"], plates["mantle_drag_force_azi"] = vector_xyz2lat_lon(
+            plates["centroid_lat"], 
+            plates["centroid_lon"], 
+            force_at_centroid, 
+            DEBUG_MODE
         )
 
-        # Calculate velocity at centroid and convert to cm/a
-        plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"] = vector_xyz2lat_lon(plates.centroid_lat, plates.centroid_lon, velocity_at_centroid, constants)
-        plates["centroid_v_lat"] *= constants.m_s2cm_a; plates["centroid_v_lon"] *= constants.m_s2cm_a; plates["centroid_v_mag"] *= constants.m_s2cm_a
+        # # Convert velocity to cm/a
+        # plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"] = vector_xyz2lat_lon(
+        #     plates["centroid_lat"], 
+        #     plates["centroid_lon"], 
+        #     velocity_at_centroid, 
+        #     constants
+        # )
+        # plates["centroid_v_lat"] *= constants.m_s2cm_a
+        # plates["centroid_v_lon"] *= constants.m_s2cm_a
+        # plates["centroid_v_mag"] *= constants.m_s2cm_a
 
-        # Get velocity of upper and lower plates
+        # # Apply the minimum plate area mask: Set NaNs where plates are smaller than the minimum area
+        # valid_plate_mask = plates.area >= options["Minimum plate area"]
+
+        # # Replace values with NaN for invalid plates
+        # for column in ["mantle_drag_force_lat", "mantle_drag_force_lon", "mantle_drag_force_mag", "mantle_drag_force_azi"]:
+        #     plates.loc[~valid_plate_mask, column] = _numpy.nan
+
+        # for column in ["centroid_v_lat", "centroid_v_lon", "centroid_v_mag", "centroid_v_azi"]:
+        #     plates.loc[~valid_plate_mask, column] = _numpy.nan
+
+        # Calculate the velocities of upper and lower plates at trenches
         converging_plates = ["upper", "lower"]
         for converging_plate in converging_plates:
             if DEBUG_MODE:
@@ -595,12 +749,13 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
                 DEBUG_MODE,
             )
 
-            slabs[f"v_{converging_plate}_plate_lat"], slabs[f"v_{converging_plate}_plate_lon"], slabs[f"v_{converging_plate}_plate_mag"], slabs[f"v_{converging_plate}_plate_azi"] = slab_velocities
+            slabs[f"v_{converging_plate}_plate_lat"], slabs[f"v_{converging_plate}_plate_lon"], \
+            slabs[f"v_{converging_plate}_plate_mag"], slabs[f"v_{converging_plate}_plate_azi"] = slab_velocities
 
         # Calculate convergence rates
-        slabs.v_convergence_lon = slabs.v_upper_plate_lon - slabs.v_lower_plate_lon
-        slabs.v_convergence_lat = slabs.v_upper_plate_lat - slabs.v_lower_plate_lat
-        slabs.v_convergence_mag = _numpy.sqrt(slabs.v_convergence_lon ** 2 + slabs.v_convergence_lat ** 2)
+        slabs["v_convergence_lon"] = slabs["v_upper_plate_lon"] - slabs["v_lower_plate_lon"]
+        slabs["v_convergence_lat"] = slabs["v_upper_plate_lat"] - slabs["v_lower_plate_lat"]
+        slabs["v_convergence_mag"] = _numpy.sqrt(slabs["v_convergence_lon"] ** 2 + slabs["v_convergence_lat"] ** 2)
 
         # Get velocity at points
         if DEBUG_MODE:
@@ -622,7 +777,7 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
         # Calculate subduction fluxes
         if DEBUG_MODE:
             print(f"Calculating subduction fluxes")
-        
+
         for type in ["slab", "sediment"]:
             plates = compute_subduction_flux(plates, slabs, type)
 

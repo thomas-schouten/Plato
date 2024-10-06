@@ -2574,6 +2574,14 @@ class PlateForces():
         # Get velocity difference grid
         grid = velocity_grid[reconstruction_time][case1].velocity_magnitude.values-velocity_grid[reconstruction_time][case2].velocity_magnitude.values
 
+        # Set invalid values to NaN
+        grid = _numpy.where(
+            (_numpy.isnan(velocity_grid[reconstruction_time][case1].velocity_magnitude.values)) | 
+            (_numpy.isnan(velocity_grid[reconstruction_time][case2].velocity_magnitude.values)),
+            _numpy.nan,
+            grid
+        )
+
         # Plot velocity difference grid
         im = self.plot_grid(
             ax,
