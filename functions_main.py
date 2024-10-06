@@ -1602,8 +1602,8 @@ def compute_euler_rotation(plates, constants):
         # Convert geographic positions to Cartesian coordinates
         p1 = lat_lon2xyz(row["centroid_lat"], row["centroid_lon"], constants)
         p2 = lat_lon2xyz(
-            row["centroid_lat"] + _numpy.rad2deg(row["centroid_v_lat"] * constants.cm_a2m_s * constants.m_s2rad_a * 1e6),
-            row["centroid_lon"] + _numpy.rad2deg(row["centroid_v_lon"] * constants.cm_a2m_s * constants.m_s2rad_a * 1e6),
+            row["centroid_lat"] + _numpy.rad2deg(_numpy.deg2rad(row["centroid_v_lat"]) * constants.cm_a2m_s * constants.m_s2rad_a * 1e6),
+            row["centroid_lon"] + _numpy.rad2deg(_numpy.deg2rad(row["centroid_v_lon"]) * constants.cm_a2m_s * constants.m_s2rad_a * 1e6),
             constants
         )
 

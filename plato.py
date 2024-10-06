@@ -363,8 +363,9 @@ class PlateForces():
         # Calculate net lithospheric rotation
         for i, reconstruction_time in enumerate(self.times):
             for case in self.plates[reconstruction_time]:
+                selected_plates = self.plates[reconstruction_time][case][self.plates[reconstruction_time][case].area >= self.options[case]["Minimum plate area"]]
                 net_rotation = functions_main.compute_net_rotation(
-                    self.plates[reconstruction_time][case],
+                    selected_plates,
                     self.constants
                 )
                 self.net_rotation[case].loc[i, "pole_lat"] = net_rotation[0]
