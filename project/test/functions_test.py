@@ -54,7 +54,7 @@ def test_settings(settings_file=None):
 
     return settings_test
 
-def test_plates(settings=None, settings_file=None, reconstruction_files=None, plate_data=None):
+def test_plates(settings=None, settings_file=None, reconstruction_files=None, plate_data=None, test_functions=True):
     """Test the plates module of the plato package."""
     logging.info("Testing plates module...")
 
@@ -82,7 +82,7 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, pl
         plates_test = None
 
     # Test various functions of the Plates class
-    if plates_test is not None:
+    if plates_test is not None and test_functions:
         # Test calculation of RMS plate velocities
         try:
             plates_test.calculate_rms_velocity()
@@ -132,7 +132,7 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, pl
         
         return plates_test
 
-def test_points(settings=None, settings_file=None, reconstruction_files=None, plate_data=None, seafloor_grid=None):
+def test_points(settings=None, settings_file=None, reconstruction_files=None, point_data=None, seafloor_grid=None, test_functions=True):
     """Test the points module of the plato package."""
     logging.info("Testing 'points' module...")
 
@@ -140,49 +140,26 @@ def test_points(settings=None, settings_file=None, reconstruction_files=None, pl
     if reconstruction_files:
         reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
 
-    # Get plate data if not provided
-    if not plate_data:
-        try:
-            plates_test = Plates(
+    # Test initialisation of Points object
+    try:
+        points_test = Points(
             settings=settings,
             ages=[0, 1], 
             cases_file=settings_file,
             reconstruction=reconstruction,
             files_dir="output",
-            data=plate_data,
-            )
+        )
+        logging.info("Successfully initialised 'Points' object.")
 
-            # Set plate data to the data attribute of the Plates object
-            plate_data = plates_test.data
+    except Exception as e:
+        logging.error(f"An error occurred during initialisation of the 'Points' object: {e}")
+        traceback.print_exc()
 
-        except Exception as e:
-            logging.error(f"An error occurred during initialisation of the 'Plates' object: {e}")
-            traceback.print_exc()
-        
-            # Set plate data to None if an error occurs
-            plate_data = None
-    
-    if plate_data is not None:
-        # Test initialisation of the Points object
-        try:
-            points_test = Points(
-                settings=settings,
-                ages=[0, 1], 
-                cases_file=settings_file,
-                reconstruction=reconstruction,
-                files_dir="output",
-            )
-            logging.info("Points object initialised successfully.")
-
-        except Exception as e:
-            logging.error(f"An error occurred during initialisation of the 'Points' object: {e}")
-            traceback.print_exc()
-
-            # Set points_test to None if an error occurs
-            points_test = None
+        # Set plates_test to None if an error occurs
+        points_test = None
 
         # Test functions of the Points class
-        if points_test is not None:
+        if points_test is not None and test_functions:
             # Test sampling of seafloor age grid at points
             if seafloor_grid:
                 try:
@@ -215,7 +192,7 @@ def test_points(settings=None, settings_file=None, reconstruction_files=None, pl
 
     return points_test
 
-def test_slabs(data=None, seafloor_grid=None, print_results=False):
+def test_slabs(data=None, seafloor_grid=None, print_results=False, test_functions=True):
     """Test the slabs module of the plato package."""
     if print_results:
         print("Testing slabs module...")
@@ -233,7 +210,7 @@ def test_slabs(data=None, seafloor_grid=None, print_results=False):
         traceback.print_exc()
 
     # Test functions of the Slabs object
-    if slabs_test in locals():
+    if slabs_test in locals() and test_functions:
         # Test sampling of seafloor age grid at slabs and upper plate
         if seafloor_grid:
             try:

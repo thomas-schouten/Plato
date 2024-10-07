@@ -6,6 +6,9 @@
 
 # Import libraries
 # Standard libraries
+import logging
+from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as _numpy
 import pandas as _pandas
 import pygplates
@@ -556,7 +559,7 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
         plates["mantle_drag_torque_opt_mag"] = xyz2mag(plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"])
         
         # Convert to centroid
-        centroid_position = lat_lon2xyz(plates.centroid_lat, plates.centroid_lon, constants)
+        centroid_position = spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants.mean_Earth_radius_m)
         centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
         
         # Calculate force from cross product of plates with centroid position
@@ -631,7 +634,15 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
 # VELOCITIES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, constants, DEBUG_MODE=False):
+def compute_velocity(
+        lats: _numpy.array,
+        lons: _numpy.array,
+        plateIDs: Union[List, _numpy.array],
+        pole_lon: Union[List, _numpy.array],
+        pole_lat: Union[List, _numpy.array],
+        pole_angle: Union[List, _numpy.array],
+        constants
+        ):
     """
     Function to compute lat, lon, magnitude and azimuth of velocity at a set of locations from a Cartesian torque vector.
 
@@ -651,46 +662,45 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
     # Initialise arrays to store velocities
     v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
     v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
+    omegas = _numpy.zeros_like(lats)
 
     # Loop through points
-    for i, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
+    for i, (lat, lon) in enumerate(zip(lats, lons)):
+        # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
+        point_velocity = vector_xyz2lat_lon(
+            [lat],
+            [lon],
+            _numpy.asarray(
+                [_numpy.cross(
+                velocity_xyz, spherical2cartesian(
+                    lat, lon, _numpy.linalg.norm(velocity_xyz)
+                    ),
+                axis=0
+                )]
+            ).T,
+            _numpy.linalg.norm(velocity_xyz),
+        )
+
+        # Assign the velocity to the respective columns in the points DataFrame
+        v_lats[i] = point_velocity[0][0]
+        v_lons[i] = point_velocity[1][0]
+        v_mags[i] = point_velocity[2][0]
+        v_azis[i] = point_velocity[3][0]
+
+        # Calculate the spin rate as the dot product of the velocity and the unit position vector
+        point_spin_rate = _numpy.dot(
+            spherical2cartesian(lat, lon, constants).T,
+            velocity_xyz / constants.mean_Earth_radius_m
+        )
+
+        # Assign the spin rate to the respective columns in the points DataFrame
+        omegas[i] = point_spin_rate
         # Check if upper plate is in torques
-        if plateID in plates.plateID.values:
-            # Get the index of the lower plate in the torques DataFrame
-            n = _numpy.where(plates.plateID.values == plateID)
-            velocity_xyz = -1 * _numpy.asarray([
-                torques_xyz[:,n][0][0][0],
-                torques_xyz[:,n][1][0][0],
-                torques_xyz[:,n][2][0][0]
-            ])
-
-            # Check if the area condition is satisfied
-            if plates.area.values[n] >= options["Minimum plate area"] and torques_xyz[:,n][0][0] != 0 and torques_xyz[:,n][0][0] != _numpy.nan:
-                # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
-                point_velocity = vector_xyz2lat_lon(
-                    [lat],
-                    [lon],
-                    _numpy.asarray(
-                        [_numpy.cross(
-                        velocity_xyz, lat_lon2xyz(
-                            lat, lon, constants
-                            ) / constants.mean_Earth_radius_m,
-                        axis=0
-                        )]
-                    ).T,
-                    constants
-                )
-
-                # Assign the velocity to the respective columns in the points DataFrame
-                v_lats[i] = point_velocity[0][0]
-                v_lons[i] = point_velocity[1][0]
-                v_mags[i] = point_velocity[2][0]
-                v_azis[i] = point_velocity[3][0]
-
+        
     # Convert to cm/a
     v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
 
-    return v_lats, v_lons, v_mags, v_azis
+    return v_lats, v_lons, v_mags, v_azis, omegas
 
 def compute_rms_velocity(plates, points):
     """
@@ -740,11 +750,11 @@ def compute_rms_velocity(plates, points):
 
         omegas = _numpy.zeros(len(selected_points))
         for i, (lat, lon) in enumerate(zip(selected_points.lat, selected_points.lon)):
-            # print(lat_lon2xyz(rotation_pole_lat, rotation_pole_lon, constants).T)
+            # print(spherical2cartesian(rotation_pole_lat, rotation_pole_lon, constants).T)
             # Calculate the spin rate at each point
             omegas[i] = _numpy.dot(
-                lat_lon2xyz(lat, lon, constants).T,
-                lat_lon2xyz(rotation_pole_lat, rotation_pole_lon, constants),
+                spherical2cartesian(lat, lon, constants).T,
+                spherical2cartesian(rotation_pole_lat, rotation_pole_lon, constants),
             ) * rotation_angle / (total_area * constants.mean_Earth_radius_m)
 
         # Calculate the RMS spin rate
@@ -807,7 +817,7 @@ def sum_torque(plates, torque_type, constants):
     )
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
-    centroid_position = lat_lon2xyz(plates.centroid_lat, plates.centroid_lon, constants)
+    centroid_position = spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
     for opt in ["", "opt_"]:
@@ -870,7 +880,7 @@ def compute_residual_along_trench(plates, slabs, constants, DEBUG_MODE=False):
                     [lon],
                     _numpy.asarray(
                         [_numpy.cross(
-                        residual_torque_xyz, lat_lon2xyz(
+                        residual_torque_xyz, spherical2cartesian(
                             lat, lon, constants
                             ) / constants.mean_Earth_radius_m,
                         axis=0
@@ -1032,7 +1042,7 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     data = _pandas.DataFrame({"plateID": plateID})
 
     # Convert points to Cartesian coordinates
-    position = lat_lon2xyz(lat, lon, constants)
+    position = spherical2cartesian(lat, lon, constants)
     
     # Calculate torques in Cartesian coordinates
     torques_cartesian = force2torque(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon)
@@ -1058,7 +1068,7 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     torques.reset_index(inplace=True)
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
-    centroid_position = lat_lon2xyz(torques.centroid_lat, torques.centroid_lon, constants)
+    centroid_position = spherical2cartesian(torques.centroid_lat, torques.centroid_lon, constants)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
     summed_torques_cartesian = _numpy.asarray([torques[torque_variable + "_x"], torques[torque_variable + "_y"], torques[torque_variable + "_z"]])
@@ -1108,52 +1118,38 @@ def compute_subduction_flux(
 # CONVERSIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def vector_xyz2lat_lon(lats, lons, vector, DEBUG_MODE=False):
+def cartesian2spherical_azimuth(x, y, z):
     """
-    Function to convert a 3D vector into latitudinal and longitudinal components at a point.
+    Convert Cartesian coordinates to latitude, longitude, magnitude, and azimuth.
 
-    :param lats:     Latitude in degrees.
-    :type lats:      float, int, list, numpy.array, pandas.Series
-    :param lons:     Longitude in degrees.
-    :type lons:      float, int, list, numpy.array, pandas.Series
-    :param vector:   3D vector in Cartesian coordinates.
-    :type vector:    numpy.array
+    :param x:           X coordinate.
+    :type x:            float, int, list, numpy.array, pandas.Series
+    :param y:           Y coordinate.
+    :type y:            float, int, list, numpy.array, pandas.Series
+    :param z:           Z coordinate.
+    :type z:            float, int, list, numpy.array, pandas.Series
 
-    :return:         Latitudinal and longitudinal components of the vector.
-    :rtype:          numpy.array, numpy.array
-
-    NOTE: This function uses the pygplates library to convert the vector from Cartesian to magnitude, azimuth, and inclination
-          It could be optimised using vectorised operations, but so far it has not impacted performance in its current form
+    :return:            Latitude (degrees), Longitude (degrees), Magnitude, Azimuth (degrees).
+    :rtype:             tuple (float, float, float, float)
     """
-    # Convert lats and lons to numpy arrays, if not already
-    lats = _numpy.asarray(lats); lons = _numpy.asarray(lons)
-
-    # Initialize dataframes
-    vector_mags = _numpy.zeros(len(lats)); vector_azis = _numpy.zeros(len(lats))
-    vector_lats = _numpy.zeros(len(lats)); vector_lons = _numpy.zeros(len(lons))
-
-    # Loop through points and convert vector to latitudinal and longitudinal components
-    for i, (lat, lon) in enumerate(zip(lats, lons)):
-        # Make PointonSphere
-        point = pygplates.PointOnSphere(lat, lon)
-
-        # Convert vector to magnitude, azimuth, and inclination
-        vector_mags[i], vector_azis[i], _ = _numpy.asarray(
-            pygplates.LocalCartesian.convert_from_geocentric_to_magnitude_azimuth_inclination(
-                point, 
-                (vector[0][i], vector[1][i], vector[2][i])
-            )
-        )
-
-    # Divide by radius of Earth because pygplates.LocalCartesian assumes a unit sphere and therefore multiplies the result by the radius of the Earth.
-    vector_mags /= constants.mean_Earth_radius_m; vector_azis = _numpy.rad2deg(vector_azis)
+    # Calculate magnitude
+    mag = _numpy.sqrt(x**2 + y**2 + z**2)
     
-    # Convert to latitudinal and longitudinal components
-    vector_lats, vector_lons = mag_azi2lat_lon(vector_mags, vector_azis)
+    # Calculate latitude
+    lat_rads = _numpy.arcsin(z / mag)
+    lat = _numpy.rad2deg(lat_rads)
+    
+    # Calculate longitude
+    lon_rads = _numpy.arctan2(y, x)
+    lon = _numpy.rad2deg(lon_rads)
+    
+    # Calculate azimuth
+    azi_rads = _numpy.arctan2(x, y)
+    azi = _numpy.rad2deg(azi_rads)
 
-    return vector_lats, vector_lons, vector_mags, vector_azis
+    return lat, lon, mag, azi
 
-def lat_lon2xyz(lat, lon, constants):
+def spherical2cartesian(lat, lon, mag):
     """
     Convert latitude and longitude to Cartesian coordinates.
 
@@ -1171,10 +1167,12 @@ def lat_lon2xyz(lat, lon, constants):
     lat_rads = _numpy.deg2rad(lat)
     lon_rads = _numpy.deg2rad(lon)
 
-    # Calculate position vectors
-    position = constants.mean_Earth_radius_m * _numpy.asarray([_numpy.cos(lat_rads) * _numpy.cos(lon_rads), _numpy.cos(lat_rads) * _numpy.sin(lon_rads), _numpy.sin(lat_rads)])
+    # Calculate x, y, z
+    x = mag * _numpy.cos(lat_rads) * _numpy.cos(lon_rads)
+    y = mag * _numpy.cos(lat_rads) * _numpy.sin(lon_rads)
+    z = mag * _numpy.sin(lat_rads)
 
-    return position
+    return x, y, z
 
 def force2torque(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon):
     """
@@ -1367,7 +1365,7 @@ def get_relative_rotaton_pole(plateID, rotations_a, rotations_b, reconstruction_
 
     return relative_rotation_pole.get_lat_lon_euler_pole_and_angle_degrees()
 
-def rotate_vector(vector, rotation, constants):
+def rotate_vector(vector, rotation):
     """
     Function to rotate a vector in Cartesian coordinates with a given Euler rotation.
 
@@ -1380,10 +1378,7 @@ def rotate_vector(vector, rotation, constants):
     :rtype:             numpy.array
     """
     # Convert rotation axis to Cartesian coordinates
-    rotation_axis = lat_lon2xyz(rotation[0], rotation[1], constants)
-
-    # Convert to unit vector
-    rotation_axis = rotation_axis / _numpy.linalg.norm(rotation_axis)
+    rotation_axis = spherical2cartesian(rotation[0], rotation[1], 1)
 
     # Calculate Euler parameters
     a = _numpy.cos(_numpy.deg2rad(rotation[2]) / 2)

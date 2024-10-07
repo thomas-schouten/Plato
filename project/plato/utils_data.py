@@ -105,11 +105,30 @@ def load_data(
                     logging.info(f"Initialising new DataFrame for {type} for {reconstruction_name} at {_age} Ma for case {unavailable_case}...")
 
                     if type == "Plates":
-                        data[_age][unavailable_case] = get_plate_data(reconstruction.rotation_model, _age, resolved_topologies[_age], all_options[unavailable_case])
+                        data[_age][unavailable_case] = get_plate_data(
+                            reconstruction.rotation_model,
+                            _age,
+                            resolved_topologies[_age],
+                            all_options[unavailable_case]
+                            )
+
                     if type == "Slabs":
-                        data[_age][unavailable_case] = get_slab_data(reconstruction, _age, plate_data[_age][unavailable_case], resolved_geometries[_age], all_options[unavailable_case])
+                        data[_age][unavailable_case] = get_slab_data(
+                            reconstruction,
+                            _age,
+                            plate_data[_age][unavailable_case],
+                            resolved_geometries[_age],
+                            all_options[unavailable_case]
+                            )
+
                     if type == "Points":
-                        data[_age][unavailable_case] = get_point_data(reconstruction, _age, plate_data[_age][unavailable_case], resolved_geometries[_age], all_options[unavailable_case])
+                        data[_age][unavailable_case] = get_point_data(
+                            reconstruction, 
+                            _age, 
+                            plate_data[_age][unavailable_case], 
+                            resolved_geometries[_age], 
+                            all_options[unavailable_case]
+                            )
 
             # Append case to available cases
             available_cases.append(unavailable_case)
@@ -227,7 +246,6 @@ def get_plate_data(
 def get_slab_data(
         reconstruction: _gplately.PlateReconstruction,
         age: int,
-        plates: _pandas.DataFrame,
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
         PARALLEL_MODE: Optional[bool] = False,
@@ -239,8 +257,6 @@ def get_slab_data(
         :type reconstruction:       _gplately.PlateReconstruction
         :param age:                 reconstruction time
         :type age:                  integer
-        :param plates:              plates
-        :type plates:               pandas.DataFrame
         :param topology_geometries: topology geometries
         :type topology_geometries:  geopandas.GeoDataFrame
         :param options:             options for the case
@@ -286,47 +302,11 @@ def get_slab_data(
             PARALLEL_MODE=PARALLEL_MODE
         )
 
-        # Get absolute velocities of upper and lower plates
-        for plate in ["upper_plate", "lower_plate", "trench_plate"]:
-            # Loop through lower plateIDs to get absolute lower plate velocities
-            for plateID in slabs[plate + "ID"].unique():
-                # Select all points with the same plateID
-                selected_slabs = slabs[slabs[plate + "ID"] == plateID]
-
-                # Get stage rotation for plateID
-                selected_plate = plates[plates.plateID == plateID]
-
-                if len(selected_plate) == 0:
-                    stage_rotation = reconstruction.rotation_model.get_rotation(
-                        to_time=age,
-                        moving_plate_id=int(plateID),
-                        from_time=age + options["Velocity time step"],
-                        anchor_plate_id=options["Anchor plateID"]
-                    ).get_lat_lon_euler_pole_and_angle_degrees()
-                else:
-                    stage_rotation = (
-                        selected_plate.pole_lat.values[0],
-                        selected_plate.pole_lon.values[0],
-                        selected_plate.pole_angle.values[0]
-                    )
-
-                # Get plate velocities
-                selected_velocities = get_velocities(
-                    selected_slabs.lat,
-                    selected_slabs.lon,
-                    stage_rotation
-                )
-
-                # Store in array
-                slabs.loc[slabs[plate + "ID"] == plateID, "v_" + plate + "_lat"] = selected_velocities[0]
-                slabs.loc[slabs[plate + "ID"] == plateID, "v_" + plate + "_lon"] = selected_velocities[1]
-                slabs.loc[slabs[plate + "ID"] == plateID, "v_" + plate + "_mag"] = selected_velocities[2]
-                slabs.loc[slabs[plate + "ID"] == plateID, "v_" + plate + "_azi"] = selected_velocities[3]
-
-        # Calculate convergence rates
-        slabs["v_convergence_lat"] = slabs.v_lower_plate_lat - slabs.v_trench_plate_lat
-        slabs["v_convergence_lon"] = slabs.v_lower_plate_lon - slabs.v_trench_plate_lon
-        slabs["v_convergence_mag"] = _numpy.sqrt(slabs.v_convergence_lat**2 + slabs.v_convergence_lon**2)
+        # Initialise columns to store convergence rates
+        for type in ["upper", "lower", "convergence"]:
+            slabs[f"{type}_plate_convergence_lat"] = 0.
+            slabs[f"{type}_plate_convergence_lon"] = 0.
+            slabs[f"{type}_plate_convergence_mag"] = 0.
 
         # Initialise other columns to store seafloor ages and forces
         # Upper plate
@@ -527,6 +507,85 @@ def get_globe_data(
     })
         
     return globe
+
+def get_resolved_topologies(
+        reconstruction: _gplately.PlateReconstruction,
+        ages: _numpy.array,
+        filename: Optional[str] = None,
+    ):
+    """
+    Function to get resolved geometries for all ages.
+    """
+    if not filename:
+        # Store resolved topologies in a file
+        _resolved_topologies = filename
+    else:
+        # Initialise dictionary to store resolved topologies
+        _resolved_topologies = {_age: [] for _age in ages}
+
+    for _age in ages:
+        # Initialise list to store resolved topologies
+        if not filename:
+            resolved_topologies = []
+
+        # Resolve topologies
+        with warnings.catch_warnings():
+            # Ignore annoying warnings that the field names are laundered
+            warnings.filterwarnings(
+                action="ignore",
+                message="Normalized/laundered field name:"
+            )
+            _pygplates.resolve_topologies(
+                reconstruction.topology_features,
+                reconstruction.rotation_model, 
+                resolved_topologies, 
+                _age,  
+                anchor_plate_id=0
+            )
+
+        if not filename:
+            _resolved_topologies[_age] = resolved_topologies
+
+    if not filename:
+        return _resolved_topologies
+    
+def get_resolved_geometries(
+        reconstruction: _gplately.PlateReconstruction,
+        ages: _numpy.array,
+        resolved_topologies: Optional[Dict] = None,
+    ):
+    """
+    Function to obtain resolved geometries as GeoDataFrames for all ages.
+
+    :param reconstruction:        reconstruction
+    :type reconstruction:         gplately.PlateReconstruction
+    :param ages:                  ages
+    :type ages:                   numpy.array
+    :param resolved_topologies:   resolved topologies
+    :type resolved_topologies:    dict
+
+    :return:                      resolved_geometries
+    :rtype:                       dict
+    """
+    # Make temporary directory to hold shapefiles
+    temp_dir = tempfile.mkdtemp()
+
+    # Initialise dictionary to store resolved geometries
+    resolved_geometries = {}
+
+    for _age in ages:
+        # Save resolved topologies as shapefiles
+        if resolved_topologies is None:
+            topology_file = _os.path.join(temp_dir, f"topologies_{_age}.shp")
+            resolved_topologies = get_resolved_topologies(reconstruction, _age, topology_file)
+
+        # Load resolved topologies as GeoDataFrames
+        resolved_geometries[_age] = _geopandas.read_file(topology_file)
+    
+    # Remove temporary directory
+    shutil.rmtree(temp_dir)
+
+    return resolved_geometries
 
 def extract_geometry_data(topology_geometries):
     """

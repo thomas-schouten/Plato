@@ -120,20 +120,10 @@ class Plates:
             # Resolve topologies to use to get plates
             # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
             #       This step could be sped up by extracting all information from the geopandas DataFrame, but so far this has not been the main bottleneck
-            # Ignore annoying warnings that the field names are laundered
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    action="ignore",
-                    message="Normalized/laundered field name:"
-                )
-                self.resolved_topologies[_age] = []
-                _pygplates.resolve_topologies(
-                    self.reconstruction.topology_features,
-                    self.reconstruction.rotation_model, 
-                    self.resolved_topologies[_age], 
-                    _age,  
-                    anchor_plate_id=0
-                )
+            self.resolved_topologies = utils_data.get_resolved_topologies(
+                self.reconstruction,
+                _age,
+            )
 
         # DATA
         # Load data for all combinations of ages and cases

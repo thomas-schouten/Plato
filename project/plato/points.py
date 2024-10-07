@@ -20,7 +20,6 @@ class Points:
             cases_file: Optional[list[str]]= None,
             cases_sheet: Optional[str]= "Sheet1",
             files_dir: Optional[str]= None,
-            plate_data: Optional[Dict] = None,
             resolved_geometries: Optional[Dict] = None,
             PARALLEL_MODE: Optional[bool] = False,
             DEBUG_MODE: Optional[bool] = False,
@@ -70,10 +69,75 @@ class Points:
             PARALLEL_MODE=self.settings.PARALLEL_MODE,
         )
 
+        # Create a mask for the data to filter out points with an area below the threshold set in the settings
+        self.mask = {age: self.data[age][self.settings.cases[0]].area >= self.settings.options["Minimum plate area"] for age in self.settings.ages}
+
+        # Get valid plateIDs
+        self.plateIDs = self.data[self.settings.ages[0]][self.settings.cases[0]].plateID.unique()
+
+        # Calculate velocities at points
+        self.calculate_velocities()
+
         # Set flags for computed torques
         self.sampled_points = False
         self.computed_gpe_torque = False
         self.computed_mantle_drag_torque = False
+
+    def calculate_velocities(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            stage_rotation: Optional[Dict] = None,
+        ):
+        """
+        Function to compute velocities at points.
+        """
+        # Define ages if not provided
+        if ages is None:
+            ages = self.settings.ages
+        else:
+            if isinstance(ages, str):
+                ages = [ages]
+
+        # Define cases if not provided
+        if cases is None:
+            cases = self.settings.cases
+
+        # Define stage rotation if not provided
+        if stage_rotation is None:
+            _stage_rotation = {}
+
+        # Loop through ages and cases
+        for _age in ages:
+            # Get stage rotation, if not provided
+            if stage_rotation is None:
+                for plateID in self.plateIDs[self.mask[_age][cases[0]]]:
+                    _stage_rotation = self.reconstruction.rotation_model.get_rotation(
+                        to_time =_age,
+                        moving_plate_id = plateID,
+                        from_time=_age + self.settings.options["Velocity time step"],
+                        anchor_plate_id = self.settings.options["Anchor plateID"]
+                    )
+        
+            for _case in cases:
+                # Filter points
+                selected_points = self.data[_age][_case][self.mask[_age][_case]]
+
+                # Compute velocities
+                velocities = utils_calc.compute_velocity(
+                    selected_points.lat,
+                    selected_points.lon,
+                    _stage_rotation[0],
+                    _stage_rotation[1],
+                    _stage_rotation[2],
+                )
+
+                # Store velocities
+                self.data[_age][_case]["v_lat"] = velocities[0]
+                self.data[_age][_case]["v_lon"] = velocities[1]
+                self.data[_age][_case]["v_mag"] = velocities[2]
+                self.data[_age][_case]["v_azi"] = velocities[3]
+                self.data[_age][_case]["omega"] = velocities[4]
 
     def sample_points(
             self,
@@ -83,7 +147,7 @@ class Points:
         ):
         """
         Samples seafloor age at points
-        The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and reconstruction time.
+        The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and age.
 
         :param ages:    reconstruction times to sample points for
         :type ages:     list
@@ -92,7 +156,7 @@ class Points:
         :param PROGRESS_BAR:            whether or not to display a progress bar
         :type PROGRESS_BAR:             bool
         """
-        # Define reconstruction times if not provided
+        # Define ages if not provided
         if ages is None:
             ages = self.settings.ages
         else:
