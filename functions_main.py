@@ -696,7 +696,7 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
             DEBUG_MODE,
         )
 
-        plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"] = centroid_velocities
+        plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"], plates["centroid_omega"] = centroid_velocities
 
         # Debugging output
         if DEBUG_MODE:
@@ -750,7 +750,7 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
             )
 
             slabs[f"v_{converging_plate}_plate_lat"], slabs[f"v_{converging_plate}_plate_lon"], \
-            slabs[f"v_{converging_plate}_plate_mag"], slabs[f"v_{converging_plate}_plate_azi"] = slab_velocities
+            slabs[f"v_{converging_plate}_plate_mag"], slabs[f"v_{converging_plate}_plate_azi"], slabs[f"omega_{converging_plate}_plate"] = slab_velocities
 
         # Calculate convergence rates
         slabs["v_convergence_lon"] = slabs["v_upper_plate_lon"] - slabs["v_lower_plate_lon"]
@@ -772,7 +772,7 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
             DEBUG_MODE,
         )
 
-        points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"] = point_velocities
+        points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"], points["omega"] = point_velocities
 
         # Calculate subduction fluxes
         if DEBUG_MODE:
@@ -807,6 +807,7 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
     # Initialise arrays to store velocities
     v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
     v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
+    omegas = _numpy.zeros_like(lats)
 
     # Loop through points
     for i, (lat, lon, plateID) in enumerate(zip(lats, lons, plateIDs)):
@@ -822,7 +823,7 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
 
             # Check if the area condition is satisfied
             if plates.area.values[n] >= options["Minimum plate area"] and torques_xyz[:,n][0][0] != 0 and torques_xyz[:,n][0][0] != _numpy.nan:
-                # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
+                # Calculate the speed and the azimuth of the plate as the cross product of the torque and the unit position vector
                 point_velocity = vector_xyz2lat_lon(
                     [lat],
                     [lon],
@@ -843,10 +844,19 @@ def compute_velocities(lats, lons, plateIDs, plates, torques_xyz, options, const
                 v_mags[i] = point_velocity[2][0]
                 v_azis[i] = point_velocity[3][0]
 
+                # Calculate the spin rate as the dot product of the velocity and the unit position vector
+                point_spin_rate = _numpy.dot(
+                    lat_lon2xyz(lat, lon, constants).T,
+                    velocity_xyz / constants.mean_Earth_radius_m
+                )
+
+                # Assign the spin rate to the respective columns in the points DataFrame
+                omegas[i] = point_spin_rate
+
     # Convert to cm/a
     v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
 
-    return v_lats, v_lons, v_mags, v_azis
+    return v_lats, v_lons, v_mags, v_azis, omegas
 
 def compute_rms_velocity(plates, points):
     """
@@ -901,10 +911,10 @@ def compute_rms_velocity(plates, points):
             omegas[i] = _numpy.dot(
                 lat_lon2xyz(lat, lon, constants).T,
                 lat_lon2xyz(rotation_pole_lat, rotation_pole_lon, constants),
-            ) * rotation_angle / (total_area * constants.mean_Earth_radius_m)
+            ) * rotation_angle / constants.mean_Earth_radius_m
 
         # Calculate the RMS spin rate
-        omega_rms = _numpy.sum(omegas * segment_areas)
+        omega_rms = _numpy.sum(omegas * segment_areas) / total_area
 
         plates.loc[plates.plateID == plateID, "omega_rms"] = omega_rms
 

@@ -2509,6 +2509,99 @@ class PlateForces():
         )
 
         return im, qu
+    
+    def plot_spin_rate_map(
+            self,
+            ax,
+            reconstruction_time,
+            case = None,
+            cmap = "cmc.bilbao_r",
+            # vmin = 0,
+            # vmax = 25,
+            normalise_vectors = False,
+            log_scale = False,
+            coastlines_facecolour = "none",
+            coastlines_edgecolour = "black",
+            coastlines_linewidth = 0.1,
+            plate_boundaries_linewidth = 0.5,
+            vector_width = 4e-3,
+            vector_scale = 3e2,
+            vector_color = "k",
+            vector_alpha = 0.5,
+        ):
+        """
+        Function to plot plate velocities on an axes object
+            ax:                     axes object
+            fig:                    figure
+            reconstruction_time:    the time for which to display the map
+            case:                   case for which to plot the sediments
+            plotting_options:       dictionary with options for plotting
+        """
+        # Check if reconstruction time is in valid times
+        if reconstruction_time not in self.times:
+            return print("Invalid reconstruction time")
+        
+        # Set case to first case in cases list if not specified
+        if case is None:
+            case = self.cases[0]
+        
+        # Set basemap
+        gl = self.plot_basemap(ax)
+
+        # Get velocity grid
+        velocity_grid = {}
+        velocity_grid = setup.load_grid(
+            velocity_grid,
+            self.name,
+            [reconstruction_time],
+            "Velocity",
+            self.dir_path,
+            points = self.points,
+            seafloor_grid = self.seafloor,
+            cases = [case],
+            DEBUG_MODE = self.DEBUG_MODE,
+            PROGRESS_BAR=False,
+        )
+                
+        # Plot velocity difference grid
+        im = self.plot_grid(
+            ax,
+            velocity_grid[reconstruction_time][case].velocity_magnitude.values,
+            cmap = cmap,
+            # vmin = vmin,
+            # vmax = vmax,
+            log_scale = log_scale
+        )
+
+        # Get velocity vectors
+        velocity_vectors = self.points[reconstruction_time][case].iloc[::209].copy()
+
+        # Plot velocity vectors
+        qu = self.plot_vectors(
+            ax,
+            velocity_vectors.lat.values,
+            velocity_vectors.lon.values,
+            velocity_vectors.v_lat.values,
+            velocity_vectors.v_lon.values,
+            velocity_vectors.v_mag.values,
+            normalise_vectors = normalise_vectors,
+            width = vector_width,
+            scale = vector_scale,
+            facecolour = vector_color,
+            alpha = vector_alpha
+        )
+
+        # Plot plates and coastlines
+        ax = self.plot_reconstruction(
+            ax,
+            reconstruction_time,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
+
+        return im, qu
 
     def plot_velocity_difference_map(
             self,
