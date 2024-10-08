@@ -1,32 +1,12 @@
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PLATO
-# Algorithm to calculate plate forces from tectonic reconstructions
-# Thomas Schouten, 2024
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-# Import libraries
-# Standard libraries
-import os as _os
 import logging
-import warnings
 from typing import Dict, List, Optional, Union
 
-# Third-party libraries
-import numpy as _numpy
-import pandas as _pandas
 import gplately as _gplately
-from gplately import pygplates as _pygplates
-from tqdm import tqdm
+import numpy as _numpy
+from tqdm import tqdm as _tqdm
 
-# Local libraries
-import utils_calc, utils_data, utils_init
+import utils_data, utils_calc, utils_init
 from settings import Settings
-from points import Points
-from slabs import Slabs
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PLATES OBJECT
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class Plates:
     """
@@ -92,12 +72,11 @@ class Plates:
         )
 
         # Load or initialise plate geometries
-        for _age in tqdm(_ages, desc="Loading geometries", disable=logging.getLogger().isEnabledFor(logging.INFO)):
-            
+        for _age in _tqdm(_ages, desc="Loading geometries", disable=logging.getLogger().isEnabledFor(logging.INFO)):
             # Load resolved geometries if they are available
             if resolved_geometries is not None:
                 # Check if resolved geometries are a dictionary
-                if not isinstance(resolved_geometries, dict):
+                if not isinstance(resolved_geometries, Dict):
                     raise ValueError("Resolved geometries should be a dictionary.")
                 
                 # Check if the age is in the dictionary
@@ -111,35 +90,64 @@ class Plates:
                         self.settings.name,
                     )
 
-                    # Get new topologies if they are unavailable
-                    if self.resolved_geometries[_age] is None:
-                        self.resolved_geometries[_age] = utils_data.get_topology_geometries(
-                            self.reconstruction, _age, anchor_plateID=0
-                        )
+                # Get new topologies if they are unavailable
+                if self.resolved_geometries[_age] is None:
+                    resolved_geometries = utils_data.get_topology_geometries(
+                        self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
+                    )
+                    self.resolved_geometries[_age] = resolved_geometries[_age]
             
             # Resolve topologies to use to get plates
             # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
             #       This step could be sped up by extracting all information from the geopandas DataFrame, but so far this has not been the main bottleneck
-            self.resolved_topologies = utils_data.get_resolved_topologies(
+            resolved_topologies = utils_data.get_resolved_topologies(
                 self.reconstruction,
+                [_age],
+            )
+            self.resolved_topologies[_age] = resolved_topologies[_age]
+
+        # Initialise data dictionary
+        self.data = {age: {} for age in self.settings.ages}
+
+        # Loop through times
+        for _age in _tqdm(ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
+            # Load available data
+            self.data[_age] = utils_data.load_data(
+                self.data[_age],
+                self.settings.name,
                 _age,
+                "Plates",
+                self.settings.cases,
+                self.settings.point_cases,
+                self.settings.dir_path,
+                PARALLEL_MODE=self.settings.PARALLEL_MODE,
             )
 
-        # DATA
-        # Load data for all combinations of ages and cases
-        self.data = utils_data.load_data(
-            self.reconstruction,
-            self.settings.name,
-            _ages,
-            "Plates",
-            self.settings.cases,
-            self.settings.options,
-            self.settings.plate_cases,
-            files_dir,
-            resolved_topologies = self.resolved_topologies,
-            resolved_geometries = self.resolved_geometries,
-            PARALLEL_MODE = self.settings.PARALLEL_MODE,
-        )
+            for key, entries in self.settings.plate_cases.items():
+                for entry in entries:
+                    if entry in self.data[_age].keys():
+                        available_case = entry
+                        break
+                    else:
+                        available_case = None
+                
+                if available_case:
+                    for entry in entries:
+                        if entry is not available_case:
+                            self.data[_age][entry] = self.data[_age][available_case].copy()
+                else:
+                    # Initialise missing data
+                    self.data[_age][key] = utils_data.get_plate_data(
+                        self.reconstruction.rotation_model,
+                        _age,
+                        self.resolved_topologies[_age], 
+                        self.settings.options[key],
+                    )
+
+                    # Copy to matching cases
+                    if len(entries) > 1:
+                        for entry in entries[1:]:
+                            self.data[_age][entry] = self.data[_age][key].copy()
 
     def calculate_rms_velocity(
             self,

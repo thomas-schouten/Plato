@@ -1,8 +1,9 @@
+import logging
 from typing import Dict, List, Optional, Union
 
 import gplately as _gplately
 import numpy as _numpy
-import tqdm as _tqdm
+from tqdm import tqdm as _tqdm
 
 import utils_data, utils_calc, utils_init
 from settings import Settings
@@ -54,26 +55,57 @@ class Points:
             reconstruction_name,
         )
 
-        # Load data
-        self.data = utils_data.load_data(
-            self.reconstruction,
-            self.settings.name,
-            self.settings.ages,
-            "Points",
-            self.settings.cases,
-            self.settings.options,
-            self.settings.point_cases,
-            self.settings.dir_path,
-            plate_data=plate_data,
-            resolved_geometries=resolved_geometries,
-            PARALLEL_MODE=self.settings.PARALLEL_MODE,
-        )
+        # Initialise data dictionary
+        self.data = {age: {} for age in self.settings.ages}
 
-        # Create a mask for the data to filter out points with an area below the threshold set in the settings
-        self.mask = {age: self.data[age][self.settings.cases[0]].area >= self.settings.options["Minimum plate area"] for age in self.settings.ages}
+        # Loop through times
+        for _age in _tqdm(ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
+            # Load available data
+            self.data[_age] = utils_data.load_data(
+                self.data[_age],
+                self.settings.name,
+                _age,
+                "Points",
+                self.settings.cases,
+                self.settings.point_cases,
+                self.settings.dir_path,
+                PARALLEL_MODE=self.settings.PARALLEL_MODE,
+            )
+            
+            # Initialise missing data
+            for key, entries in self.settings.point_cases.items():
+                for entry in entries:
+                    if self.data[_age][entry] is not None:
+                        available_case = entry
+                        break
+                    else:
+                        available_case = None
+                
+                if available_case:
+                    for entry in entries:
+                        if entry is not available_case:
+                            self.data[_age][entry] = self.data[_age][available_case].copy()
+                else:
+                    if not resolved_geometries or key not in resolved_geometries.keys():
+                        resolved_geometries = {}
+                        resolved_geometries[_age] = utils_data.get_topology_geometries(
+                            self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
+                        )
 
-        # Get valid plateIDs
-        self.plateIDs = self.data[self.settings.ages[0]][self.settings.cases[0]].plateID.unique()
+                    # Initialise missing data
+                    self.data[_age][key] = utils_data.get_point_data(
+                        self.reconstruction,
+                        _age,
+                        resolved_geometries[_age], 
+                        self.settings.options[key],
+                    )
+
+                    # Copy data to other cases
+                    if len(entries) > 1:
+                        for entry in entries[1:]:
+                            self.data[_age][entry] = self.data[_age][key].copy()
+
+        print(self.data)
 
         # Calculate velocities at points
         self.calculate_velocities()
@@ -93,51 +125,45 @@ class Points:
         Function to compute velocities at points.
         """
         # Define ages if not provided
-        if ages is None:
-            ages = self.settings.ages
-        else:
-            if isinstance(ages, str):
-                ages = [ages]
-
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+        
         # Define cases if not provided
-        if cases is None:
-            cases = self.settings.cases
-
-        # Define stage rotation if not provided
-        if stage_rotation is None:
-            _stage_rotation = {}
+        _cases = utils_data.get_cases(cases, self.settings.point_cases)
 
         # Loop through ages and cases
-        for _age in ages:
-            # Get stage rotation, if not provided
-            if stage_rotation is None:
-                for plateID in self.plateIDs[self.mask[_age][cases[0]]]:
-                    _stage_rotation = self.reconstruction.rotation_model.get_rotation(
-                        to_time =_age,
-                        moving_plate_id = plateID,
-                        from_time=_age + self.settings.options["Velocity time step"],
-                        anchor_plate_id = self.settings.options["Anchor plateID"]
+        for _age in _ages:
+            for _case in _cases:
+                for plateID in self.data[_age][_case].plateID.unique():
+                    # Get stage rotation, if not provided
+                    if stage_rotation is None:
+                        _stage_rotation = self.reconstruction.rotation_model.get_rotation(
+                            to_time =_age,
+                            moving_plate_id = int(plateID),
+                            from_time=_age + self.settings.options[_case]["Velocity time step"],
+                            anchor_plate_id = self.settings.options[_case]["Anchor plateID"]
+                        ).get_lat_lon_euler_pole_and_angle_degrees()
+                    else:
+                        # Get stage rotation from the provided DataFrame in the dictionary
+                        _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
+
+                    # Make mask for plate
+                    mask = self.data[_age][_case].plateID == plateID
+                                            
+                    # Compute velocities
+                    velocities = utils_calc.compute_velocity(
+                        self.data[_age][_case].lat[mask],
+                        self.data[_age][_case].lon[mask],
+                        _stage_rotation[0],
+                        _stage_rotation[1],
+                        _stage_rotation[2],
+                        self.settings.constants,
                     )
-        
-            for _case in cases:
-                # Filter points
-                selected_points = self.data[_age][_case][self.mask[_age][_case]]
 
-                # Compute velocities
-                velocities = utils_calc.compute_velocity(
-                    selected_points.lat,
-                    selected_points.lon,
-                    _stage_rotation[0],
-                    _stage_rotation[1],
-                    _stage_rotation[2],
-                )
-
-                # Store velocities
-                self.data[_age][_case]["v_lat"] = velocities[0]
-                self.data[_age][_case]["v_lon"] = velocities[1]
-                self.data[_age][_case]["v_mag"] = velocities[2]
-                self.data[_age][_case]["v_azi"] = velocities[3]
-                self.data[_age][_case]["omega"] = velocities[4]
+                    # Store velocities
+                    self.data[_age][_case].loc[mask, f"v_lat"] = velocities[0]
+                    self.data[_age][_case].loc[mask, f"v_lon"] = velocities[1]
+                    self.data[_age][_case].loc[mask, f"v_mag"] = velocities[2]
+                    self.data[_age][_case].loc[mask, f"omega"] = velocities[3]
 
     def sample_points(
             self,

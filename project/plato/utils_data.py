@@ -26,7 +26,7 @@ import gplately as _gplately
 import pandas as _pandas
 import pygplates as _pygplates
 import xarray as _xarray
-from tqdm import tqdm
+from tqdm import tqdm as _tqdm
 
 # Local libraries
 from utils_calc import set_constants, mag_azi2lat_lon, project_points
@@ -36,17 +36,13 @@ from utils_calc import set_constants, mag_azi2lat_lon, project_points
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def load_data(
-        reconstruction: _gplately.PlateReconstruction,
+        data: dict,
         reconstruction_name: str,
-        ages: Union[list, _numpy.array],
+        age: Union[list, _numpy.array],
         type: str,
         all_cases: list,
-        all_options: dict,
         matching_case_dict: dict,
         files_dir: Optional[str] = None,
-        plate_data = None,
-        resolved_topologies = None,
-        resolved_geometries = None,
         PARALLEL_MODE: Optional[bool] = False,
     ):
     """
@@ -55,85 +51,60 @@ def load_data(
     :return:                      data
     :rtype:                       dict
     """
-    # Initialise dictionary to store data
-    data = {}
+    # Initialise list to store available and unavailable cases
+    unavailable_cases = all_cases.copy()
+    available_cases = []
 
-    # Loop through times
-    for _age in tqdm(ages, desc="Loading data", disable=logging.getLogger().isEnabledFor(logging.INFO)):
-        # Initialise dictionary to store data for age
-        data[_age] = {}
+    # If a file directory is provided, check for the existence of files
+    if files_dir:
+        for case in all_cases:
+            # Load DataFrame if found
+            data[case] = DataFrame_from_parquet(files_dir, type, reconstruction_name, case, age)
 
-        # Initialise list to store available and unavailable cases
-        unavailable_cases = all_cases.copy()
-        available_cases = []
+            if data[case] is not None:
+                unavailable_cases.remove(case)
+                available_cases.append(case)
+            else:
+                logging.info(f"DataFrame for {type} for {reconstruction_name} at {age} Ma for case {case} not found, checking for similar cases...")
 
-        # If a file directory is provided, check for the existence of files
-        if files_dir:
-            for case in all_cases:
-                # Load DataFrame if found
-                data[_age][case] = DataFrame_from_csv(files_dir, type, reconstruction_name, case, _age)
+    # Get available cases
+    for unavailable_case in unavailable_cases:
+        data[unavailable_case] = get_available_cases(data, unavailable_case, available_cases, matching_case_dict)
 
-                if data[_age][case] is not None:
-                    unavailable_cases.remove(case)
-                    available_cases.append(case)
-                else:
-                    logging.info(f"DataFrame for {type} for {reconstruction_name} at {_age} Ma for case {case} not found, checking for similar cases...")
-
-        # Copy dataframes for unavailable cases
-        for unavailable_case in unavailable_cases:
-            matching_key = None
-
-            # Find dictionary key of list in which unavailable case is located
-            for key, matching_cases in matching_case_dict.items():
-                for matching_case in matching_cases:
-                    if matching_case == unavailable_case:
-                        matching_key = key
-                        break
-                if matching_key:
-                    break
-
-            # Check if there is an available case in the corresponding list
-            for matching_case in matching_case_dict[matching_key]:
-                # Copy DataFrame if found
-                if matching_case in available_cases:
-                    data[_age][unavailable_case] = data[_age][matching_case].copy()
-                    break
-                
-                # Initialise new DataFrame if not found
-                if data[_age][unavailable_case] is None:
-                    # Let the user know you're busy
-                    logging.info(f"Initialising new DataFrame for {type} for {reconstruction_name} at {_age} Ma for case {unavailable_case}...")
-
-                    if type == "Plates":
-                        data[_age][unavailable_case] = get_plate_data(
-                            reconstruction.rotation_model,
-                            _age,
-                            resolved_topologies[_age],
-                            all_options[unavailable_case]
-                            )
-
-                    if type == "Slabs":
-                        data[_age][unavailable_case] = get_slab_data(
-                            reconstruction,
-                            _age,
-                            plate_data[_age][unavailable_case],
-                            resolved_geometries[_age],
-                            all_options[unavailable_case]
-                            )
-
-                    if type == "Points":
-                        data[_age][unavailable_case] = get_point_data(
-                            reconstruction, 
-                            _age, 
-                            plate_data[_age][unavailable_case], 
-                            resolved_geometries[_age], 
-                            all_options[unavailable_case]
-                            )
-
-            # Append case to available cases
+        if data[unavailable_case] is not None:
             available_cases.append(unavailable_case)
 
     return data
+
+def get_available_cases(data, unavailable_case, available_cases, matching_case_dict):
+    # Copy dataframes for unavailable cases
+    matching_key = None
+
+    # Find dictionary key of list in which unavailable case is located
+    for key, matching_cases in matching_case_dict.items():
+        for matching_case in matching_cases:
+            if matching_case == unavailable_case:
+                matching_key = key
+                break
+        if matching_key:
+            break
+
+    # Check if there is an available case in the corresponding list
+    for matching_case in matching_case_dict[matching_key]:
+        # Copy DataFrame if found
+        if matching_case in available_cases:
+            # Ensure that matching_case data is not None
+            if data[matching_case] is not None:
+                data[unavailable_case] = data[matching_case].copy()
+                return data[unavailable_case]
+            
+            else:
+                logging.info(f"Data for matching case '{matching_case}' is None; cannot copy to '{unavailable_case}'.")
+
+    # If no matching case is found, return None
+    data[unavailable_case] = None
+
+    return data[unavailable_case]
 
 def get_plate_data(
         rotations: _pygplates.RotationModel,
@@ -303,10 +274,9 @@ def get_slab_data(
         )
 
         # Initialise columns to store convergence rates
-        for type in ["upper", "lower", "convergence"]:
-            slabs[f"{type}_plate_convergence_lat"] = 0.
-            slabs[f"{type}_plate_convergence_lon"] = 0.
-            slabs[f"{type}_plate_convergence_mag"] = 0.
+        types = ["upper_plate", "lower_plate", "convergence"]
+        coords = ["lat", "lon", "mag"]
+        slabs[[f"{type}_v_{coord}" for type in types for coord in coords]] = [[0.] * len(coords) * len(types) for _ in range(len(slabs))]
 
         # Initialise other columns to store seafloor ages and forces
         # Upper plate
@@ -325,7 +295,7 @@ def get_slab_data(
         # Forces
         forces = ["slab_pull", "slab_bend", "residual"]
         coords = ["mag", "lat", "lon"]
-        slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0] * 9 for _ in range(len(slabs))]
+        slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(coords) * len(forces) for _ in range(len(slabs))]
         slabs["residual_force_azi"] = 0.
         slabs["residual_alignment"] = 0.
 
@@ -337,7 +307,6 @@ def get_slab_data(
 def get_point_data(
         reconstruction: _gplately.PlateReconstruction,
         age: int,
-        plates: _pandas.DataFrame,
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
         PARALLEL_MODE: Optional[bool] = False,
@@ -380,38 +349,6 @@ def get_point_data(
         PARALLEL_MODE=PARALLEL_MODE
     )
 
-    # Initialise empty array to store velocities
-    velocity_lat, velocity_lon = _numpy.zeros_like(lat_grid), _numpy.zeros_like(lat_grid)
-    velocity_mag, velocity_azi = _numpy.zeros_like(lat_grid), _numpy.zeros_like(lat_grid)
-
-    # Loop through plateIDs to get velocities
-    for plateID in _numpy.unique(plateIDs):
-        # Your code here
-        # Select all points with the same plateID
-        selected_lon, selected_lat = lon_grid[plateIDs == plateID], lat_grid[plateIDs == plateID]
-
-        # Get stage rotation for plateID
-        selected_plate = plates[plates.plateID == plateID]
-
-        if len(selected_plate) == 0:
-            stage_rotation = reconstruction.rotation_model.get_rotation(
-                to_time=age,
-                moving_plate_id=int(plateID),
-                from_time=age + options["Velocity time step"],
-                anchor_plate_id=options["Anchor plateID"]
-            ).get_lat_lon_euler_pole_and_angle_degrees()
-        else:
-            stage_rotation = (selected_plate.pole_lat.values[0], selected_plate.pole_lon.values[0], selected_plate.pole_angle.values[0])
-
-        # Get plate velocities
-        selected_velocities = get_velocities(selected_lat, selected_lon, stage_rotation)
-
-        # Store in array
-        velocity_lat[plateIDs == plateID] = selected_velocities[0]
-        velocity_lon[plateIDs == plateID] = selected_velocities[1]
-        velocity_mag[plateIDs == plateID] = selected_velocities[2]
-        velocity_azi[plateIDs == plateID] = selected_velocities[3]
-
     # Convert degree spacing to metre spacing
     segment_length_lat = constants.mean_Earth_radius_m * (_numpy.pi/180) * options["Grid spacing"]
     segment_length_lon = constants.mean_Earth_radius_m * (_numpy.pi/180) * _numpy.cos(_numpy.deg2rad(lat_grid)) * options["Grid spacing"]
@@ -422,22 +359,24 @@ def get_point_data(
                            "plateID": plateIDs, 
                            "segment_length_lat": segment_length_lat,
                            "segment_length_lon": segment_length_lon,
-                           "v_lat": velocity_lat, 
-                           "v_lon": velocity_lon,
-                           "v_mag": velocity_mag,
-                           "v_azi": velocity_azi,},
+                           },
                            dtype=float
                         )
 
-    # Add additional columns to store seafloor ages and forces
+    # Add additional columns to store velocities
+    components = ["v_lat", "v_lon", "v_mag", "v_azi", "omega"]
+    points[[component for component in components]] = [[0.] * len(components) for _ in range(len(points))]
+
+    # Add additional columns to store seafloor properties
     points["seafloor_age"] = 0
     points["lithospheric_thickness"] = 0
     points["crustal_thickness"] = 0
     points["water_depth"] = 0
     points["U"] = 0
+
+    # Add additional columns to store forces
     forces = ["GPE", "mantle_drag"]
     coords = ["lat", "lon", "mag"]
-
     points[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(forces) * len(coords) for _ in range(len(points))]
     
     return points
@@ -510,50 +449,55 @@ def get_globe_data(
 
 def get_resolved_topologies(
         reconstruction: _gplately.PlateReconstruction,
-        ages: _numpy.array,
+        ages: Union[int, float, _numpy.floating, _numpy.integer, List, _numpy.array],
         filename: Optional[str] = None,
-    ):
+    ) -> Dict:
     """
     Function to get resolved geometries for all ages.
     """
-    if not filename:
-        # Store resolved topologies in a file
-        _resolved_topologies = filename
-    else:
-        # Initialise dictionary to store resolved topologies
-        _resolved_topologies = {_age: [] for _age in ages}
+    if isinstance(ages, (int, float, _numpy.floating, _numpy.integer)):
+        ages = _numpy.array([ages])
+    elif isinstance(ages, list):
+        ages = _numpy.array(ages)
+
+    # Initialise dictionary to store resolved topologies
+    _resolved_topologies = {}
+
+    # Initialise dictionary to store resolved topologies
+    _resolved_topologies = {_age: [] for _age in ages}
 
     for _age in ages:
-        # Initialise list to store resolved topologies
-        if not filename:
+        if filename:
+            # Initialise list to store resolved topologies for each age
+            resolved_topologies = filename
+        else:
             resolved_topologies = []
 
-        # Resolve topologies
+        # Resolve topologies for the current age
         with warnings.catch_warnings():
-            # Ignore annoying warnings that the field names are laundered
+            # Ignore warnings about field name laundering
             warnings.filterwarnings(
                 action="ignore",
                 message="Normalized/laundered field name:"
             )
             _pygplates.resolve_topologies(
                 reconstruction.topology_features,
-                reconstruction.rotation_model, 
-                resolved_topologies, 
-                _age,  
+                reconstruction.rotation_model,
+                resolved_topologies,
+                _age,
                 anchor_plate_id=0
             )
-
-        if not filename:
-            _resolved_topologies[_age] = resolved_topologies
-
-    if not filename:
-        return _resolved_topologies
+        
+        # Store the resolved topologies for the current age
+        _resolved_topologies[_age] = resolved_topologies
+    
+    return _resolved_topologies
     
 def get_resolved_geometries(
         reconstruction: _gplately.PlateReconstruction,
         ages: _numpy.array,
         resolved_topologies: Optional[Dict] = None,
-    ):
+    ) -> Dict:
     """
     Function to obtain resolved geometries as GeoDataFrames for all ages.
 
@@ -632,11 +576,10 @@ def process_plateIDs(
 def get_plateIDs(
         reconstruction: _gplately.PlateReconstruction,
         topology_geometries: _geopandas.GeoDataFrame,
-        lats: Union[list or _numpy.array],
-        lons: Union[list or _numpy.array],
-        _age: int,
+        lats: Union[List, _numpy.array],
+        lons: Union[List, _numpy.array],
+        age: int,
         PARALLEL_MODE: Optional[bool] = False,
-        num_workers: Optional[int] = None,
     ):
     """
     Function to get plate IDs for a set of latitudes and longitudes.
@@ -658,13 +601,13 @@ def get_plateIDs(
     # Convert lats and lons to numpy arrays if they are not already
     lats = _numpy.asarray(lats)
     lons = _numpy.asarray(lons)
-
+    
     # Extract geometry data
     geometries_data = extract_geometry_data(topology_geometries)
 
     # Get plateIDs for the entire dataset
     plateIDs = process_plateIDs(geometries_data, lats, lons)
-
+    
     # Use vectorised operations to find and assign plate IDs for remaining points
     no_plateID_mask = plateIDs == 0
     if no_plateID_mask.any():
@@ -672,17 +615,17 @@ def get_plateIDs(
             reconstruction,
             lons[no_plateID_mask],
             lats[no_plateID_mask],
-            time=_age
+            time=int(age),
         )
         plateIDs[no_plateID_mask] = no_plateID_grid.plate_id
 
     return plateIDs
 
 def get_velocities(
-        lats: Union[list or _numpy.array],
-        lons: Union[list or _numpy.array],
+        lats: Union[List, _numpy.array],
+        lons: Union[List, _numpy.array],
         stage_rotation: tuple,
-    ):
+    ) -> Tuple[_numpy.array, _numpy.array, _numpy.array, _numpy.array]:
     """
     Function to get velocities for a set of latitudes and longitudes.
     NOTE: This function is not vectorised yet, but has not been a bottleneck in the code so far.
@@ -735,7 +678,7 @@ def get_velocities(
 
 def get_topology_geometries(
         reconstruction: _gplately.PlateReconstruction,
-        _age: int,
+        age: int,
         anchor_plateID: int
     ):
     """
@@ -764,7 +707,7 @@ def get_topology_geometries(
             reconstruction.topology_features, 
             reconstruction.rotation_model, 
             topology_file, 
-            _age, 
+            int(age), 
             anchor_plate_id=anchor_plateID
         )
         if _os.path.exists(topology_file):

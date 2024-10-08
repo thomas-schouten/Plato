@@ -1,72 +1,115 @@
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PLATO
-# Algorithm to calculate plate forces from tectonic reconstructions
-# Thomas Schouten, 2024
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+import logging
+from typing import Dict, List, Optional, Union
 
-# Import libraries
-# Standard libraries
-import os
-import multiprocessing
-import sys
-import warnings
-from typing import List, Optional, Union
-from copy import deepcopy
-
-# Third-party libraries
-import numpy as _numpy
-import matplotlib.pyplot as plt
-import geopandas as _geopandas
 import gplately as _gplately
-import pandas as _pandas
-from gplately import pygplates as _pygplates
-import cartopy.crs as ccrs
-import cmcrameri as cmc
-from tqdm import tqdm
+import numpy as _numpy
 import xarray as _xarray
+from tqdm import tqdm as _tqdm
 
-# Local libraries
-import utils_calc, utils_data, utils_init
+import utils_data, utils_calc, utils_init
 from settings import Settings
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# SLABS OBJECT
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class Slabs:
     def __init__(
             self,
-            settings: Optional['Settings'] = None,
-            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            settings: Optional[Union[None, Settings]]= None,
+            reconstruction: Optional[_gplately.PlateReconstruction]= None,
+            rotation_file: Optional[str]= None,
+            topology_file: Optional[str]= None,
+            polygon_file: Optional[str]= None,
+            reconstruction_name: Optional[str] = None,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plates_data: Optional[dict] = None,
-            files_dir: Optional[str] = None,
+            cases_file: Optional[list[str]]= None,
+            cases_sheet: Optional[str]= "Sheet1",
+            files_dir: Optional[str]= None,
+            resolved_geometries: Optional[Dict] = None,
+            PARALLEL_MODE: Optional[bool] = False,
+            DEBUG_MODE: Optional[bool] = False,
         ):
         """
-        Slabs object. Contains all information on slabs
-        """
-        # Get the slab data
-        self.data = {}
+        Class to store and manipulate point data.
 
-        # Load or initialise slabs
-        self.data = utils_data.load_data(
-            self.data,
-            self.reconstruction,
-            self.settings.name,
-            self.settings.ages,
-            "Slabs",
-            self.settings.cases,
-            self.settings.options,
-            self.settings.slab_cases,
+        :param settings: Simulation parameters.
+        :type settings: Settings object
+        :param reconstruction: Plate reconstruction.
+        :type reconstruction: Reconstruction object
+        :param plates: Optional dictionary of plate data (default: None).
+        :type plates: Optional[Dict]
+        :param data: Optional dictionary of point data structured by age and case (default: None).
+        :type data: Optional[Dict]
+        """
+        # Store settings object
+        self.settings = utils_init.get_settings(
+            settings, 
+            ages, 
+            cases_file,
+            cases_sheet,
             files_dir,
-            plates = self.plates.data,
-            resolved_geometries = self.plates.resolved_geometries,
-            DEBUG_MODE = self.settings.DEBUG_MODE,
-            PARALLEL_MODE = self.settings.PARALLEL_MODE,
+        )
+            
+        # Store reconstruction object
+        self.reconstruction = utils_init.get_reconstruction(
+            reconstruction,
+            rotation_file,
+            topology_file,
+            polygon_file,
+            reconstruction_name,
         )
 
-        # Calculate total slab length as a function of age and slab tessellation spacing
+        # Initialise data dictionary
+        self.data = {age: {} for age in self.settings.ages}
+
+        # Loop through times
+        for _age in _tqdm(ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
+            # Load available data
+            self.data[_age] = utils_data.load_data(
+                self.data[_age],
+                self.settings.name,
+                _age,
+                "Slabs",
+                self.settings.cases,
+                self.settings.point_cases,
+                self.settings.dir_path,
+                PARALLEL_MODE=self.settings.PARALLEL_MODE,
+            )
+
+            # Initialise missing data
+            for key, entries in self.settings.slab_cases.items():
+                for entry in entries:
+                    if self.data[_age][entry] is not None:
+                        available_case = entry
+                        break
+                    else:
+                        available_case = None
+                
+                if available_case:
+                    for entry in entries:
+                        if entry is not available_case:
+                            self.data[_age][entry] = self.data[_age][available_case].copy()
+                else:
+                    if not resolved_geometries or key not in resolved_geometries.keys():
+                        resolved_geometries = {}
+                        resolved_geometries[_age] = utils_data.get_topology_geometries(
+                            self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
+                        )
+
+                    # Initialise missing data
+                    self.data[_age][key] = utils_data.get_slab_data(
+                        self.reconstruction,
+                        _age,
+                        resolved_geometries[_age], 
+                        self.settings.options[key],
+                    )
+
+                    # Copy data to other cases
+                    if len(entries) > 1:
+                        for entry in entries[1:]:
+                            self.data[_age][entry] = self.data[_age][key].copy()
+
+        # Calculate velocities at points
+        self.calculate_velocities()
+
+        # Calculate total slab length as a function of age and case
         self.total_slab_length = _numpy.zeros((len(self.settings.ages), len(self.settings.slab_pull_cases)))
         for i, _age in enumerate(self.settings.ages):
             for j, _case in enumerate(self.settings.slab_pull_cases):
@@ -75,6 +118,57 @@ class Slabs:
         # Set flag for sampling slabs and upper plates
         self.sampled_slabs = False
         self.sampled_upper_plates = False
+
+    def calculate_velocities(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            stage_rotation: Optional[Dict] = None,
+        ):
+        """
+        Function to compute velocities at slabs.
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+
+        # Loop through ages and cases
+        for _age in _ages:
+            for plate in ["upper", "lower", "trench"]:
+                for _case in _cases:
+                    for plateID in self.data[_age][_case][f"{plate}_plateID"].unique():
+                        # Get stage rotation, if not provided
+                        if stage_rotation is None:
+                            _stage_rotation = self.reconstruction.rotation_model.get_rotation(
+                                to_time =_age,
+                                moving_plate_id = int(plateID),
+                                from_time=_age + self.settings.options[_case]["Velocity time step"],
+                                anchor_plate_id = self.settings.options[_case]["Anchor plateID"]
+                            ).get_lat_lon_euler_pole_and_angle_degrees()
+                        else:
+                            # Get stage rotation from the provided DataFrame in the dictionary
+                            _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
+                                        
+                        # Make mask for plate
+                        mask = self.data[_age][_case][f"{plate}_plateID"] == plateID
+                                                
+                        # Compute velocities
+                        velocities = utils_calc.compute_velocity(
+                            self.data[_age][_case].lat[mask],
+                            self.data[_age][_case].lon[mask],
+                            _stage_rotation[0],
+                            _stage_rotation[1],
+                            _stage_rotation[2],
+                            self.settings.constants,
+                        )
+
+                        # Store velocities
+                        self.data[_age][_case].loc[mask, f"v_{plate}_lat"] = velocities[0]
+                        self.data[_age][_case].loc[mask, f"v_{plate}_lon"] = velocities[1]
+                        self.data[_age][_case].loc[mask, f"v_{plate}_mag"] = velocities[2]
+                        self.data[_age][_case].loc[mask, f"omega_{plate}"] = velocities[3]
 
     def sample_slabs(
             self,

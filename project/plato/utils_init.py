@@ -69,14 +69,14 @@ def get_reconstruction(
     logging.info("Setting up plate reconstruction...")
 
     # If a reconstruction object is provided, return it
-    if reconstruction:
+    if reconstruction and reconstruction.static_polygons is not None:
         return reconstruction
 
     # Establish a connection to gplately DataServer if any file is missing
     gdownload = None
     if not rotation_file or not topology_file or not polygon_file:
         gdownload = _gplately.DataServer(name)
-
+    
     # Download reconstruction files if any are missing
     if not rotation_file or not topology_file or not polygon_file:
         valid_reconstructions = [

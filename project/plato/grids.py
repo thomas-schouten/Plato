@@ -29,7 +29,7 @@ class Grids():
             self.seafloor = {}
 
             # Load or initialise seafloor
-            self.seafloor = setup.load_grid(
+            self.seafloor = utils_data.load_grid(
                 self.seafloor,
                 self.settings.name,
                 self.settings.ages,

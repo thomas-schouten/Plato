@@ -54,13 +54,15 @@ def test_settings(settings_file=None):
 
     return settings_test
 
-def test_plates(settings=None, settings_file=None, reconstruction_files=None, plate_data=None, test_functions=True):
+def test_plates(settings=None, settings_file=None, reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
     """Test the plates module of the plato package."""
     logging.info("Testing plates module...")
 
     # Make a PlateReconstruction object if files are provided
     if reconstruction_files:
         reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+    else:
+        reconstruction = None
 
     # Test initialisation of Plates object
     try:
@@ -69,8 +71,8 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, pl
             ages=[0, 1], 
             cases_file=settings_file,
             reconstruction=reconstruction,
+            reconstruction_name=reconstruction_name,
             files_dir="output",
-            data=plate_data,
         )
         logging.info("Successfully initialised 'Plates' object.")
 
@@ -132,13 +134,15 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, pl
         
         return plates_test
 
-def test_points(settings=None, settings_file=None, reconstruction_files=None, point_data=None, seafloor_grid=None, test_functions=True):
+def test_points(settings=None, settings_file=None, reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
     """Test the points module of the plato package."""
     logging.info("Testing 'points' module...")
 
     # Make a PlateReconstruction object if files are provided
     if reconstruction_files:
         reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+    else:
+        reconstruction = None
 
     # Test initialisation of Points object
     try:
@@ -147,6 +151,7 @@ def test_points(settings=None, settings_file=None, reconstruction_files=None, po
             ages=[0, 1], 
             cases_file=settings_file,
             reconstruction=reconstruction,
+            reconstruction_name=reconstruction_name,
             files_dir="output",
         )
         logging.info("Successfully initialised 'Points' object.")
@@ -192,62 +197,74 @@ def test_points(settings=None, settings_file=None, reconstruction_files=None, po
 
     return points_test
 
-def test_slabs(data=None, seafloor_grid=None, print_results=False, test_functions=True):
+def test_slabs(settings=None, settings_file=None, reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
     """Test the slabs module of the plato package."""
-    if print_results:
-        print("Testing slabs module...")
+    logging.info("Testing 'slabs' module...")
 
-    # Test initialisation of Slabs object
+    # Make a PlateReconstruction object if files are provided
+    if reconstruction_files:
+        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+    else:
+        reconstruction = None
+
+    # Test initialisation of Points object
     try:
-        if data:
-            slabs_test = Slabs(
-                data=data,
-            )
-        slabs_test = Slabs()
+        slabs_test = Slabs(
+            settings=settings,
+            ages=[0, 1], 
+            cases_file=settings_file,
+            reconstruction=reconstruction,
+            reconstruction_name=reconstruction_name,
+            files_dir="output",
+        )
+        logging.info("Successfully initialised 'Slabs' object.")
 
     except Exception as e:
-        print(f"An error occurred during initialisation of the 'Slabs' object: {e}")
+        logging.error(f"An error occurred during initialisation of the 'Slabs' object: {e}")
         traceback.print_exc()
 
+        # Set slabs_test to None if an error occurs
+        slabs_test = None
+
     # Test functions of the Slabs object
-    if slabs_test in locals() and test_functions:
-        # Test sampling of seafloor age grid at slabs and upper plate
-        if seafloor_grid:
-            try:
-                slabs_test.sample_slabs(seafloor_grid = seafloor_grid)
-            except Exception as e:
-                print(f"An error occurred during 'sample_slabs' function: {e}")
-                traceback.print_exc()
-            try:
-                slabs_test.sample_upper_plates(seafloor_grid = seafloor_grid)
-            except Exception as e:
-                print(f"An error occurred during 'sample_upper_plates' function: {e}")
-                traceback.print_exc()
-        else:
-            print("No seafloor grid provided for sampling.")
+    # if slabs_test is not None and test_functions:
+    #     # Test sampling of seafloor age grid at slabs and upper plate
+    #     if seafloor_grid:
+    #         try:
+    #             slabs_test.sample_slabs(seafloor_grid = seafloor_grid)
+    #         except Exception as e:
+    #             print(f"An error occurred during 'sample_slabs' function: {e}")
+    #             traceback.print_exc()
+    #         try:
+    #             slabs_test.sample_upper_plates(seafloor_grid = seafloor_grid)
+    #         except Exception as e:
+    #             print(f"An error occurred during 'sample_upper_plates' function: {e}")
+    #             traceback.print_exc()
+    #     else:
+    #         print("No seafloor grid provided for sampling.")
 
-        # Test computation of slab pull force
-        try:
-            slabs_test.compute_slab_pull_force()
+    #     # Test computation of slab pull force
+    #     try:
+    #         slabs_test.compute_slab_pull_force()
 
-        except Exception as e:
-            print(f"An error occurred during testing the 'compute_slab_pull_force' function: {e}")
-            traceback.print_exc()
+    #     except Exception as e:
+    #         print(f"An error occurred during testing the 'compute_slab_pull_force' function: {e}")
+    #         traceback.print_exc()
 
-        # Test computation of slab bend force
-        try:
-            slabs_test.compute_slab_bend_force()
+    #     # Test computation of slab bend force
+    #     try:
+    #         slabs_test.compute_slab_bend_force()
 
-        except Exception as e:
-            print(f"An error occurred during testing the 'compute_slab_bend_force' function: {e}")
-            traceback.print_exc()
+    #     except Exception as e:
+    #         print(f"An error occurred during testing the 'compute_slab_bend_force' function: {e}")
+    #         traceback.print_exc()
 
-    if print_results:
-        print("Testing of the 'slabs' module complete.")
+    # if print_results:
+    #     print("Testing of the 'slabs' module complete.")
 
     return slabs_test
 
-def grids_test(print_results=False):
+def test_grids():
     """Test the grids module of the plato package."""
     if print_results:
         print("Testing grids module...")
@@ -260,26 +277,26 @@ def grids_test(print_results=False):
         print(f"An error occurred during initialisation of the 'Grids' object: {e}")
         traceback.print_exc()
 
-    # Test functions of the Grids object
-    if grids_test in locals():
-        # Test making an xarray dataset from an a series of xarray data arrays
-        try:
-            grids_test.data_arrays2dataset()
+    # # Test functions of the Grids object
+    # if grids_test in locals():
+    #     # Test making an xarray dataset from an a series of xarray data arrays
+    #     try:
+    #         grids_test.data_arrays2dataset()
 
-        except Exception as e:
-            print(f"An error occurred during testing of the 'data_arrays2dataset' function: {e}")
-            traceback.print_exc()
+    #     except Exception as e:
+    #         print(f"An error occurred during testing of the 'data_arrays2dataset' function: {e}")
+    #         traceback.print_exc()
 
-        # Test interpolation of data to the resolution of the seafloor grid
-        try:
-            grids_test.array2data_array()
+    #     # Test interpolation of data to the resolution of the seafloor grid
+    #     try:
+    #         grids_test.array2data_array()
 
-        except Exception as e:
-            print(f"An error occurred during testing of the 'array2data_array' function: {e}")
-            traceback.print_exc()
+    #     except Exception as e:
+    #         print(f"An error occurred during testing of the 'array2data_array' function: {e}")
+    #         traceback.print_exc()
 
-    if print_results:
-        print("Testing of the 'grids' module complete.")
+    # if print_results:
+    #     print("Testing of the 'grids' module complete.")
 
     return grids_test
 

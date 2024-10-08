@@ -10,7 +10,7 @@ from typing import List, Optional
 
 import numpy as _numpy
 
-import utils_data
+import utils_data, utils_calc
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SETTINGS OBJECT
@@ -103,6 +103,10 @@ class Settings:
         self.slab_bend_cases = self.process_cases(["Slab bend torque", "Seafloor age profile"])
         self.gpe_cases = self.process_cases(["Continental crust", "Seafloor age profile", "Grid spacing"])
         self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing"])
+
+        # Store constants and mechanical parameters
+        self.constants = utils_calc.set_constants()
+        self.mech = utils_calc.set_mech_params()
 
         logging.info("Settings initialisation complete.")
 

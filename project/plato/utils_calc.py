@@ -637,12 +637,11 @@ def compute_mantle_drag_force(plates, points, slabs, options, mech, constants, D
 def compute_velocity(
         lats: _numpy.array,
         lons: _numpy.array,
-        plateIDs: Union[List, _numpy.array],
         pole_lon: Union[List, _numpy.array],
         pole_lat: Union[List, _numpy.array],
         pole_angle: Union[List, _numpy.array],
         constants
-        ):
+    ):
     """
     Function to compute lat, lon, magnitude and azimuth of velocity at a set of locations from a Cartesian torque vector.
 
@@ -664,38 +663,34 @@ def compute_velocity(
     v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
     omegas = _numpy.zeros_like(lats)
 
+    # Organise velocity vector
+    euler_pole = spherical2cartesian(pole_lat, pole_lon, pole_angle)
+
     # Loop through points
     for i, (lat, lon) in enumerate(zip(lats, lons)):
-        # Calculate the velocity of the lower plate as the cross product of the torque and the unit position vector
-        point_velocity = vector_xyz2lat_lon(
-            [lat],
-            [lon],
-            _numpy.asarray(
-                [_numpy.cross(
-                velocity_xyz, spherical2cartesian(
-                    lat, lon, _numpy.linalg.norm(velocity_xyz)
-                    ),
-                axis=0
-                )]
-            ).T,
-            _numpy.linalg.norm(velocity_xyz),
-        )
+        # Convert spherical to cartesian coordinates
+        position_xyz = spherical2cartesian(lat, lon, constants.mean_Earth_radius_m)
+
+        # Calculate the velocity as the cross product of the position and the torque
+        velocity_xyz = _numpy.cross(euler_pole, position_xyz, axis=0)
+
+        # Convert to spherical coordinates
+        velocity_sph = cartesian2spherical_azimuth(velocity_xyz[0], velocity_xyz[1], velocity_xyz[2])
 
         # Assign the velocity to the respective columns in the points DataFrame
-        v_lats[i] = point_velocity[0][0]
-        v_lons[i] = point_velocity[1][0]
-        v_mags[i] = point_velocity[2][0]
-        v_azis[i] = point_velocity[3][0]
+        v_lats[i] = velocity_sph[0]
+        v_lons[i] = velocity_sph[1]
+        v_mags[i] = velocity_sph[2]
+        v_azis[i] = velocity_sph[3]
 
         # Calculate the spin rate as the dot product of the velocity and the unit position vector
-        point_spin_rate = _numpy.dot(
-            spherical2cartesian(lat, lon, constants).T,
-            velocity_xyz / constants.mean_Earth_radius_m
+        spin_rate = _numpy.dot(
+            _numpy.asarray(spherical2cartesian(lat, lon, 1)).T,
+            euler_pole
         )
 
         # Assign the spin rate to the respective columns in the points DataFrame
-        omegas[i] = point_spin_rate
-        # Check if upper plate is in torques
+        omegas[i] = spin_rate
         
     # Convert to cm/a
     v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
@@ -1133,7 +1128,7 @@ def cartesian2spherical_azimuth(x, y, z):
     :rtype:             tuple (float, float, float, float)
     """
     # Calculate magnitude
-    mag = _numpy.sqrt(x**2 + y**2 + z**2)
+    mag = _numpy.linalg.norm([x, y, z])
     
     # Calculate latitude
     lat_rads = _numpy.arcsin(z / mag)

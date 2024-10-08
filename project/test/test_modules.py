@@ -17,12 +17,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Test configurations
 TEST_CONFIGS = {
     "TEST_SETTINGS": False,
-    "TEST_LOCAL_FILES": True,
+    "TEST_LOCAL_FILES": False,
     "TEST_FUNCTIONS": False,
     "TEST_PLATES": False,
-    "TEST_POINTS": True,
+    "TEST_POINTS": False,
     "TEST_SLABS": False,
-    "TEST_GRIDS": False,
+    "TEST_GRIDS": True,
     "TEST_GLOBE": False,
     "TEST_PLATE_TORQUES": False,
 }
@@ -37,6 +37,14 @@ reconstruction_files = (
     os.path.join("data", "Global_EarthByte_230-0Ma_GK07_AREPS_Polygons.gpml"),
     os.path.join("data", "Global_EarthByte_230-0Ma_GK07_AREPS_Coastlines.gpml"),
 )
+
+# Define test ages
+test_ages = [0, 50]
+
+# Define seafloor files
+seafloor_files = {}
+for age in test_ages:
+    seafloor_files[age] = os.path.join("data", f"age_{age}.nc")
 
 def run_tests():
     """Run all specified tests based on the TEST_CONFIGS dictionary."""
@@ -78,9 +86,9 @@ def run_tests():
     # Test Grids
     if TEST_CONFIGS["TEST_GRIDS"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_grids(settings_file=settings_file, reconstruction_files=reconstruction_files, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_grids(seafloor_files=seafloor_files, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
-            functions_test.test_grids(settings_file=settings_file, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_grids(test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 
     # Test Plate Torques
     if TEST_CONFIGS["TEST_PLATE_TORQUES"]:
