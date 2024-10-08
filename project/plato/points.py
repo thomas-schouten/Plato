@@ -73,18 +73,21 @@ class Points:
             )
             
             # Initialise missing data
+            available_case = None
             for key, entries in self.settings.point_cases.items():
-                for entry in entries:
-                    if self.data[_age][entry] is not None:
-                        available_case = entry
-                        break
-                    else:
-                        available_case = None
-                
+                if len(entries) > 1:
+                    for entry in entries:
+                        if self.data[_age][entry] is not None:
+                            available_case = entry
+                            break
+
+                # If data is available, copy to other cases    
                 if available_case:
                     for entry in entries:
                         if entry is not available_case:
                             self.data[_age][entry] = self.data[_age][available_case].copy()
+
+                # If no data is available, initialise new data
                 else:
                     if not resolved_geometries or key not in resolved_geometries.keys():
                         resolved_geometries = {}
@@ -104,8 +107,6 @@ class Points:
                     if len(entries) > 1:
                         for entry in entries[1:]:
                             self.data[_age][entry] = self.data[_age][key].copy()
-
-        print(self.data)
 
         # Calculate velocities at points
         self.calculate_velocities()

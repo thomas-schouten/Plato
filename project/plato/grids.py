@@ -9,6 +9,8 @@ class Grids():
     def __init__(
             self,
             settings,
+            reconstruction_name: Optional[str] = None,
+            cases_file: Optional[str] = None,
             seafloor_grids: Optional[dict] = None,
             continental_grids: Optional[dict] = None,
             velocity_grids: Optional[dict] = None

@@ -41,10 +41,10 @@ reconstruction_files = (
 # Define test ages
 test_ages = [0, 50]
 
-# Define seafloor files
-seafloor_files = {}
-for age in test_ages:
-    seafloor_files[age] = os.path.join("data", f"age_{age}.nc")
+# # Define seafloor files
+# seafloor_files = {}
+# for age in test_ages:
+#     seafloor_files[age] = os.path.join("data", f"age_{age}.nc")
 
 def run_tests():
     """Run all specified tests based on the TEST_CONFIGS dictionary."""

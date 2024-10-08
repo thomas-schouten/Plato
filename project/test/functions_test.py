@@ -30,7 +30,7 @@ from globe import Globe
 from optimisation import Optimisation
 from plot import Plot
 
-def test_settings(settings_file=None):
+def test_settings(settings_file=None, test_ages=[0]):
     """Test the settings module of the plato package."""
     logging.info("Testing settings module...")
     
@@ -38,7 +38,7 @@ def test_settings(settings_file=None):
     try:
         settings_test = Settings(
             name="test",
-            ages=[0, 1],
+            ages=test_ages,
             cases_file=settings_file,
             files_dir="output",
             PARALLEL_MODE=False,
@@ -54,7 +54,7 @@ def test_settings(settings_file=None):
 
     return settings_test
 
-def test_plates(settings=None, settings_file=None, reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
+def test_plates(settings=None, settings_file=None, test_ages=[0], reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
     """Test the plates module of the plato package."""
     logging.info("Testing plates module...")
 
@@ -68,7 +68,7 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, re
     try:
         plates_test = Plates(
             settings=settings,
-            ages=[0, 1], 
+            ages=test_ages, 
             cases_file=settings_file,
             reconstruction=reconstruction,
             reconstruction_name=reconstruction_name,
@@ -134,7 +134,7 @@ def test_plates(settings=None, settings_file=None, reconstruction_files=None, re
         
         return plates_test
 
-def test_points(settings=None, settings_file=None, reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
+def test_points(settings=None, settings_file=None, test_ages=[0], reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
     """Test the points module of the plato package."""
     logging.info("Testing 'points' module...")
 
@@ -148,7 +148,7 @@ def test_points(settings=None, settings_file=None, reconstruction_files=None, re
     try:
         points_test = Points(
             settings=settings,
-            ages=[0, 1], 
+            ages=test_ages, 
             cases_file=settings_file,
             reconstruction=reconstruction,
             reconstruction_name=reconstruction_name,
@@ -197,7 +197,7 @@ def test_points(settings=None, settings_file=None, reconstruction_files=None, re
 
     return points_test
 
-def test_slabs(settings=None, settings_file=None, reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
+def test_slabs(settings=None, settings_file=None, test_ages=[0], reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
     """Test the slabs module of the plato package."""
     logging.info("Testing 'slabs' module...")
 
@@ -211,7 +211,7 @@ def test_slabs(settings=None, settings_file=None, reconstruction_files=None, rec
     try:
         slabs_test = Slabs(
             settings=settings,
-            ages=[0, 1], 
+            ages=test_ages, 
             cases_file=settings_file,
             reconstruction=reconstruction,
             reconstruction_name=reconstruction_name,
@@ -264,14 +264,22 @@ def test_slabs(settings=None, settings_file=None, reconstruction_files=None, rec
 
     return slabs_test
 
-def test_grids():
-    """Test the grids module of the plato package."""
-    if print_results:
-        print("Testing grids module...")
+def test_grids(settings=None, settings_file=None, test_ages=[0], seafloor_grids=None, continental_grids=None, velocity_grids=None, test_functions=True):
+    """Test the slabs module of the plato package."""
+    logging.info("Testing 'slabs' module...")
 
+    # Get settings
+    if settings is None:
+        settings = test_settings(settings_file=settings_file, test_ages=test_ages)
     # Test initialisation of Grids object
     try:
-        grids_test = Grids()
+        grids_test = Grids(
+            settings=settings,
+            cases_file=settings_file,
+            seafloor_grids=seafloor_grids,
+            continental_grids=continental_grids,
+            velocity_grids=velocity_grids
+        )
         
     except Exception as e:
         print(f"An error occurred during initialisation of the 'Grids' object: {e}")
