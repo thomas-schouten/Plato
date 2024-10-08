@@ -1,19 +1,32 @@
+import logging
 from typing import Optional, Union
 
 import numpy as _numpy
+import gplately as _gplately
 import xarray as _xarray
+from tqdm import tqdm as _tqdm
 
-import utils_data
+import utils_data, utils_init
+from settings import Settings
 
 class Grids():
     def __init__(
             self,
-            settings,
-            reconstruction_name: Optional[str] = None,
+            settings: Optional['Settings'] = None,
             cases_file: Optional[str] = None,
+            cases_sheet: Optional[str] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            reconstruction_name: Optional[str] = None,
+            rotation_file: Optional[str] = None,
+            topology_file: Optional[str] = None,
+            polygon_file: Optional[str] = None,
+            ages: Optional[list] = None,
+            files_dir: Optional[str] = None,
             seafloor_grids: Optional[dict] = None,
             continental_grids: Optional[dict] = None,
-            velocity_grids: Optional[dict] = None
+            velocity_grids: Optional[dict] = None,
+            DEBUG_MODE: Optional[bool] = False,
+            PARALLEL_MODE: Optional[bool] = False,
         ):
         """
         Object to hold gridded data.
@@ -21,8 +34,25 @@ class Grids():
         Continental grids contain lithospheric thickness and, optionally, crustal thickness.
         Velocity grids contain plate velocity data.
         """
-        # Store the settings
-        self.settings = settings
+        # Store settings object
+        self.settings = utils_init.get_settings(
+            settings, 
+            ages, 
+            cases_file,
+            cases_sheet,
+            files_dir,
+            PARALLEL_MODE = PARALLEL_MODE,
+            DEBUG_MODE = DEBUG_MODE,
+        )
+            
+        # Store reconstruction object
+        self.reconstruction = utils_init.get_reconstruction(
+            reconstruction,
+            rotation_file,
+            topology_file,
+            polygon_file,
+            reconstruction_name,
+        )
 
         # Store seafloor grid
         if seafloor_grids:
@@ -33,7 +63,7 @@ class Grids():
             # Load or initialise seafloor
             self.seafloor = utils_data.load_grid(
                 self.seafloor,
-                self.settings.name,
+                reconstruction_name,
                 self.settings.ages,
                 "Seafloor",
                 self.settings.dir_path,

@@ -151,7 +151,7 @@ class Plates:
 
     def calculate_rms_velocity(
             self,
-            point_data: Optional[Dict] = None,
+            point_data: Dict,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
         ):
@@ -166,18 +166,9 @@ class Plates:
 
         # Check if no points are passed, initialise Points object
         if point_data is None:
-            logging.info("No points data provided, initialising Points object.")
-            return
+            raise ValueError("No points data provided, initialising Points object.")
         
-            # points = Points(
-            #     self.settings,
-            #     self.reconstruction,
-            #     ages,
-            #     plate_data = self.data,
-            #     resolved_geometries = self.resolved_geometries,
-            # )
-
-            # point_data = points.data
+        # TODO: Implement automatic initialisation of a Points object
         
         # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
         _iterable = utils_data.get_iterable(
@@ -185,33 +176,30 @@ class Plates:
             self.settings.gpe_cases,
         )
 
-        for _age in _ages:
-            # Calculate rms velocity
-            for key, entries in _iterable.items():
-                print(self.data)
-                if self.data[_age][key]["v_rms_mag"].mean() == 0:
-                    self.data[_age][key] = utils_calc.compute_rms_velocity(
-                        self.data[_age][key],
-                        point_data[_age][key]
-                    )
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Calculating RMS velocities"):
+            # Check if age in point data
+            if _age in point_data.keys():
+                # Loop through cases
+                for key, entries in _iterable.items():
+                    # Check if case in point data
+                    if key in point_data[_age].keys():
+                        if self.data[_age][key]["v_rms_mag"].mean() == 0:
+                            self.data[_age][key] = utils_calc.compute_rms_velocity(
+                                self.data[_age][key],
+                                point_data[_age][key]
+                            )
 
-                self.data[_age] = utils_calc.copy_values(
-                    self.data[_age], 
-                    key, 
-                    entries, 
-                    ["v_rms_mag", "v_rms_azi", "omega_rms"], 
-                )
-            
-                # Copy DataFrames to other cases
-                for entry in entries[1:]:
-                    if self.data[_age][entry]["v_rms_mag"].mean() == 0:
-                        self.data[_age][entry]["v_rms_mag"] = self.data[_age][key]["v_rms_mag"]
-
-                    if self.data[_age][entry]["v_rms_azi"].mean() == 0:
-                        self.data[_age][entry]["v_rms_azi"] = self.data[_age][key]["v_rms_azi"]
-
-                    if self.data[_age][entry]["omega_rms"].mean() == 0:
-                        self.data[_age][entry]["omega_rms"] = self.data[_age][key]["omega_rms"]
+                        self.data[_age] = utils_calc.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries, 
+                            ["v_rms_mag", "v_rms_azi", "omega_rms"], 
+                        )
+                    else:
+                        logging.error(f"No point data available for {key} at {_age} Ma, no RMS velocity calculated.")
+            else:
+                logging.error(f"No point data available for {_age} Ma, no RMS velocity calculated.")
 
     def optimise_torques(
             self,

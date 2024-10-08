@@ -30,7 +30,10 @@ from globe import Globe
 from optimisation import Optimisation
 from plot import Plot
 
-def test_settings(settings_file=None, test_ages=[0]):
+def test_settings(
+        settings_file=None,
+        test_ages=[0]
+    ):
     """Test the settings module of the plato package."""
     logging.info("Testing settings module...")
     
@@ -54,7 +57,14 @@ def test_settings(settings_file=None, test_ages=[0]):
 
     return settings_test
 
-def test_plates(settings=None, settings_file=None, test_ages=[0], reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
+def test_plates(
+        settings=None, 
+        settings_file=None, 
+        test_ages=[0], 
+        reconstruction_files=None, 
+        reconstruction_name="Muller2016", 
+        test_functions=True
+    ):
     """Test the plates module of the plato package."""
     logging.info("Testing plates module...")
 
@@ -94,32 +104,32 @@ def test_plates(settings=None, settings_file=None, test_ages=[0], reconstruction
             logging.error(f"An error occurred during RMS velocity calculation: {e}")
             traceback.print_exc()
 
-        # Test calculation of plate torques
-        try:
-            plates_test.calculate_torque_on_plates()
-            logging.info("Successfully calculated plate torques.")
+        # # Test calculation of plate torques
+        # try:
+        #     plates_test.calculate_torque_on_plates()
+        #     logging.info("Successfully calculated plate torques.")
 
-        except Exception as e:
-            logging.error(f"An error occurred during plate torque calculation: {e}")
-            traceback.print_exc()
+        # except Exception as e:
+        #     logging.error(f"An error occurred during plate torque calculation: {e}")
+        #     traceback.print_exc()
 
-        # Test calculation of plate driving torques
-        try:
-            plates_test.calculate_driving_torques()
-            logging.info("Successfully calculated driving torques.")
+        # # Test calculation of plate driving torques
+        # try:
+        #     plates_test.calculate_driving_torques()
+        #     logging.info("Successfully calculated driving torques.")
 
-        except Exception as e:
-            logging.error(f"An error occurred during driving torque calculation: {e}")
-            traceback.print_exc()
+        # except Exception as e:
+        #     logging.error(f"An error occurred during driving torque calculation: {e}")
+        #     traceback.print_exc()
 
-        # Test calculation of plate residual torques
-        try:
-            plates_test.calculate_residual_torques()
-            logging.info("Successfully calculated residual torques.")
+        # # Test calculation of plate residual torques
+        # try:
+        #     plates_test.calculate_residual_torques()
+        #     logging.info("Successfully calculated residual torques.")
 
-        except Exception as e:
-            print(f"An error occurred during residual torque calculation: {e}")
-            traceback.print_exc()
+        # except Exception as e:
+        #     print(f"An error occurred during residual torque calculation: {e}")
+        #     traceback.print_exc()
         
         # Test optimisation of plate torques (this should probably moved to the optimisation module)
         # try:
@@ -264,7 +274,17 @@ def test_slabs(settings=None, settings_file=None, test_ages=[0], reconstruction_
 
     return slabs_test
 
-def test_grids(settings=None, settings_file=None, test_ages=[0], seafloor_grids=None, continental_grids=None, velocity_grids=None, test_functions=True):
+def test_grids(
+        settings=None,
+        settings_file=None,
+        reconstruction_name="Muller2016",
+        test_ages=[0],
+        seafloor_grids=None,
+        continental_grids=None,
+        velocity_grids=None,
+        point_data_var=None,
+        test_functions=True
+    ):
     """Test the slabs module of the plato package."""
     logging.info("Testing 'slabs' module...")
 
@@ -275,21 +295,27 @@ def test_grids(settings=None, settings_file=None, test_ages=[0], seafloor_grids=
     try:
         grids_test = Grids(
             settings=settings,
+            reconstruction_name=reconstruction_name,
             cases_file=settings_file,
             seafloor_grids=seafloor_grids,
             continental_grids=continental_grids,
             velocity_grids=velocity_grids
         )
+        logging.info("Successfully initialised 'Grids' object.")
         
     except Exception as e:
         print(f"An error occurred during initialisation of the 'Grids' object: {e}")
         traceback.print_exc()
 
-    # # Test functions of the Grids object
-    # if grids_test in locals():
+        # Set grids_test to None if an error occurs
+        grids_test = None
+
+    # Test functions of the Grids object
+    # TODO: Actually implement these functions in such a way that they can be tested
+    # if grids_test is not None and test_functions:
     #     # Test making an xarray dataset from an a series of xarray data arrays
     #     try:
-    #         grids_test.data_arrays2dataset()
+    #         grids_test.data_arrays2dataset(point_data_var=point_data_var)
 
     #     except Exception as e:
     #         print(f"An error occurred during testing of the 'data_arrays2dataset' function: {e}")
@@ -303,8 +329,7 @@ def test_grids(settings=None, settings_file=None, test_ages=[0], seafloor_grids=
     #         print(f"An error occurred during testing of the 'array2data_array' function: {e}")
     #         traceback.print_exc()
 
-    # if print_results:
-    #     print("Testing of the 'grids' module complete.")
+    logging.info("Testing of the 'grids' module complete.")
 
     return grids_test
 

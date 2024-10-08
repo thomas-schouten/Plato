@@ -86,7 +86,7 @@ def run_tests():
     # Test Grids
     if TEST_CONFIGS["TEST_GRIDS"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_grids(seafloor_files=seafloor_files, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_grids(seafloor_grids=seafloor_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
             functions_test.test_grids(test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 
@@ -100,5 +100,4 @@ def run_tests():
 # RUN TESTS
 if __name__ == "__main__":
     run_tests()
-
 # %%

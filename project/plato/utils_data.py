@@ -249,9 +249,8 @@ def get_slab_data(
         # Convert to _pandas.DataFrame
         slabs = _pandas.DataFrame(slabs)
 
-        # Kick unused columns
+        # Kick unused columns and rename the rest
         slabs = slabs.drop(columns=[2, 3, 4, 5])
-
         slabs.columns = ["lon", "lat", "trench_segment_length", "trench_normal_azimuth", "lower_plateID", "trench_plateID"]
 
         # Convert trench segment length from degree to m
@@ -914,7 +913,7 @@ def get_options(
 
 def get_seafloor_grid(
         reconstruction_name: str,
-        _age: int,
+        age: int,
         DEBUG_MODE: bool = False
     ) -> _xarray.Dataset:
     """
@@ -934,14 +933,14 @@ def get_seafloor_grid(
     gdownload = _gplately.download.DataServer(reconstruction_name)
 
     # Inform the user of the ongoing process if in debug mode
-    logger.debug(f"Downloading age grid for {reconstruction_name} at {_age} Ma")
+    logging.info(f"Downloading age grid for {reconstruction_name} at {age} Ma")
 
     # Download the age grid, suppressing stdout output if not in debug mode
     if DEBUG_MODE:
-        age_raster = gdownload.get_age_grid(time=_age)
+        age_raster = gdownload.get_age_grid(time=age)
     else:
         with contextlib.redirect_stdout(io.StringIO()):
-            age_raster = gdownload.get_age_grid(time=_age)
+            age_raster = gdownload.get_age_grid(time=age)
 
     # Convert the data to a masked array
     seafloor_ages_ma = _numpy.ma.masked_invalid(age_raster.data)
@@ -1452,7 +1451,7 @@ def load_grid(
     :rtype:                        xarray.Dataset
     """
     # Loop through times
-    for _age in tqdm(ages, desc=f"Loading {type} grids", disable=DEBUG_MODE):
+    for _age in _tqdm(ages, desc=f"Loading {type} grids", disable=(DEBUG_MODE, logging.getLogger().getEffectiveLevel() > logging.INFO)):
         # Check if the grid for the reconstruction time is already in the dictionary
         if _age in grid:
             # Rename variables and coordinates in seafloor age grid for clarity
