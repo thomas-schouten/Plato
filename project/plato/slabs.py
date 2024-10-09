@@ -27,24 +27,18 @@ class Slabs:
             DEBUG_MODE: Optional[bool] = False,
         ):
         """
-        Class to store and manipulate point data.
-
-        :param settings: Simulation parameters.
-        :type settings: Settings object
-        :param reconstruction: Plate reconstruction.
-        :type reconstruction: Reconstruction object
-        :param plates: Optional dictionary of plate data (default: None).
-        :type plates: Optional[Dict]
-        :param data: Optional dictionary of point data structured by age and case (default: None).
-        :type data: Optional[Dict]
+        Class to store and manipulate data on slabs.
         """
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
+            reconstruction_name,
             ages, 
             cases_file,
             cases_sheet,
             files_dir,
+            PARALLEL_MODE = PARALLEL_MODE,
+            DEBUG_MODE = DEBUG_MODE,
         )
             
         # Store reconstruction object
@@ -60,40 +54,35 @@ class Slabs:
         self.data = {age: {} for age in self.settings.ages}
 
         # Loop through times
-        for _age in _tqdm(ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(self.settings.ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
             # Load available data
-            self.data[_age] = utils_data.load_data(
-                self.data[_age],
-                self.settings.name,
-                _age,
-                "Slabs",
-                self.settings.cases,
-                self.settings.point_cases,
-                self.settings.dir_path,
-                PARALLEL_MODE=self.settings.PARALLEL_MODE,
-            )
-
-            # Initialise missing data
-            available_case = None
             for key, entries in self.settings.slab_cases.items():
-                # Check if data is available
-                for entry in entries:
-                    if self.data[_age][entry] is not None:
-                        available_case = entry
-                        break
-                
-                # If data is available, copy to other cases    
-                if available_case:
-                    for entry in entries:
-                        if entry is not available_case:
-                            self.data[_age][entry] = self.data[_age][available_case].copy()
+                # Make list to store available cases
+                available_cases = []
 
-                # If no data is available, initialise new data
+                # Try to load all DataFrames
+                for entry in entries:
+                    self.data[_age][entry] = utils_data.DataFrame_from_parquet(
+                        self.settings.dir_path,
+                        "Slabs",
+                        self.settings.name,
+                        entry,
+                        _age
+                    )
+                    # Store the cases for which a DataFrame could be loaded
+                    if self.data[_age][entry] is not None:
+                        available_cases.append(entry)
+                
+                # Check if any DataFrames were loaded
+                if len(available_cases) > 0:
+                    # Copy all DataFrames from the available case        
+                    for entries in entry:
+                        if entry not in available_cases:
+                            self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
-                    # Check if resolved geometries are available
+                    # Initialise missing data
                     if not resolved_geometries or key not in resolved_geometries.keys():
-                        resolved_geometries = {}
-                        resolved_geometries[_age] = utils_data.get_topology_geometries(
+                        resolved_geometries = utils_data.get_topology_geometries(
                             self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
                         )
 
@@ -101,7 +90,7 @@ class Slabs:
                     self.data[_age][key] = utils_data.get_slab_data(
                         self.reconstruction,
                         _age,
-                        resolved_geometries[_age], 
+                        resolved_geometries, 
                         self.settings.options[key],
                     )
 
@@ -500,3 +489,73 @@ class Slabs:
                         [self.plates[_age][entry].update(
                             {"slab_bend_torque_" + axis: self.plates[_age][key]["slab_bend_torque_" + axis]}
                         ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
+
+    def save(
+            self,
+            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            cases: Union[None, str, List[str]] = None,
+            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            file_dir: Optional[str] = None,
+        ):
+        """
+        Function to save the 'Slabs' object.
+        Data of the 'Slabs' object is saved to .parquet files.
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+        
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
+
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Saving Slabs", disable=self.settings.logger.level==logging.INFO):
+            # Loop through cases
+            for _case in _cases:
+                utils_data.DataFrame_to_parquet(
+                    self.data[_age][_case],
+                    "Slabs",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
+                )
+
+        logging.info(f"Slabs saved to {self.settings.dir_path}")
+
+    def export(
+            self,
+            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            cases: Union[None, str, List[str]] = None,
+            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            file_dir: Optional[str] = None,
+        ):
+        """
+        Function to export the 'Slabs' object.
+        Data of the 'Slabs' object is exported to .csv files.
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+        
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
+
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Exporting Slabs", disable=self.settings.logger.level==logging.INFO):
+            # Loop through cases
+            for _case in _cases:
+                utils_data.DataFrame_to_csv(
+                    self.data[_age][_case],
+                    "Slabs",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
+                )
+
+        logging.info(f"Slabs exported to {self.settings.dir_path}")

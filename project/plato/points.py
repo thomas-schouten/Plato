@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 import gplately as _gplately
 import numpy as _numpy
+import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
 import utils_data, utils_calc, utils_init
@@ -11,7 +12,7 @@ from settings import Settings
 class Points:
     def __init__(
             self,
-            settings: Optional[Union[None, Settings]]= None,
+            settings: Optional[Settings] = None,
             reconstruction: Optional[_gplately.PlateReconstruction]= None,
             rotation_file: Optional[str]= None,
             topology_file: Optional[str]= None,
@@ -40,10 +41,13 @@ class Points:
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
+            reconstruction_name,
             ages, 
             cases_file,
             cases_sheet,
             files_dir,
+            PARALLEL_MODE = PARALLEL_MODE,
+            DEBUG_MODE = DEBUG_MODE,
         )
             
         # Store reconstruction object
@@ -59,47 +63,45 @@ class Points:
         self.data = {age: {} for age in self.settings.ages}
 
         # Loop through times
-        for _age in _tqdm(ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(self.settings.ages, desc="Loading point data", disable=self.settings.logger.level==logging.INFO):
             # Load available data
-            self.data[_age] = utils_data.load_data(
-                self.data[_age],
-                self.settings.name,
-                _age,
-                "Points",
-                self.settings.cases,
-                self.settings.point_cases,
-                self.settings.dir_path,
-                PARALLEL_MODE=self.settings.PARALLEL_MODE,
-            )
-            
-            # Initialise missing data
-            available_case = None
             for key, entries in self.settings.point_cases.items():
-                if len(entries) > 1:
-                    for entry in entries:
-                        if self.data[_age][entry] is not None:
-                            available_case = entry
-                            break
+                # Make list to store available cases
+                available_cases = []
 
-                # If data is available, copy to other cases    
-                if available_case:
-                    for entry in entries:
-                        if entry is not available_case:
-                            self.data[_age][entry] = self.data[_age][available_case].copy()
-
-                # If no data is available, initialise new data
+                # Try to load all DataFrames
+                for entry in entries:
+                    self.data[_age][entry] = utils_data.DataFrame_from_parquet(
+                        self.settings.dir_path,
+                        "Points",
+                        self.settings.name,
+                        _age,
+                        entry,
+                    )
+                    # Store the cases for which a DataFrame could be loaded
+                    if self.data[_age][entry] is not None:
+                        available_cases.append(entry)
+                
+                # Check if any DataFrames were loaded
+                if len(available_cases) > 0:
+                    # Copy all DataFrames from the available case        
+                    for entries in entry:
+                        if entry not in available_cases:
+                            self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
+                    # Initialise missing data
                     if not resolved_geometries or key not in resolved_geometries.keys():
-                        resolved_geometries = {}
-                        resolved_geometries[_age] = utils_data.get_topology_geometries(
-                            self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
+                        resolved_geometries = utils_data.get_resolved_geometries(
+                            self.reconstruction,
+                            _age,
+                            self.settings.options[key]["Anchor plateID"]
                         )
 
                     # Initialise missing data
                     self.data[_age][key] = utils_data.get_point_data(
                         self.reconstruction,
                         _age,
-                        resolved_geometries[_age], 
+                        resolved_geometries, 
                         self.settings.options[key],
                     )
 
@@ -166,58 +168,44 @@ class Points:
                     self.data[_age][_case].loc[mask, f"v_mag"] = velocities[2]
                     self.data[_age][_case].loc[mask, f"omega"] = velocities[3]
 
-    def sample_points(
+    def sample_seafloor_at_points(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            PROGRESS_BAR: Optional[bool] = True,    
+            seafloor_grid: Optional[_xarray.Dataset] = None,
+            variables: Optional[Union[str, List[str]]] = ["seafloor_age"],
         ):
         """
         Samples seafloor age at points
-        The results are stored in the `points` DataFrame, specifically in the `seafloor_age` field for each case and age.
-
-        :param ages:    reconstruction times to sample points for
-        :type ages:     list
-        :param cases:                   cases to sample points for (defaults to gpe cases if not specified).
-        :type cases:                    list
-        :param PROGRESS_BAR:            whether or not to display a progress bar
-        :type PROGRESS_BAR:             bool
         """
         # Define ages if not provided
-        if ages is None:
-            ages = self.settings.ages
-        else:
-            if isinstance(ages, str):
-                ages = [ages]
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _iterable = utils_data.get_iterable(cases, self.settings.gpe_cases)
 
-        # Make iterable
-        if cases is None:
-            iterable = self.settings.gpe_cases
-        else:
-            if isinstance(cases, str):
-                cases = [cases]
-            iterable = {case: [] for case in cases}
+        # Define variables, if not provided
+        _variables = utils_data.get_variables(variables, seafloor_grid.data_vars)
 
         # Loop through valid times
-        for _age in _tqdm(ages, desc="Sampling points", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.settings.DEBUG_MODE:
-                print(f"Sampling points at {_age} Ma")
-
-            for key, entries in iterable.items():
-                if self.settings.DEBUG_MODE:
-                    print(f"Sampling points for case {key} and entries {entries}...")
-
-                # Select dictionaries
-                self.seafloor[_age] = self.seafloor[_age]
+        for _age in _tqdm(ages, desc="Sampling points", disable = self.settings.logger.level == logging.INFO):
+            for key, entries in _iterable.items():
+                for _variable in _variables:
+                    # Sample seafloor age at points for key
+                    self.data[_age][key]["seafloor_age"] = utils_calc.sample_grid(
+                        self.data[_age][key].lat,
+                        self.data[_age][key].lon,
+                        seafloor_grid[_variable]
+                    )
+                    
+                    # Copy to other entries
+                    self.data[_age] = utils_calc.copy_values(
+                                self.data[_age], 
+                                key, 
+                                entries, 
+                                [_variable], 
+                            )
                 
-                # Sample seafloor age at points
-                self.points[_age][key]["seafloor_age"] = utils_calc.sample_ages(self.points[_age][key].lat, self.points[_age][key].lon, self.seafloor[_age]["seafloor_age"])
-                
-                # Copy DataFrames to other cases
-                if len(entries) > 1 and cases is None:
-                    for entry in entries[1:]:
-                        self.points[_age][entry]["seafloor_age"] = self.points[_age][key]["seafloor_age"]
-
         # Set flag to True
         self.sampled_points = True
     
@@ -412,3 +400,72 @@ class Points:
                             self.plates.data[_age][case],
                             self.points[_age][case]
                         )
+
+    def save(
+            self,
+            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            cases: Union[None, str, List[str]] = None,
+            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            file_dir: Optional[str] = None,
+        ):
+        """
+        Function to save the 'Points' object.
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+        
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
+
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Saving Points", disable=self.settings.logger.level==logging.INFO):
+            # Loop through cases
+            for _case in _cases:
+                utils_data.DataFrame_to_parquet(
+                    self.data[_age][_case],
+                    "Points",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
+                )
+
+        logging.info(f"Points saved to {self.settings.dir_path}")
+
+    def export(
+            self,
+            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            cases: Union[None, str, List[str]] = None,
+            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            file_dir: Optional[str] = None,
+        ):
+        """
+        Function to export the 'Points' object.
+        Data of the points object is saved to .csv files.
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+        
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
+
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Exporting Points", disable=self.settings.logger.level==logging.INFO):
+            # Loop through cases
+            for _case in _cases:
+                utils_data.DataFrame_to_csv(
+                    self.data[_age][_case],
+                    "Points",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
+                )
+
+        logging.info(f"Points exported to {self.settings.dir_path}")

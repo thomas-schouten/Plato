@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as _numpy
 import gplately as _gplately
@@ -7,15 +7,17 @@ from gplately import pygplates as _pygplates
 from tqdm import tqdm
 
 from settings import Settings
-from points import Points
+# from plates import Plates
+# from points import Points
+# from slabs import Slabs
 
 def get_settings(
         settings: Optional['Settings'] = None,
+        reconstruction_name: Optional[str] = None,
         ages: Optional[Union[int, float, list, _numpy.integer, _numpy.floating, _numpy.ndarray]] = None,
         cases_file: Optional[str] = None,
         cases_sheet: Optional[str] = "Sheet1",
         files_dir: Optional[str] = None,
-        reconstruction_name: Optional[str] = None,
         PARALLEL_MODE: Optional[bool] = False,
         DEBUG_MODE: Optional[bool] = False,
     ):
@@ -65,9 +67,6 @@ def get_reconstruction(
     :param name: Name of the reconstruction model.
     :type name: Optional[str]
     """
-    # Inform the user
-    logging.info("Setting up plate reconstruction...")
-
     # If a reconstruction object is provided, return it
     if reconstruction and reconstruction.static_polygons is not None:
         return reconstruction
@@ -76,7 +75,9 @@ def get_reconstruction(
     gdownload = None
     if not rotation_file or not topology_file or not polygon_file:
         gdownload = _gplately.DataServer(name)
-    
+        # Inform the user
+        logging.info(f"Downloading files for {name} plate reconstruction from GPlately DataServer.")
+
     # Download reconstruction files if any are missing
     if not rotation_file or not topology_file or not polygon_file:
         valid_reconstructions = [
@@ -105,3 +106,81 @@ def get_reconstruction(
     logging.info("Plate reconstruction ready!")  
     
     return reconstruction
+
+# def get_plates(
+#         plates: Optional['Plates'] = None,
+#         settings: Optional[Union[None, Settings]]= None,
+#         reconstruction: Optional[_gplately.PlateReconstruction]= None,
+#         rotation_file: Optional[str]= None,
+#         topology_file: Optional[str]= None,
+#         polygon_file: Optional[str]= None,
+#         reconstruction_name: Optional[str] = None,
+#         ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+#         cases_file: Optional[list[str]]= None,
+#         cases_sheet: Optional[str]= "Sheet1",
+#         files_dir: Optional[str]= None,
+#         resolved_geometries: Optional[Dict] = None,
+#         PARALLEL_MODE: Optional[bool] = False,
+#         DEBUG_MODE: Optional[bool] = False,
+#     ):
+#     """
+#     Function to initialise a Plates object
+    
+#     """
+#     # If a Plates object is provided, return it
+#     if plates is 'Plates':
+#         return plates
+    
+#     # Else, initialise one
+#     plates = Plates(
+#         settings,
+#         reconstruction,
+#         rotation_file,
+#         topology_file,
+#         polygon_file,
+#         reconstruction_name,
+#         ages,
+#         cases_file,
+#         cases_sheet,
+#         files_dir,
+#         resolved_geometries,
+#     )
+
+# def get_points(
+        
+#     ):
+#     """
+#     Function to initialise a Points object
+#     """
+#     pass
+
+# def get_slabs(
+        
+#     ):
+#     """
+#     Function to initialise a Slabs object
+#     """
+#     pass
+
+# def get_grids(
+#         self,
+#         settings: Optional['Settings'] = None,
+#         cases_file: Optional[str] = None,
+#         cases_sheet: Optional[str] = None,
+#         reconstruction: Optional[_gplately.PlateReconstruction] = None,
+#         reconstruction_name: Optional[str] = None,
+#         rotation_file: Optional[str] = None,
+#         topology_file: Optional[str] = None,
+#         polygon_file: Optional[str] = None,
+#         ages: Optional[list] = None,
+#         files_dir: Optional[str] = None,
+#         seafloor_grids: Optional[dict] = None,
+#         continental_grids: Optional[dict] = None,
+#         velocity_grids: Optional[dict] = None,
+#         DEBUG_MODE: Optional[bool] = False,
+#         PARALLEL_MODE: Optional[bool] = False,
+#     ):
+#     """
+#     Function to initialise a Grids object
+#     """
+#     pass

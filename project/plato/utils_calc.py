@@ -505,21 +505,29 @@ def compute_GPE_force(points, seafloor, options, mech, age_variable="seafloor_ag
 
     return points
 
-def sample_ages(lat, lon, seafloor, coords=["latitude", "longitude"]):
+def sample_grid(
+        lat: _numpy.ndarray,
+        lon: _numpy.ndarray,
+        grid: _xarray.Dataset,
+        coords = ["latitude", "longitude"],
+    ):
+    """
+    Function to sample a grid
+    """
     # Load seafloor into memory to decrease computation time
-    seafloor = seafloor.load()
+    grid = grid.load()
 
     # Extract latitude and longitude values from points and convert to xarray DataArrays
     lat_da = _xarray.DataArray(lat, dims="point")
     lon_da = _xarray.DataArray(lon, dims="point")
 
     # Interpolate age value at point
-    ages = _numpy.asarray(seafloor.interp({coords[0]: lat_da, coords[1]: lon_da}, method="nearest").values.tolist())
+    sampled_values = _numpy.asarray(grid.interp({coords[0]: lat_da, coords[1]: lon_da}, method="nearest").values.tolist())
 
     # Close the seafloor to free memory space
-    seafloor.close()
+    grid.close()
 
-    return ages
+    return sampled_values
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASAL TRACTIONS
@@ -697,70 +705,37 @@ def compute_velocity(
 
     return v_lats, v_lons, v_mags, v_azis, omegas
 
-def compute_rms_velocity(plates, points):
+def compute_rms_velocity(
+        segment_length_lat,
+        segment_length_lon,
+        v_mag,
+        v_azi,
+        omega
+    ):
     """
     Function to calculate area-weighted root mean square (RMS) velocity for a given plate.
-
-    :param plates:                  plate data
-    :type plates:                   pandas.DataFrame
-    :param points:                  points data including columns with latitude, longitude and plateID
-    :type points:                   pandas.DataFrame
-
-    :return:                        plates
-    :rtype:                         pandas.DataFrame
-
-    RMS velocity consists of the following components:
-    - RMS velocity magnitude
-    - RMS velocity azimuth
-    - RMS spin rate
     """
-    # Calculate components of the root mean square velocity
-    for plateID in plates.plateID.values:
-        # Filter points for the current plate
-        selected_points = points[points.plateID == plateID]
+    # Precompute segment areas to avoid repeated calculation
+    segment_areas = segment_length_lat * segment_length_lon
+    total_area = _numpy.sum(segment_areas)
 
-        # Precompute segment areas to avoid repeated calculation
-        segment_areas = selected_points.segment_length_lat * selected_points.segment_length_lon
-        total_area = segment_areas.sum()
+    # Calculate RMS velocity magnitude
+    v_rms_mag = _numpy.sum(v_mag * segment_areas) / total_area
 
-        # Calculate RMS velocity magnitude
-        v_rms_mag = (selected_points.v_mag * segment_areas).sum() / total_area
-        plates.loc[plates.plateID == plateID, "v_rms_mag"] = v_rms_mag
+    # Calculate RMS velocity azimuth (in degrees)
+    sin_azi = _numpy.sum(_numpy.sin(v_azi) * segment_areas) / total_area
+    cos_azi = _numpy.sum(_numpy.cos(v_azi) * segment_areas) / total_area
 
-        # Calculate RMS velocity azimuth (in degrees)
-        sin_azi = _numpy.sum(_numpy.sin(selected_points.v_azi) * segment_areas) / total_area
-        cos_azi = _numpy.sum(_numpy.cos(selected_points.v_azi) * segment_areas) / total_area
+    v_rms_azi = _numpy.rad2deg(
+        -1 * (_numpy.arctan2(sin_azi, cos_azi) + 0.5 * _numpy.pi)
+    )
+    # Ensure azimuth is within the range [0, 360]
+    v_rms_azi = _numpy.where(v_rms_azi < 0, v_rms_azi + 360, v_rms_azi)
+    
+    # Calculate spin rate
+    omega_rms = _numpy.sum(omega * segment_areas) / total_area
 
-        v_rms_azi = _numpy.rad2deg(
-            -1 * (_numpy.arctan2(sin_azi, cos_azi) + 0.5 * _numpy.pi)
-        )
-        # Ensure azimuth is within the range [0, 360]
-        v_rms_azi = _numpy.where(v_rms_azi < 0, v_rms_azi + 360, v_rms_azi)
-        plates.loc[plates.plateID == plateID, "v_rms_azi"] = v_rms_azi
-
-        # Get rotation pole
-        rotation_pole_lat = plates.loc[plates.plateID == plateID, "pole_lat"].values[0]
-        rotation_pole_lon = plates.loc[plates.plateID == plateID, "pole_lon"].values[0]
-        rotation_angle = plates.loc[plates.plateID == plateID, "pole_angle"].values[0]
-
-        omegas = _numpy.zeros(len(selected_points))
-        for i, (lat, lon) in enumerate(zip(selected_points.lat, selected_points.lon)):
-            # print(spherical2cartesian(rotation_pole_lat, rotation_pole_lon, constants).T)
-            # Calculate the spin rate at each point
-            omegas[i] = _numpy.dot(
-                spherical2cartesian(lat, lon, constants).T,
-                spherical2cartesian(rotation_pole_lat, rotation_pole_lon, constants),
-            ) * rotation_angle / (total_area * constants.mean_Earth_radius_m)
-
-        # Calculate the RMS spin rate
-        omega_rms = _numpy.sqrt(
-            _numpy.abs(
-                _numpy.sum(omegas * segment_areas) / total_area
-            )
-        )
-        plates.loc[plates.plateID == plateID, "omega_rms"] = omega_rms
-
-    return plates
+    return v_rms_mag, v_rms_azi, omega_rms
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # DRIVING AND RESIDUAL TORQUES
@@ -1001,7 +976,18 @@ def compute_thicknesses(ages, options, crust=True, water=True):
 
     return lithospheric_mantle_thickness, crustal_thickness, water_depth
 
-def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, segment_length_lat, segment_length_lon, constants, torque_variable="torque", DEBUG_MODE=False):
+def compute_torque_on_plates(
+        plate_data,
+        lat,
+        lon,
+        plateID,
+        force_lat,
+        force_lon,
+        segment_length_lat,
+        segment_length_lon,
+        constants,
+        torque_variable="torque",
+    ):
     """
     Calculate and update torque information on plates based on latitudinal, longitudinal forces, and segment dimensions.
 
@@ -1033,52 +1019,53 @@ def compute_torque_on_plates(torques, lat, lon, plateID, force_lat, force_lon, s
     It then sums the torque components for each plate, calculates the torque vector at the centroid, and updates the torques DataFrame.
     Finally, it calculates the force components at the centroid, converts them to latitudinal and longitudinal components, and adds these to the torques DataFrame.
     """
-    # Initialize dataframes and sort plateIDs
-    data = _pandas.DataFrame({"plateID": plateID})
+    # Initialise dataframes and sort plateIDs
+    point_data = _pandas.DataFrame({"plateID": plateID})
 
     # Convert points to Cartesian coordinates
-    position = spherical2cartesian(lat, lon, constants)
+    position_xyz = spherical2cartesian(lat, lon, constants)
     
     # Calculate torques in Cartesian coordinates
-    torques_cartesian = force2torque(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon)
+    torques_xyz = force2torque(position_xyz, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon)
     
     # Assign the calculated torques to the new torque_variable columns
-    data[torque_variable + "_x"] = torques_cartesian[0]
-    data[torque_variable + "_y"] = torques_cartesian[1]
-    data[torque_variable + "_z"] = torques_cartesian[2]
-    data[torque_variable + "_mag"] = _numpy.sqrt(
-        torques_cartesian[0] ** 2 + torques_cartesian[1] ** 2 + torques_cartesian[2] ** 2
+    point_data[torque_variable + "_x"] = torques_xyz[0]
+    point_data[torque_variable + "_y"] = torques_xyz[1]
+    point_data[torque_variable + "_z"] = torques_xyz[2]
+    point_data[torque_variable + "_mag"] = _numpy.sqrt(
+        torques_xyz[0] ** 2 + torques_xyz[1] ** 2 + torques_xyz[2] ** 2
     )
 
     # Sum components of plates based on plateID
-    summed_data = data.groupby("plateID", as_index=True).sum().fillna(0)
+    summed_data = point_data.groupby("plateID", as_index=True).sum().fillna(0)
 
     # Set "plateID" as the index of the torques DataFrame
-    torques.set_index("plateID", inplace=True)
+    plate_data.set_index("plateID", inplace=True)
 
     # Update the torques DataFrame with values from summed_data
-    torques.update(summed_data)
+    plate_data.update(summed_data)
 
     # Reset the index of torques and keep "plateID" as a column
-    torques.reset_index(inplace=True)
+    plate_data.reset_index(inplace=True)
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
-    centroid_position = spherical2cartesian(torques.centroid_lat, torques.centroid_lon, constants)
+    centroid_position = spherical2cartesian(plate_data.centroid_lat, plate_data.centroid_lon, constants.mean_Earth_radius_m)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
-    summed_torques_cartesian = _numpy.asarray([torques[torque_variable + "_x"], torques[torque_variable + "_y"], torques[torque_variable + "_z"]])
-    force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0) 
-
-    if DEBUG_MODE:
-        print(f"Computing torque at centroid: {force_at_centroid}")
+    summed_torques_xyz = _numpy.asarray([plate_data[torque_variable + "_x"], plate_data[torque_variable + "_y"], plate_data[torque_variable + "_z"]])
+    centroid_force_xyz = _numpy.cross(summed_torques_xyz, centroid_position, axis=0) 
 
     # Compute force magnitude at centroid
     force_variable = torque_variable.replace("torque", "force")
-    torques[force_variable + "_lat"], torques[force_variable + "_lon"], torques[force_variable + "_mag"], torques[force_variable + "_azi"] = vector_xyz2lat_lon(
-        torques.centroid_lat, torques.centroid_lon, force_at_centroid, constants
-    )
+    centroid_force_sph = cartesian2spherical_azimuth(centroid_force_xyz)
+
+    # Store values in the torques DataFrame
+    plate_data[f"{force_variable}_lat"] = centroid_force_sph[0]
+    plate_data[f"{force_variable}_lon"] = centroid_force_sph[1]
+    plate_data[f"{force_variable}_mag"] = centroid_force_sph[2]
+    plate_data[f"{force_variable}_azi"] = centroid_force_sph[3]
     
-    return torques
+    return plate_data
 
 def compute_subduction_flux(
         plates,
@@ -1169,7 +1156,15 @@ def spherical2cartesian(lat, lon, mag):
 
     return x, y, z
 
-def force2torque(position, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon):
+def force2torque(
+        position, 
+        lat, 
+        lon, 
+        force_lat, 
+        force_lon, 
+        segment_length_lat, 
+        segment_length_lon
+    ):
     """
     Calculate plate torque vector from force vectors.
 

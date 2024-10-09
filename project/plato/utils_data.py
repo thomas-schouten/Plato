@@ -133,7 +133,7 @@ def get_plate_data(
         # Make _pandas.df with all plates
         # Initialise list
         plates = _numpy.zeros([len(resolved_topologies),10])
-        
+
         # Loop through plates
         for n, topology in enumerate(resolved_topologies):
 
@@ -189,7 +189,6 @@ def get_plate_data(
 
         # Sort and index by plate ID
         merged_plates = merged_plates.sort_values(by="plateID")
-        merged_plates = merged_plates.reset_index(drop=True)
 
         # Initialise columns to store other whole-plate properties
         merged_plates["trench_length"] = 0.; merged_plates["zeta"] = 0.
@@ -448,67 +447,43 @@ def get_globe_data(
 
 def get_resolved_topologies(
         reconstruction: _gplately.PlateReconstruction,
-        ages: Union[int, float, _numpy.floating, _numpy.integer, List, _numpy.array],
+        age: Union[int, float, _numpy.floating, _numpy.integer],
+        anchor_plateID: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0,
         filename: Optional[str] = None,
     ) -> Dict:
     """
     Function to get resolved geometries for all ages.
     """
-    if isinstance(ages, (int, float, _numpy.floating, _numpy.integer)):
-        ages = _numpy.array([ages])
-    elif isinstance(ages, list):
-        ages = _numpy.array(ages)
+    if filename:
+        # Initialise list to store resolved topologies for each age
+        resolved_topologies = filename
+    else:
+        resolved_topologies = []
 
-    # Initialise dictionary to store resolved topologies
-    _resolved_topologies = {}
-
-    # Initialise dictionary to store resolved topologies
-    _resolved_topologies = {_age: [] for _age in ages}
-
-    for _age in ages:
-        if filename:
-            # Initialise list to store resolved topologies for each age
-            resolved_topologies = filename
-        else:
-            resolved_topologies = []
-
-        # Resolve topologies for the current age
-        with warnings.catch_warnings():
-            # Ignore warnings about field name laundering
-            warnings.filterwarnings(
-                action="ignore",
-                message="Normalized/laundered field name:"
-            )
-            _pygplates.resolve_topologies(
-                reconstruction.topology_features,
-                reconstruction.rotation_model,
-                resolved_topologies,
-                _age,
-                anchor_plate_id=0
-            )
-        
-        # Store the resolved topologies for the current age
-        _resolved_topologies[_age] = resolved_topologies
+    # Resolve topologies for the current age
+    with warnings.catch_warnings():
+        # Ignore warnings about field name laundering
+        warnings.filterwarnings(
+            action="ignore",
+            message="Normalized/laundered field name:"
+        )
+        _pygplates.resolve_topologies(
+            reconstruction.topology_features,
+            reconstruction.rotation_model,
+            resolved_topologies,
+            age,
+            anchor_plate_id=int(anchor_plateID)
+        )
     
-    return _resolved_topologies
+    return resolved_topologies
     
 def get_resolved_geometries(
         reconstruction: _gplately.PlateReconstruction,
-        ages: _numpy.array,
-        resolved_topologies: Optional[Dict] = None,
+        age: Union[int, float, _numpy.floating, _numpy.integer],
+        anchor_plateID: Optional[Union[int, float, _numpy.integer, _numpy.floating]]
     ) -> Dict:
     """
     Function to obtain resolved geometries as GeoDataFrames for all ages.
-
-    :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
-    :param ages:                  ages
-    :type ages:                   numpy.array
-    :param resolved_topologies:   resolved topologies
-    :type resolved_topologies:    dict
-
-    :return:                      resolved_geometries
-    :rtype:                       dict
     """
     # Make temporary directory to hold shapefiles
     temp_dir = tempfile.mkdtemp()
@@ -516,14 +491,11 @@ def get_resolved_geometries(
     # Initialise dictionary to store resolved geometries
     resolved_geometries = {}
 
-    for _age in ages:
-        # Save resolved topologies as shapefiles
-        if resolved_topologies is None:
-            topology_file = _os.path.join(temp_dir, f"topologies_{_age}.shp")
-            resolved_topologies = get_resolved_topologies(reconstruction, _age, topology_file)
+    topology_file = _os.path.join(temp_dir, f"topologies_{age}.shp")
+    get_resolved_topologies(reconstruction, age, anchor_plateID, topology_file)
 
-        # Load resolved topologies as GeoDataFrames
-        resolved_geometries[_age] = _geopandas.read_file(topology_file)
+    # Load resolved topologies as GeoDataFrames
+    resolved_geometries = _geopandas.read_file(topology_file)
     
     # Remove temporary directory
     shutil.rmtree(temp_dir)
@@ -910,8 +882,7 @@ def get_options(
 
     return cases, options
 
-
-def get_seafloor_grid(
+def get_seafloor_age_grid(
         reconstruction_name: str,
         age: int,
         DEBUG_MODE: bool = False
@@ -1020,21 +991,19 @@ def get_ages(
     # Define ages
     if ages is None:
         # If no ages are provided, use default ages
-        _ages = default_ages
+        return default_ages
+    
+    elif isinstance(ages, _numpy.ndarray):
+        # If a numpy array is provided, use as is
+        return ages
+    
+    elif isinstance(ages, list):
+        # If a list is provided, convert to numpy array
+        return _numpy.array(ages)
 
     elif isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
         # If a single value is provided, convert to numpy array
-        _ages = _numpy.array([ages])
-
-    elif isinstance(ages, list):
-        # If a list is provided, convert to numpy array
-        _ages = _numpy.array(ages)
-
-    elif isinstance(ages, _numpy.ndarray):
-        # If a numpy array is provided, use as is
-        _ages = ages
-
-    return _ages
+        return _numpy.array([ages])
 
 def get_cases(
     cases: Union[None, str, List[str]],
@@ -1054,14 +1023,15 @@ def get_cases(
     # Define cases
     if cases is None:
         # If no cases are provided, use default cases
-        _cases = default_cases
+        return default_cases
 
-    else:
-        # Check if cases is a single value (str), convert to list
-        if isinstance(cases, str):
-            _cases = [cases]
+    elif isinstance(cases, List):
+        # If cases is a list, return it
+        return cases
 
-    return _cases
+    elif isinstance(cases, str):
+        # If cases is a string, put it in a list
+       return [cases]
 
 def get_iterable(
         cases: Union[None, str, List[str]],
@@ -1069,45 +1039,56 @@ def get_iterable(
     ) -> Dict[str, List[str]]:
     """
     Function to check and get iterable.
-
-    :param cases:               cases (can be None, a single case as a string, or a list of cases)
-    :type cases:                None, str, or list of strings
-    :param default_iterable:    default iterable to use if cases is not provided
-    :type default_iterable:     list of strings
-
-    :return:                 iterable
-    :rtype:                  dict
     """
     # Define iterable
     if cases is None:
-        # If no cases are provided, use the default iterable
-        _iterable = default_iterable
+        # If no iterable is provided, use the default iterable
+        return default_iterable
 
-    else:
-        # Check if cases is a single value (str), convert to list
-        if isinstance(cases, str):
-            cases = [cases]
-        
-        # Make dictionary of iterable
-        _iterable = {case: [] for case in cases}
+    elif isinstance(cases, str):
+        # If cases is a single value, put it in a list
+        cases = [cases]
+
+    # Make dictionary of iterable
+    _iterable = {case: [] for case in cases}
 
     return _iterable
 
 def get_plates(
-        plate_IDs: Union[None, int, list, _numpy.integer, _numpy.floating, _numpy.ndarray],
-    ) -> _numpy.ndarray:
+        plateIDs: Union[None, int, list, _numpy.integer, _numpy.floating, _numpy.ndarray],
+        default_plates: List,
+    ) -> Union[List, _numpy.ndarray]:
     """
     Function to check and get plate IDs.
-
-    :param plate_IDs:        plate IDs
-    :type plate_IDs:         None, int, list, numpy.integer, numpy.floating, numpy.ndarray
-
-    :return:                 plate IDs
-    :rtype:                  numpy.ndarray
     """
-    # Define plate IDs
-    if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
-            plates = [plates]
+    # Define iterable
+    if plateIDs is None:
+        # If no plateIDs are provided, use the default iterable
+        return default_plates
+    
+    elif isinstance(plateIDs, (List, _numpy.ndarray)):
+        # If plateIDs is already a list or a numpy array, simply return it
+        return plateIDs
+
+    elif isinstance(plateIDs, (int, float, _numpy.floating, _numpy.integer)):
+        # If plateIDs is a single value, put it in a list
+        return [plateIDs]
+
+def get_variables(
+        variables: Union[None, str, List[str]],
+        default_variables: List,
+    ) -> List[str]:
+    """
+    Function to get variables
+    """
+    if variables is None:
+        return default_variables
+    
+    elif isinstance(variables, List(str)):
+        return variables
+    
+    elif isinstance(variables, str):
+        return [variables]
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PROCESS CASES 
@@ -1165,7 +1146,7 @@ def DataFrame_to_parquet(
         data: _pandas.DataFrame,
         data_name: str,
         reconstruction_name: str,
-        _age: int,
+        age: int,
         case: str,
         folder: str,
     ):
@@ -1189,11 +1170,18 @@ def DataFrame_to_parquet(
     """
     # Construct the file path
     target_dir = folder if folder else _os.getcwd()
-    file_name = f"{data_name}_{reconstruction_name}_{case}_{_age}Ma.parquet"
+    if age is not None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.parquet"
+    elif age is None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}.parquet"
+    elif age is not None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.parquet"
+    elif age is None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}.parquet"
     file_path = _os.path.join(target_dir, data_name, file_name)
     
     # Debug information
-    logger.info(f"Saving {data_name} to {file_path}")
+    logging.info(f"Saving {data_name} to {file_path}.")
 
     # Ensure the directory exists
     _os.makedirs(_os.path.dirname(file_path), exist_ok=True)
@@ -1201,6 +1189,8 @@ def DataFrame_to_parquet(
     # Delete old file if it exists
     try:
         _os.remove(file_path)
+        logging.info(f"Deleted {file_path}.")
+
     except FileNotFoundError:
         pass  # No need to remove if file does not exist
 
@@ -1211,7 +1201,7 @@ def DataFrame_to_csv(
         data: _pandas.DataFrame,
         data_name: str,
         reconstruction_name: str,
-        _age: int,
+        age: int,
         case: str,
         folder: str,
         DEBUG_MODE: bool = False
@@ -1236,11 +1226,18 @@ def DataFrame_to_csv(
     """
     # Construct the file path
     target_dir = folder if folder else _os.getcwd()
-    file_name = f"{data_name}_{reconstruction_name}_{case}_{_age}Ma.csv"
+    if age is not None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.csv"
+    elif age is None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}.csv"
+    elif age is not None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.csv"
+    elif age is None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}.csv"
     file_path = _os.path.join(target_dir, data_name, file_name)
     
     # Debug information
-    logger.info(f"Saving {data_name} to {file_path}")
+    logging.info(f"Exporting {data_name} to {file_path}.")
 
     # Ensure the directory exists
     _os.makedirs(_os.path.dirname(file_path), exist_ok=True)
@@ -1248,6 +1245,8 @@ def DataFrame_to_csv(
     # Delete old file if it exists
     try:
         _os.remove(file_path)
+        logging.info(f"Deleted {file_path}.")
+
     except FileNotFoundError:
         pass  # No need to remove if file does not exist
 
@@ -1258,9 +1257,9 @@ def GeoDataFrame_to_geoparquet(
         data: _geopandas.GeoDataFrame,
         data_name: str,
         reconstruction_name: str,
-        _age: int,
+        age: int,
+        case: str,
         folder: str,
-        DEBUG_MODE: bool = False
     ):
     """
     Function to save GeoDataFrame to a GeoParquet file in a folder efficiently.
@@ -1278,15 +1277,19 @@ def GeoDataFrame_to_geoparquet(
     :param DEBUG_MODE:            whether to run in debug mode
     :type DEBUG_MODE:             bool
     """
-    # Construct the target directory and file path
-    target_dir = _os.path.join(folder if folder else _os.getcwd(), data_name)
-    file_name = f"{data_name}_{reconstruction_name}_{_age}Ma.parquet"
-    file_path = _os.path.join(target_dir, file_name)
+    # Construct the file path
+    target_dir = folder if folder else _os.getcwd()
+    if age is not None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.parquet"
+    elif age is None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}.parquet"
+    elif age is not None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.parquet"
+    elif age is None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}.parquet"
+    file_path = _os.path.join(target_dir, data_name, file_name)
     
-    # Debug information
-    if DEBUG_MODE:
-        print(f"Target directory for {data_name}: {target_dir}")
-        print(f"File path for {data_name} at {_age}: {file_path}")
+    logging.info(f"Saving {data_name} to {file_path}.")
 
     # Ensure the directory exists
     _os.makedirs(target_dir, exist_ok=True)
@@ -1294,8 +1297,8 @@ def GeoDataFrame_to_geoparquet(
     # Delete old file if it exists
     try:
         _os.remove(file_path)
-        if DEBUG_MODE:
-            print(f"Deleted old file {file_path}")
+        logging.info(f"Deleted {file_path}.")
+
     except FileNotFoundError:
         pass  # File does not exist, no need to remove
 
@@ -1306,7 +1309,8 @@ def GeoDataFrame_to_shapefile(
         data: _geopandas.GeoDataFrame,
         data_name: str,
         reconstruction_name: str,
-        _age: int,
+        age: int,
+        case: str,
         folder: str,
         DEBUG_MODE: bool = False
     ):
@@ -1326,15 +1330,19 @@ def GeoDataFrame_to_shapefile(
     :param DEBUG_MODE:            whether to run in debug mode
     :type DEBUG_MODE:             bool
     """
-    # Construct the target directory and file path
-    target_dir = _os.path.join(folder if folder else _os.getcwd(), data_name)
-    file_name = f"{data_name}_{reconstruction_name}_{_age}Ma.shp"
-    file_path = _os.path.join(target_dir, file_name)
+    # Construct the file path
+    target_dir = folder if folder else _os.getcwd()
+    if age is not None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.shp"
+    elif age is None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}.shp"
+    elif age is not None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.shp"
+    elif age is None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}.shp"
+    file_path = _os.path.join(target_dir, data_name, file_name)
     
-    # Debug information
-    if DEBUG_MODE:
-        print(f"Target directory for {data_name}: {target_dir}")
-        print(f"File path for {data_name} at {_age}: {file_path}")
+    logging.info(f"Exporting {data_name} to {file_path}.")
 
     # Ensure the directory exists
     _os.makedirs(target_dir, exist_ok=True)
@@ -1342,8 +1350,8 @@ def GeoDataFrame_to_shapefile(
     # Delete old file if it exists
     try:
         _os.remove(file_path)
-        if DEBUG_MODE:
-            print(f"Deleted old file {file_path}")
+        logging.info(f"Deleted old file {file_path}")
+
     except FileNotFoundError:
         pass  # File does not exist, no need to remove
 
@@ -1354,9 +1362,9 @@ def Dataset_to_netcdf(
         data: _xarray.Dataset,
         data_name: str,
         reconstruction_name: str,
-        _age: int,
-        folder: str,
-        case: str = None,
+        age: int,
+        case: Optional[str] = None,
+        folder: Optional[str] = None,
         DEBUG_MODE: bool = False
     ):
     """
@@ -1375,18 +1383,17 @@ def Dataset_to_netcdf(
     :param DEBUG_MODE:            whether to run in debug mode
     :type DEBUG_MODE:             bool
     """
-    # Construct the target directory and file path
-    target_dir = _os.path.join(folder if folder else _os.getcwd(), data_name)
-    if case:
-        file_name = f"{data_name}_{reconstruction_name}_{case}_{_age}Ma.nc"
-    else:
-        file_name = f"{data_name}_{reconstruction_name}_{_age}Ma.nc"
-    file_path = _os.path.join(target_dir, file_name)
-
-    # Debug information
-    if DEBUG_MODE:
-        print(f"Target directory for {data_name}: {target_dir}")
-        print(f"File path for {data_name} at {_age}: {file_path}")
+    # Construct the file path
+    target_dir = folder if folder else _os.getcwd()
+    if age is not None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.nc"
+    elif age is None and case is not None:
+        file_name = f"{data_name}_{reconstruction_name}_{case}.nc"
+    elif age is not None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.nc"
+    elif age is None and case is None:
+        file_name = f"{data_name}_{reconstruction_name}.nc"
+    file_path = _os.path.join(target_dir, data_name, file_name)
 
     # Ensure the directory exists
     _os.makedirs(target_dir, exist_ok=True)
@@ -1394,8 +1401,8 @@ def Dataset_to_netcdf(
     # Delete old file if it exists
     try:
         _os.remove(file_path)
-        if DEBUG_MODE:
-            print(f"Deleted old file {file_path}")
+        logging.info(f"Deleted old file {file_path}")
+        
     except FileNotFoundError:
         pass
 
@@ -1500,8 +1507,8 @@ def DataFrame_from_parquet(
         folder: str,
         type: str,
         reconstruction_name: str,
+        age: int,
         case: str,
-        _age: int
     ) -> _pandas.DataFrame:
     """
     Function to load DataFrames from a folder efficiently.
@@ -1524,7 +1531,7 @@ def DataFrame_from_parquet(
     target_file = _os.path.join(
         folder if folder else _os.getcwd(),
         type,
-        f"{type}_{reconstruction_name}_{case}_{_age}Ma.parquet"
+        f"{type}_{reconstruction_name}_{case}_{age}Ma.parquet"
     )
 
     # Check if target file exists and load data
@@ -1537,8 +1544,8 @@ def DataFrame_from_csv(
         folder: str,
         type: str,
         reconstruction_name: str,
+        age: int,
         case: str,
-        _age: int
     ) -> _pandas.DataFrame:
     """
     Function to load DataFrames from a folder efficiently.
@@ -1561,7 +1568,7 @@ def DataFrame_from_csv(
     target_file = _os.path.join(
         folder if folder else _os.getcwd(),
         type,
-        f"{type}_{reconstruction_name}_{case}_{_age}Ma.csv"
+        f"{type}_{reconstruction_name}_{case}_{age}Ma.csv"
     )
 
     # Check if target file exists and load data
@@ -1573,9 +1580,9 @@ def DataFrame_from_csv(
 def Dataset_from_netCDF(
         folder: str,
         type: str,
-        _age: int,
         reconstruction_name: str,
-        case: Optional[str] = None
+        age: int,
+        case: str,
     ) -> _xarray.Dataset:
     """
     Function to load xarray Dataset from a folder efficiently.
@@ -1593,7 +1600,7 @@ def Dataset_from_netCDF(
     :rtype:                      xarray.Dataset or None
     """
     # Construct the file name based on whether a case is provided
-    file_name = f"{type}_{reconstruction_name}_{case + '_' if case else ''}{_age}Ma.nc"
+    file_name = f"{type}_{reconstruction_name}_{case + '_' if case else ''}{age}Ma.nc"
 
     # Construct the full path to the target file
     target_file = _os.path.join(folder if folder else _os.getcwd(), type, file_name)
@@ -1607,27 +1614,18 @@ def Dataset_from_netCDF(
 def GeoDataFrame_from_geoparquet(
         folder: str,
         type: str,
-        _age: int,
-        reconstruction_name: str
+        reconstruction_name: str,
+        age: int,
+        case: str,
     ) -> _geopandas.GeoDataFrame:
     """
     Function to load GeoDataFrame from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param _age:  reconstruction time
-    :type _age:   int
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-
-    :return:                     data
-    :rtype:                      geopandas.GeoDataFrame or None
     """
     # Construct the target file path
     target_file = _os.path.join(
         folder if folder else _os.getcwd(),
         type,
-        f"{type}_{reconstruction_name}_{_age}Ma.parquet"
+        f"{type}_{reconstruction_name}_{case}_{age}Ma.parquet"
     )
 
     # Check if target file exists and load data
@@ -1639,27 +1637,18 @@ def GeoDataFrame_from_geoparquet(
 def GeoDataFrame_from_shapefile(
         folder: str,
         type: str,
-        _age: int,
-        reconstruction_name: str
+        reconstruction_name: str,
+        age: int,
+        case: str,
     ) -> _geopandas.GeoDataFrame:
     """
     Function to load GeoDataFrame from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param _age:  reconstruction time
-    :type _age:   int
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-
-    :return:                     data
-    :rtype:                      geopandas.GeoDataFrame or None
     """
     # Construct the target file path
     target_file = _os.path.join(
         folder if folder else _os.getcwd(),
         type,
-        f"{type}_{reconstruction_name}_{_age}Ma.shp"
+        f"{type}_{reconstruction_name}_{case}_{age}Ma.shp"
     )
 
     # Check if target file exists and load data

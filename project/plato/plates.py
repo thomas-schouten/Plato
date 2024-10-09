@@ -7,6 +7,7 @@ from tqdm import tqdm as _tqdm
 
 import utils_data, utils_calc, utils_init
 from settings import Settings
+from points import Points
 
 class Plates:
     """
@@ -14,7 +15,7 @@ class Plates:
     """
     def __init__(
             self,
-            settings: Optional[Union[None, Settings]]= None,
+            settings: Optional[Settings] = None,
             reconstruction: Optional[_gplately.PlateReconstruction]= None,
             rotation_file: Optional[str]= None,
             topology_file: Optional[str]= None,
@@ -24,8 +25,6 @@ class Plates:
             cases_file: Optional[list[str]]= None,
             cases_sheet: Optional[str]= "Sheet1",
             files_dir: Optional[str]= None,
-            data: Optional[Union[Dict, str]] = None,
-            resolved_geometries: Optional[Dict] = None,
             PARALLEL_MODE: Optional[bool] = False,
             DEBUG_MODE: Optional[bool] = False,
         ):
@@ -44,6 +43,7 @@ class Plates:
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
+            reconstruction_name,
             ages, 
             cases_file,
             cases_sheet,
@@ -63,87 +63,97 @@ class Plates:
         
         # GEOMETRIES
         # Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries
-        self.resolved_topologies, self.resolved_geometries = {}, {}
-
-        # Define ages if not provided
-        _ages = utils_data.get_ages(
-            ages,
-            self.settings.ages,
-        )
+        self.resolved_topologies = {_age: {} for _age in self.settings.ages}
+        self.resolved_geometries = {_age: {} for _age in self.settings.ages}
 
         # Load or initialise plate geometries
-        for _age in _tqdm(_ages, desc="Loading geometries", disable=logging.getLogger().isEnabledFor(logging.INFO)):
-            # Load resolved geometries if they are available
-            if resolved_geometries is not None:
-                # Check if resolved geometries are a dictionary
-                if not isinstance(resolved_geometries, Dict):
-                    raise ValueError("Resolved geometries should be a dictionary.")
-                
-                # Check if the age is in the dictionary
-                if _age in resolved_geometries.keys():
-                    self.resolved_geometries[_age] = resolved_geometries[_age]
-                else:
-                    self.resolved_geometries[_age] = utils_data.GeoDataFrame_from_geoparquet(
+        for _age in _tqdm(self.settings.ages, desc="Loading geometries", disable=self.settings.logger.level==logging.INFO):
+            # Load available data
+            for key, entries in self.settings.plate_cases.items():
+                # Make list to store available cases
+                available_cases = []
+
+                # Try to load all DataFrames
+                for entry in entries:
+                    self.resolved_geometries[_age][entry] = utils_data.GeoDataFrame_from_geoparquet(
                         self.settings.dir_path,
                         "Geometries",
-                        _age,
                         self.settings.name,
+                        _age,
+                        entry
                     )
 
-                # Get new topologies if they are unavailable
-                if self.resolved_geometries[_age] is None:
-                    resolved_geometries = utils_data.get_topology_geometries(
-                        self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
+                    # Store the cases for which a DataFrame could be loaded
+                    if self.resolved_geometries[_age][entry] is not None:
+                        available_cases.append(entry)
+                
+                # Check if any DataFrames were loaded
+                if len(available_cases) > 0:
+                    # Copy all DataFrames from the available case        
+                    for entries in entry:
+                        if entry not in available_cases:
+                            self.geometries[_age][entry] = self.geometries[_age][available_cases[0]].copy()
+                else:
+                    # Initialise missing geometries
+                    self.resolved_geometries[_age][key] = utils_data.get_resolved_geometries(
+                        self.reconstruction,
+                        _age,
+                        self.settings.options[key]["Anchor plateID"]
                     )
-                    self.resolved_geometries[_age] = resolved_geometries[_age]
-            
-            # Resolve topologies to use to get plates
-            # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
-            #       This step could be sped up by extracting all information from the geopandas DataFrame, but so far this has not been the main bottleneck
-            resolved_topologies = utils_data.get_resolved_topologies(
-                self.reconstruction,
-                [_age],
-            )
-            self.resolved_topologies[_age] = resolved_topologies[_age]
+
+                    # Resolve topologies to use to get plates
+                    # NOTE: This is done because some information is retrieved from the resolved topologies and some from the resolved geometries
+                    #       This step could be sped up by extracting all information from the geopandas DataFrame, but so far this has not been the main bottleneck
+                    self.resolved_topologies[_age][key] = utils_data.get_resolved_topologies(
+                        self.reconstruction,
+                        _age,
+                        self.settings.options[key]["Anchor plateID"],
+                    )
+
+                    # Copy to matching cases
+                    if len(entries) > 1:
+                        for entry in entries[1:]:
+                            self.resolved_geometries[_age][entry] = self.resolved_geometries[_age][key].copy()
+                            self.resolved_topologies[_age][entry] = self.resolved_topologies[_age][key].copy()
 
         # Initialise data dictionary
         self.data = {age: {} for age in self.settings.ages}
 
         # Loop through times
-        for _age in _tqdm(ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(self.settings.ages, desc="Loading plate data", disable=self.settings.logger.level==logging.INFO):
             # Load available data
-            self.data[_age] = utils_data.load_data(
-                self.data[_age],
-                self.settings.name,
-                _age,
-                "Plates",
-                self.settings.cases,
-                self.settings.point_cases,
-                self.settings.dir_path,
-                PARALLEL_MODE=self.settings.PARALLEL_MODE,
-            )
-
             for key, entries in self.settings.plate_cases.items():
+                # Make list to store available cases
+                available_cases = []
+
+                # Try to load all DataFrames
                 for entry in entries:
-                    if entry in self.data[_age].keys():
-                        available_case = entry
-                        break
-                    else:
-                        available_case = None
+                    self.data[_age][entry] = utils_data.DataFrame_from_parquet(
+                        self.settings.dir_path,
+                        "Plates",
+                        self.settings.name,
+                        _age,
+                        entry,
+                    )
+                    # Store the cases for which a DataFrame could be loaded
+                    if self.data[_age][entry] is not None:
+                        available_cases.append(entry)
                 
-                if available_case:
-                    for entry in entries:
-                        if entry is not available_case:
-                            self.data[_age][entry] = self.data[_age][available_case].copy()
+                # Check if any DataFrames were loaded
+                if len(available_cases) > 0:
+                    # Copy all DataFrames from the available case        
+                    for entries in entry:
+                        if entry not in available_cases:
+                            self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
                     # Initialise missing data
                     self.data[_age][key] = utils_data.get_plate_data(
                         self.reconstruction.rotation_model,
                         _age,
-                        self.resolved_topologies[_age], 
+                        self.resolved_topologies[_age][key], 
                         self.settings.options[key],
                     )
-
+                    
                     # Copy to matching cases
                     if len(entries) > 1:
                         for entry in entries[1:]:
@@ -151,44 +161,61 @@ class Plates:
 
     def calculate_rms_velocity(
             self,
-            point_data: Dict,
+            points: Optional['Points'] = None,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List, _numpy.ndarray]] = None,
         ):
         """
         Function to calculate the root mean square (RMS) velocity of the plates.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(
-            ages,
-            self.settings.ages,
-        )
+        _ages = utils_data.get_ages(ages, self.settings.ages)
 
         # Check if no points are passed, initialise Points object
-        if point_data is None:
-            raise ValueError("No points data provided, initialising Points object.")
-        
-        # TODO: Implement automatic initialisation of a Points object
+        if points is None:
+            # Initialise a Points object
+            points = Points(
+                settings = self.settings,
+                reconstruction = self.reconstruction,
+                resolved_geometries = self.resolved_geometries
+            )
         
         # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
-        _iterable = utils_data.get_iterable(
-            cases,
-            self.settings.gpe_cases,
-        )
+        _iterable = utils_data.get_iterable(cases, self.settings.point_cases)
 
         # Loop through ages
         for _age in _tqdm(_ages, desc="Calculating RMS velocities"):
             # Check if age in point data
-            if _age in point_data.keys():
+            if _age in points.data.keys():
                 # Loop through cases
                 for key, entries in _iterable.items():
                     # Check if case in point data
-                    if key in point_data[_age].keys():
-                        if self.data[_age][key]["v_rms_mag"].mean() == 0:
-                            self.data[_age][key] = utils_calc.compute_rms_velocity(
-                                self.data[_age][key],
-                                point_data[_age][key]
+                    if key in points.data[_age].keys():
+                        # Define plateIDs if not provided
+                        _plateIDs = utils_data.get_plates(
+                            plateIDs,
+                            self.data[_age][key].plateID,
+                        )
+                        
+                        # Loop through plates
+                        for _plateID in _plateIDs:
+                            # Select points belonging to plate 
+                            mask = points.data[_age][key].plateID == _plateID
+
+                            # Calculate RMS velocity for plate
+                            rms_velocity = utils_calc.compute_rms_velocity(
+                                points.data[_age][key].segment_length_lat.values[mask],
+                                points.data[_age][key].segment_length_lon.values[mask],
+                                points.data[_age][key].v_mag.values[mask],
+                                points.data[_age][key].v_azi.values[mask],
+                                points.data[_age][key].omega.values[mask],
                             )
+
+                            # Store RMS velocity components 
+                            self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_mag"] = rms_velocity[0]
+                            self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_azi"] = rms_velocity[1]
+                            self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "omega_rms"] = rms_velocity[2]
 
                         self.data[_age] = utils_calc.copy_values(
                             self.data[_age], 
@@ -200,6 +227,83 @@ class Plates:
                         logging.error(f"No point data available for {key} at {_age} Ma, no RMS velocity calculated.")
             else:
                 logging.error(f"No point data available for {_age} Ma, no RMS velocity calculated.")
+
+    def calculate_torque_on_plates(
+            self,
+            type: str,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plate_IDs: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+            force_data: Optional[Union[Dict, str]] = None,
+        ):
+        """
+        Function to calculate the torque on plates
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+     
+        # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
+        if type == "slab_pull_torque" or type == "slab_bend_torque":
+            matching_cases = self.settings.slab_cases
+        elif type == "GPE_torque":
+            matching_cases = self.settings.gpe_cases
+        elif type == "mantle_drag_torque":
+            matching_cases = self.settings.mantle_drag_cases
+        
+        _iterable = utils_data.get_iterable(cases, matching_cases)
+
+        # Select plates
+        if plate_IDs is not None:
+            if isinstance(plate_IDs, (int, float, _numpy.floating, _numpy.integer)):
+                plate_IDs = [plate_IDs]
+        
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Calculating torque on plates"):
+            logging.info(f"Calculating torque on plates at {_age} Ma")
+
+            for key in cases:
+                # Select plates, if necessary
+                selected_data = self.data[_age][key].copy()
+                if plate_IDs is not None:
+                    selected_data = selected_data.loc[selected_data.plateID.isin(plate_IDs)].copy()
+
+                # Define length and width of segment
+                if type == "slab_pull_torque" or type == "slab_bend_torque":
+                    length = force_data[_age][key].trench_segment_length
+                    width = 1.
+                else:
+                    length = force_data[_age][key].segment_length_lat
+                    width = force_data[_age][key].segment_length_lat
+
+                # Calculate torques
+                selected_data = utils_calc.compute_torque_on_plates(
+                    self.data[_age][key], 
+                    self.force_data[_age][key].lat, 
+                    self.force_data[_age][key].lon, 
+                    self.force_data[_age][key].plateID, 
+                    self.force_data[_age][key][f"{type}_lat"], 
+                    self.force_data[_age][key][f"{type}_lat"],
+                    length,
+                    width,
+                    self.constants,
+                    torque_variable=type
+                )
+
+                # Feed back into plates
+                if plate_IDs is not None:
+                    mask = self.data[_age][key].plateID.isin(plate_IDs)
+                    self.data[_age][key].loc[mask, :] = selected_data
+                else:
+                    self.data[_age][key] = selected_data
 
     def optimise_torques(
             self,
@@ -262,7 +366,7 @@ class Plates:
             slab_iterable = {case: [] for case in cases}
             mantle_iterable = {case: [] for case in cases}
 
-        for i, _age in tqdm(self.settings.ages, desc="Optimising torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+        for i, _age in tqdm(self.settings.ages, desc="Optimising torques", disable=self.settings.logger.level==logging.INFO):
             if self.settings.DEBUG_MODE:
                 print(f"Optimising torques at {_age} Ma")            
             
@@ -371,7 +475,7 @@ class Plates:
         )
 
         # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(_ages), desc="Computing driving torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+        for i, _age in tqdm(enumerate(_ages), desc="Computing driving torques", disable=self.settings.logger.level==logging.INFO):
             if self.settings.DEBUG_MODE:
                 print(f"Computing driving torques at {_age} Ma")
 
@@ -435,7 +539,7 @@ class Plates:
             cases = self.cases
 
         # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(ages), desc="Computing residual torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
+        for i, _age in tqdm(enumerate(ages), desc="Computing residual torques", disable=self.settings.logger.level==logging.INFO):
             if self.settings.DEBUG_MODE:
                 print(f"Computing residual torques at {_age} Ma")
 
@@ -484,100 +588,109 @@ class Plates:
                     for coord in ["x", "y", "z", "mag"]:
                         self.plates[_age][case]["residual_torque_" + coord] = 0
 
-    def calculate_torque_on_plates(
+    def save(
             self,
-            type: str,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plate_IDs: Optional[
-                Union[
-                    int,
-                    float,
-                    _numpy.floating,
-                    _numpy.integer,
-                    List[Union[int, float, _numpy.floating, _numpy.integer]],
-                    _numpy.ndarray
-                ]
-            ] = None,
-            force_data: Optional[Union[Dict, str]] = None,
+            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            cases: Union[None, str, List[str]] = None,
+            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            file_dir: Optional[str] = None,
         ):
         """
-        Function to calculate the torque on plates
+        Function to save the 'Plates' object.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(
-            ages,
-            self.settings.ages,
-        )
+        _ages = utils_data.get_ages(ages, self.settings.ages)
 
-        # # Get data if not provided
-        # if force_data is None:
-        #     if type == "Slab_pull_torque" or type == "Slab_bend_torque":
-        #         # Load or initialise slabs
-        #         slabs = Slabs(
-        #             self.settings,
-        #             self.reconstruction,
-        #             ages,
-        #             resolved_geometries = self.resolved_geometries,
-        #         )
-
-        #         # Sample slabs
-        #         force_data = slabs.data
-            
-     
-        # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
-        if type == "slab_pull_torque" or type == "slab_bend_torque":
-            matching_cases = self.settings.slab_cases
-        elif type == "GPE_torque":
-            matching_cases = self.settings.gpe_cases
-        elif type == "mantle_drag_torque":
-            matching_cases = self.settings.mantle_drag_cases
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
         
-        _iterable = utils_data.get_iterable(
-            cases,
-            matching_cases,
-        )
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
-        # Select plates
-        if plate_IDs is not None:
-            if isinstance(plate_IDs, (int, float, _numpy.floating, _numpy.integer)):
-                plate_IDs = [plate_IDs]
-        
         # Loop through ages
-        for _age in tqdm(_ages, desc="Calculating torque on plates"):
-            logging.info(f"Calculating torque on plates at {_age} Ma")
+        for _age in _tqdm(_ages, desc="Saving Plates", disable=self.settings.logger.level==logging.INFO):
+            # Loop through cases
+            for _case in _cases:
+                # Select resolved geometries, if required
+                _resolved_geometries = self.resolved_geometries[_age][_case]
+                if plateIDs:
+                    _resolved_geometries = _resolved_geometries[_resolved_geometries.PLATEID1.isin(plateIDs)]
 
-            for key in cases:
-                # Select plates, if necessary
-                selected_data = self.data[_age][key].copy()
-                if plate_IDs is not None:
-                    selected_data = selected_data.loc[selected_data.plateID.isin(plate_IDs)].copy()
-
-                # Define length of segment
-                if type == "slab_pull_torque" or type == "slab_bend_torque":
-                    length = force_data[_age][key].trench_segment_length
-                    width = 1.
-                else:
-                    length = force_data[_age][key].segment_length_lat
-                    width = force_data[_age][key].segment_length_lat
-
-                # Calculate torques
-                selected_data = utils_calc.compute_torque_on_plates(
-                    self.data[_age][key], 
-                    self.force_data[_age][key].lat, 
-                    self.force_data[_age][key].lon, 
-                    self.force_data[_age][key].plateID, 
-                    self.force_data[_age][key].mantle_drag_force_lat, 
-                    self.force_data[_age][key].mantle_drag_force_lon,
-                    self.force_data[_age][key].segment_length_lat,
-                    self.force_data[_age][key].segment_length_lon,
-                    self.constants,
-                    torque_variable=type
+                # Save resolved_geometries
+                utils_data.GeoDataFrame_to_geoparquet(
+                    _resolved_geometries,
+                    "Geometries",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
                 )
 
-                # Feed back into plates
-                if plate_IDs is not None:
-                    mask = self.data[_age][key].plateID.isin(plate_IDs)
-                    self.data[_age][key].loc[mask, :] = selected_data
-                else:
-                    self.data[_age][key] = selected_data
+                # Select data, if required
+                _data = self.data[_age][_case]
+                if plateIDs:
+                    _data = _data[_data.plateID.isin(plateIDs)]
+
+                # Save data
+                utils_data.DataFrame_to_parquet(
+                    _data,
+                    "Plates",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
+                )
+
+        logging.info(f"Plates saved to {self.settings.dir_path}")
+
+    def export(
+            self,
+            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            cases: Union[None, str, List[str]] = None,
+            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            file_dir: Optional[str] = None,
+        ):
+        """
+        Function to export the 'Plates' object.
+        Geometries are saved as shapefiles, data are saved as .csv files.
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+        
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
+
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Exporting Plates", disable=self.settings.logger.level==logging.INFO):
+            # Loop through cases
+            for _case in _cases:
+                # Select resolved geometries, if required
+                _resolved_geometries = self.resolved_geometries[_age][_case]
+                if plateIDs:
+                    _resolved_geometries = _resolved_geometries[_resolved_geometries.PLATEID1.isin(plateIDs)]
+
+                # Save resolved_geometries
+                utils_data.GeoDataFrame_to_shapefile(
+                    _resolved_geometries,
+                    "Geometries",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
+                )
+
+                utils_data.DataFrame_to_csv(
+                    self.data[_age][_case],
+                    "Plates",
+                    self.settings.name,
+                    _age,
+                    _case,
+                    _file_dir,
+                )
+
+        logging.info(f"Plates exported to {self.settings.dir_path}")
+
+

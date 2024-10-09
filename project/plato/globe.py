@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Optional, Union
 
 import gplately as _gplately
+from gplately import pygplates as _pygplates
 import numpy as _numpy
 import pandas as _pandas
 from tqdm import tqdm as _tqdm
@@ -15,16 +16,17 @@ class Globe:
     """
     def __init__(
             self,
-            settings: Optional['Settings'] = None,
-            cases_file: Optional[str] = None,
-            cases_sheet: Optional[str] = None,
-            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            settings: Optional[Settings] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction]= None,
+            rotation_file: Optional[str]= None,
+            topology_file: Optional[str]= None,
+            polygon_file: Optional[str]= None,
             reconstruction_name: Optional[str] = None,
-            rotation_file: Optional[str] = None,
-            topology_file: Optional[str] = None,
-            polygon_file: Optional[str] = None,
-            ages: Optional[list] = None,
-            files_dir: Optional[str] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases_file: Optional[list[str]]= None,
+            cases_sheet: Optional[str]= "Sheet1",
+            files_dir: Optional[str]= None,
+            resolved_geometries: Optional[Dict] = None,
             plate_data: Optional[Dict] = None,
             point_data: Optional[Dict] = None,
             slab_data: Optional[Dict] = None,
@@ -48,6 +50,7 @@ class Globe:
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
+            reconstruction_name,
             ages, 
             cases_file,
             cases_sheet,
@@ -79,22 +82,35 @@ class Globe:
             "subduction_length": 0.,
             "net_rotation_pole_lat": 0.,
             "net_rotation_pole_lon": 0.,
-            "net_rotation_rate": 0.,}
+            "net_rotation_rate": 0.}
         ) for case in self.settings.cases}
 
         # Get the number of plates
-        self.calculate_number_of_plates(plate_data)
+        self.calculate_number_of_plates(
+            self.settings.ages, 
+            self.settings.cases,
+            plate_data,
+        )
 
         # Get the subduction length
-        self.calculate_subduction_length(slab_data)
+        self.calculate_subduction_length(
+            self.settings.ages, 
+            self.settings.cases,
+            slab_data,
+        )
 
         # Get the net rotation
-        self.calculate_net_rotation(plate_data)
+        self.calculate_net_rotation(
+            self.settings.ages, 
+            self.settings.cases,
+            plate_data,
+        )
 
     def calculate_number_of_plates(
             self,
             ages = None,
-            plates_data = None
+            cases = None,
+            plates_data = None,
         ):
         """
         Calculate the number of plates for each time step.
@@ -107,12 +123,15 @@ class Globe:
         # Define ages if not provided
         _ages = utils_data.get_ages(ages, self.settings.ages)
         
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+
         # Calculate the number of plates for each time step
         for i, _age in enumerate(_ages):
-            for _case in self.settings.cases:
-                if plates_data and if _age in plates_data.keys() and if _case in plates_data[_age].keys():
+            for _case in _cases:
+                if plates_data and _age in plates_data.keys() and _case in plates_data[_age].keys():
                     logging.info(f"Calculating number of plates for case {_case} at age {_age} using provided data")
-                    self.data[_case].loc[i, "number_of_plates"] = len(plates_data[_case][_age].plate_id.unique())
+                    self.data[_case].loc[i, "number_of_plates"] = len(plates_data[_age][_case].plateID.unique())
                 else:
                     logging.info(f"Calculating number of plates for case {_case} at age {_age} using resolved topologies")
                     resolved_topologies = utils_data.get_resolved_topologies(
@@ -147,7 +166,7 @@ class Globe:
                 # Check if slab data is provided
                 if slab_data and _age in slab_data.keys() and _case in slab_data[_age].keys():
                     logging.info(f"Calculating subduction length for case {_case} at age {_age} using provided data")
-                    self.data[_case].loc[i, "subduction_length"] = slab_data[_case][_age].trench_segment_length.sum()
+                    self.data[_case].loc[i, "subduction_length"] = slab_data[_age][_case].trench_segment_length.sum()
                 else:
                     logging.info(f"Calculating subduction length for case {_case} at age {_age} by tesselating subduction zones")
                     slabs = self.reconstruction.tessellate_subduction_zones(
@@ -173,7 +192,8 @@ class Globe:
             self,
             ages = None,
             cases = None,
-            plate_data = None
+            plate_data = None,
+            resolved_topologies = None,
         ):
         """
         Calculate the net rotation of the Earth's lithosphere.
@@ -196,6 +216,9 @@ class Globe:
                     logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided data")
                     pass
                 else:
+                    if resolved_topologies and _age in resolved_topologies.keys():
+                        logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided topologies")
+                        pass
                     logging.info(f"Calculating net rotation for case {_case} at age {_age} by resolving plate velocities")
                     resolved_topologies = utils_data.get_resolved_topologies(
                         self.reconstruction,
@@ -212,45 +235,76 @@ class Globe:
         ):
         """
         Calculate the fraction of the Earth's surface that has been lost to subduction.
-
-        :param ages: List of ages for which to calculate world uncertainty (default: None)
-        :type ages: Optional[int, float, numpy.integer, numpy.floating, list, numpy.ndarray]
-        :param polygons: Static polygons object or path (default: None)
-        :type polygons: Optional[Union[str, _pygplates.FeatureCollection]]
-        :param reconstructed_polygons: Optional pre-reconstructed polygons (default: None)
-        :type reconstructed_polygons: Optional[dict]
         """
         # Define ages if not provided
-        if ages is None:
-            ages = self.settings.ages
-        elif isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
-            ages = [ages]
+        _ages = utils_data.get_ages(ages, self.settings.ages)
 
         # Check that the polygons are provided
         if not reconstructed_polygons:
+            reconstructed_polygons = {}
             if polygons:
                 if isinstance(polygons, str):
                     self.polygons = _pygplates.FeatureCollection(polygons)
                 elif isinstance(polygons, _pygplates.FeatureCollection):
                     self.polygons = polygons
                 else:
-                    if hasattr(self, 'polygons'):
+                    if hasattr(self.reconstruction, 'polygons'):
                         polygons = self.polygons
                     else:
-                        raise ValueError("No static polygons object provided")
+                        raise ValueError("No static polygons provided!")
+                
+        # Loop through ages
+        for i, _age in enumerate(_ages):
+            if _age not in reconstructed_polygons.keys():
+                # If the age is not present, try to reconstruct the polygons
+                try:
+                    reconstructed_polygons[_age] = _pygplates.reconstruct(
+                        self.polygons,
+                        self.reconstruction.rotation_model,
+                        time = _age,
+                    )
+                except:
+                    # If that doesn't work, assign NaN to this age
+                    self.data[self.settings.cases[0]].loc[i, "world_uncertainty"] = _numpy.nan  
+                    break    
+            
+            area = 0
+            for polygon in reconstructed_polygons[_age]:
+                area += polygon.get_geometry.get_area()
 
-        # Reconstruct the polygons for each time step if necessary
-        if reconstructed_polygons is None:
-            reconstructed_polygons = {}
-            for age in self.settings.ages:
-                reconstructed_polygons[age] = _pygplates.reconstruct(
-                    self.polygons,
-                    self.reconstruction.rotation_model
+            self.data[self.settings.cases[0]].loc[i, "world_uncertainty"] = 1 - area        
+
+            # Copy values to other cases
+            for _case in self.settings.cases[1:]:
+                self.data[_case] = self.data[self.settings.cases[0]]
+
+    def save(
+            self,
+            ages,
+            cases,
+            plateIDs,
+            file_dir,
+        ):
+        """
+        Function to save 'Globe' object.
+        Data of the 'Globe' object is saved to .parquet files.
+        """
+        # Define ages if not provided
+        _ages = utils_data.get_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+        
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
+
+        # Loop through ages
+        for _case in _tqdm(_ages, desc="Saving Globe", disable=self.settings.logger.level==logging.INFO):
+            utils_data.DataFrame_to_parquet(
+                self.data[_case],
+                "Globe",
+                self.settings.name,
+                None,
+                _case,
+                _file_dir,
                 )
-
-        # Calculate the fraction of the Earth's surface that has been lost to subduction
-        for i, age in enumerate(ages):
-            if age in reconstructed_polygons:
-                self.data[self.settings.cases[0]].loc[i, "world_uncertainty"] = 1 - reconstructed_polygons[age]
-            else:
-                self.data[self.settings.cases[0]].loc[i, "world_uncertainty"] = 0  # Handle case when age not found

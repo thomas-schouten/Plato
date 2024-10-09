@@ -25,7 +25,7 @@ from plates import Plates
 from points import Points
 from slabs import Slabs
 from grids import Grids
-from platetorques import PlateTorques
+from plate_torques import PlateTorques
 from globe import Globe
 from optimisation import Optimisation
 from plot import Plot
@@ -95,14 +95,36 @@ def test_plates(
 
     # Test various functions of the Plates class
     if plates_test is not None and test_functions:
-        # Test calculation of RMS plate velocities
+        # Test saving
         try:
-            plates_test.calculate_rms_velocity()
-            logging.info("Successfully calculated RMS velocities.")
+            plates_test.save(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully saved 'Plates' object!")
 
         except Exception as e:
-            logging.error(f"An error occurred during RMS velocity calculation: {e}")
+            logging.error(f"An error occurred during saving of the 'Plates' object: {e}")
             traceback.print_exc()
+
+        # Test exporting
+        try:
+            plates_test.export(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully exported 'Plates' object!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during exporting of the 'Plates' object: {e}")
+            traceback.print_exc()
+
+        # # Test calculation of RMS plate velocities
+        # try:
+        #     plates_test.calculate_rms_velocity()
+        #     logging.info("Successfully calculated RMS velocities.")
+
+        # except Exception as e:
+        #     logging.error(f"An error occurred during RMS velocity calculation: {e}")
+        #     traceback.print_exc()
 
         # # Test calculation of plate torques
         # try:
@@ -144,7 +166,15 @@ def test_plates(
         
         return plates_test
 
-def test_points(settings=None, settings_file=None, test_ages=[0], reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
+def test_points(
+        settings=None,
+        settings_file=None,
+        test_ages=[0],
+        reconstruction_files=None,
+        reconstruction_name="Muller2016",
+        seafloor_grid=None,
+        test_functions=False,
+    ):
     """Test the points module of the plato package."""
     logging.info("Testing 'points' module...")
 
@@ -173,41 +203,71 @@ def test_points(settings=None, settings_file=None, test_ages=[0], reconstruction
         # Set plates_test to None if an error occurs
         points_test = None
 
-        # Test functions of the Points class
-        if points_test is not None and test_functions:
-            # Test sampling of seafloor age grid at points
-            if seafloor_grid:
-                try:
-                    points_test.sample_points(seafloor_grid = seafloor_grid)
+    # Test functions of the Points class
+    if points_test is not None and test_functions:
+        # Test saving
+        try:
+            points_test.save(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully saved 'Points' object!")
 
-                except Exception as e:
-                    logging.error(f"An error occurred during testing of the 'sample_points' function: {e}")
-                    traceback.print_exc()
-            else:
-                logging.info("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
+        except Exception as e:
+            logging.error(f"An error occurred during saving of the 'Points' object: {e}")
+            traceback.print_exc()
 
-            # Test computation of GPE force
-            try:
-                points_test.compute_gpe_force()
+        # Test exporting
+        try:
+            points_test.export(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully exported 'Points' object!")
 
-            except Exception as e:
-                logging.error(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
-                traceback.print_exc()
+        except Exception as e:
+            logging.error(f"An error occurred during exporting of the 'Points' object: {e}")
+            traceback.print_exc()
 
-            # Test computation of mantle drag force
-            try:
-                points_test.compute_mantle_drag_force()
-                logging.info("Successfully computed mantle drag force.")
+            # # Test sampling of seafloor age grid at points
+            # if seafloor_grid:
+            #     try:
+            #         points_test.sample_points(seafloor_grid = seafloor_grid)
 
-            except Exception as e:
-                print(f"An error occurred during testing of the 'compute_mantle_drag_force' function: {e}")
-                traceback.print_exc()
+            #     except Exception as e:
+            #         logging.error(f"An error occurred during testing of the 'sample_points' function: {e}")
+            #         traceback.print_exc()
+            # else:
+            #     logging.info("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
+
+            # # Test computation of GPE force
+            # try:
+            #     points_test.compute_gpe_force()
+
+            # except Exception as e:
+            #     logging.error(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
+            #     traceback.print_exc()
+
+            # # Test computation of mantle drag force
+            # try:
+            #     points_test.compute_mantle_drag_force()
+            #     logging.info("Successfully computed mantle drag force.")
+
+            # except Exception as e:
+            #     print(f"An error occurred during testing of the 'compute_mantle_drag_force' function: {e}")
+            #     traceback.print_exc()
 
         logging.info("Testing of the 'points' module complete.")
 
     return points_test
 
-def test_slabs(settings=None, settings_file=None, test_ages=[0], reconstruction_files=None, reconstruction_name="Muller2016", seafloor_grid=None, test_functions=True):
+def test_slabs(
+        settings=None,
+        settings_file=None,
+        test_ages=[0],
+        reconstruction_files=None,
+        reconstruction_name="Muller2016",
+        seafloor_grid=None,
+        test_functions=False,
+    ):
     """Test the slabs module of the plato package."""
     logging.info("Testing 'slabs' module...")
 
@@ -278,33 +338,37 @@ def test_grids(
         settings=None,
         settings_file=None,
         reconstruction_name="Muller2016",
+        reconstruction_files=None,
         test_ages=[0],
-        seafloor_grids=None,
+        seafloor_age_grids=None,
         continental_grids=None,
         velocity_grids=None,
         point_data_var=None,
-        test_functions=True
+        test_functions=False,
     ):
-    """Test the slabs module of the plato package."""
-    logging.info("Testing 'slabs' module...")
+    """Test the grids module of the plato package."""
+    logging.info("Testing 'grids' module...")
 
-    # Get settings
-    if settings is None:
-        settings = test_settings(settings_file=settings_file, test_ages=test_ages)
+    # Make a PlateReconstruction object if files are provided
+    if reconstruction_files:
+        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+    else:
+        reconstruction = None
+
     # Test initialisation of Grids object
     try:
         grids_test = Grids(
             settings=settings,
-            reconstruction_name=reconstruction_name,
+            ages=test_ages, 
             cases_file=settings_file,
-            seafloor_grids=seafloor_grids,
-            continental_grids=continental_grids,
-            velocity_grids=velocity_grids
+            reconstruction=reconstruction,
+            reconstruction_name=reconstruction_name,
+            files_dir="output",
         )
         logging.info("Successfully initialised 'Grids' object.")
-        
+
     except Exception as e:
-        print(f"An error occurred during initialisation of the 'Grids' object: {e}")
+        logging.error(f"An error occurred during initialisation of the 'Slabs' object: {e}")
         traceback.print_exc()
 
         # Set grids_test to None if an error occurs
@@ -333,50 +397,126 @@ def test_grids(
 
     return grids_test
 
-def test_globe(settings=None, reconstruction=None, reconstruction_files=None, print_results=False):
+def test_globe(
+        settings=None,
+        settings_file=None,
+        reconstruction_name="Muller2016",
+        reconstruction_files=None,
+        test_ages=[0],
+        test_functions=False,
+    ):
     """Test the globe module of the plato package."""
-    if print_results:
-        print("Testing globe module...")
+    logging.info("Testing 'globe' module...")
 
-    if settings is None:
-        settings = test_settings(print_results=False)
-    
-    if reconstruction is None:
-        reconstruction = test_reconstruction(reconstruction_files=reconstruction_files, print_results=False)
-    
-    # Test initialisation of the Globe object
+    # Make a PlateReconstruction object if files are provided
+    if reconstruction_files:
+        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+    else:
+        reconstruction = None
+
+    # Test initialisation of Globe object
     try:
-        globe_test = Globe(settings=settings, reconstruction=reconstruction)
-        if print_results:
-            print(f"Globe data:\n{globe_test.data[settings.cases[0]]}")
+        globe_test = Globe(
+            settings=settings,
+            ages=test_ages, 
+            cases_file=settings_file,
+            reconstruction=reconstruction,
+            reconstruction_name=reconstruction_name,
+            files_dir="output",
+        )
+        logging.info("Successfully initialised 'Globe' object.")
 
     except Exception as e:
-        print(f"An error occurred during globe testing: {e}")
-        traceback.print_exc()
-    
-    # Test several functions of the Globe class
-    # Test calculation of number of plates
-    try:
-        globe_test.calculate_number_of_plates()
-        if print_results:
-            print(f"Number of plates: {globe_test.number_of_plates}")
-    except Exception as e:
-        print(f"An error occurred during calculation of number of plates: {e}")
+        logging.error(f"An error occurred during initialisation of the 'Globe' object: {e}")
         traceback.print_exc()
 
-    # Test calculation of total subduction zone length
-    try:
-        globe_test.calculate_total_subduction_length()
-        if print_results:
-            print(f"Total subduction zone length: {globe_test.total_subduction_length}")
-    except Exception as e:
-        print(f"An error occurred during calculation of total subduction zone length: {e}")
-        traceback.print_exc()
+        # Set grids_test to None if an error occurs
+        globe_test = None
 
-    if print_results:
-        print(f"Globe test complete.")
+    if globe_test is not None and test_functions:
+        pass
+
+    logging.info("Testing of the 'globe' module complete.")
 
     return globe_test
+
+def test_plate_torques(
+        settings=None,
+        settings_file=None,
+        reconstruction_name="Muller2016",
+        reconstruction_files=None,
+        test_ages=[0],
+        seafloor_age_grids=None,
+        continental_grids=None,
+        velocity_grids=None,
+        test_functions=False,
+    ):
+    """Test the globe module of the plato package."""
+    logging.info("Testing 'plate_torques' module...")
+
+    # Make a PlateReconstruction object if files are provided
+    if reconstruction_files:
+        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+    else:
+        reconstruction = None
+
+    # Test initialisation of Globe object
+    try:
+        plate_torques_test = PlateTorques(
+            settings=settings,
+            ages=test_ages, 
+            cases_file=settings_file,
+            reconstruction=reconstruction,
+            reconstruction_name=reconstruction_name,
+            files_dir="output",
+            seafloor_age_grids=seafloor_age_grids,
+            continental_grids=continental_grids,
+            velocity_grids=velocity_grids,
+        )
+        logging.info("Successfully initialised 'PlateTorques' object.")
+
+    except Exception as e:
+        logging.error(f"An error occurred during initialisation of the 'PlateTorques' object: {e}")
+        traceback.print_exc()
+
+        # Set grids_test to None if an error occurs
+        plate_torques_test = None
+
+    if plate_torques_test is not None and test_functions:
+        # Test saving
+        try:
+            plate_torques_test.save_all(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully saved 'PlateTorques' object!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during saving of the 'PlateTorques' object: {e}")
+            traceback.print_exc()
+
+        # Test exporting
+        try:
+            plate_torques_test.export_all(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully exported 'Points' object!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during exporting of the 'PlateTorques' object: {e}")
+            traceback.print_exc()
+        
+        # Test calculating RMS velocities
+        try:
+            plate_torques_test.calculate_rms_velocity(
+                ages=test_ages
+            )
+            logging.info(f"Successfully calculated RMS velocities!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during calculation of the RMS velocity in the 'PlateTorques' object: {e}")
+            traceback.print_exc()
+
+    logging.info("Testing of the 'plate_torques' module complete.")
 
 def plot_test(plate_torques=None, print_results=False):
     """Test the plot module of the plato package."""

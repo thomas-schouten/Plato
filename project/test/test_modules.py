@@ -18,13 +18,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 TEST_CONFIGS = {
     "TEST_SETTINGS": False,
     "TEST_LOCAL_FILES": False,
-    "TEST_FUNCTIONS": False,
+    "TEST_FUNCTIONS": True,
     "TEST_PLATES": False,
     "TEST_POINTS": False,
     "TEST_SLABS": False,
-    "TEST_GRIDS": True,
+    "TEST_GRIDS": False,
     "TEST_GLOBE": False,
-    "TEST_PLATE_TORQUES": False,
+    "TEST_PLATE_TORQUES": True,
 }
 
 # Define settings file
@@ -41,10 +41,10 @@ reconstruction_files = (
 # Define test ages
 test_ages = [0, 50]
 
-# # Define seafloor files
-# seafloor_files = {}
+# Define seafloor files
+# seafloor_age_grids = {}
 # for age in test_ages:
-#     seafloor_files[age] = os.path.join("data", f"age_{age}.nc")
+#     seafloor_age_grids[age] = os.path.join("data", f"age_{age}.nc")
 
 def run_tests():
     """Run all specified tests based on the TEST_CONFIGS dictionary."""
@@ -86,9 +86,9 @@ def run_tests():
     # Test Grids
     if TEST_CONFIGS["TEST_GRIDS"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_grids(seafloor_grids=seafloor_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_grids(seafloor_grids=seafloor_age_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
-            functions_test.test_grids(test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_grids(settings_file=settings_file, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 
     # Test Plate Torques
     if TEST_CONFIGS["TEST_PLATE_TORQUES"]:

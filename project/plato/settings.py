@@ -90,7 +90,7 @@ class Settings:
         logging.debug(f"DEBUG_MODE: {self.DEBUG_MODE}, PARALLEL_MODE: {self.PARALLEL_MODE}")
 
         # Process case groups
-        self.plate_cases = self.process_cases(["Minimum plate area"])
+        self.plate_cases = self.process_cases(["Minimum plate area", "Anchor PlateID"])
         self.slab_cases = self.process_cases(["Slab tesselation spacing"])
         self.point_cases = self.process_cases(["Grid spacing"])
 
