@@ -114,7 +114,7 @@ class Points:
         self.calculate_velocities()
 
         # Set flags for computed torques
-        self.sampled_points = False
+        self.sampled_seafloor = False
         self.computed_gpe_torque = False
         self.computed_mantle_drag_torque = False
 
@@ -128,10 +128,10 @@ class Points:
         Function to compute velocities at points.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.point_cases)
+        _cases = utils_data.select_cases(cases, self.settings.point_cases)
 
         # Loop through ages and cases
         for _age in _ages:
@@ -168,128 +168,160 @@ class Points:
                     self.data[_age][_case].loc[mask, f"v_mag"] = velocities[2]
                     self.data[_age][_case].loc[mask, f"omega"] = velocities[3]
 
-    def sample_seafloor_at_points(
+    def sample_seafloor_ages(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            seafloor_grid: Optional[_xarray.Dataset] = None,
-            variables: Optional[Union[str, List[str]]] = ["seafloor_age"],
+            seafloor_grids: Optional[Dict] = None,
         ):
         """
-        Samples seafloor age at points
+        Samples seafloor age at points.
+        """
+        # Sample grid
+        self.sample_grid(
+            ages,
+            cases,
+            plateIDs,
+            seafloor_grids,
+            vars,
+        )
+
+        # Set sampling flag to true
+        self.sampled_seafloor = True
+
+    def sample_grid(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            grids: Optional[Dict] = None,
+            vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
+            sampling_coords: Optional[List[str]] = ["lat", "lon"],
+            cols: Optional[Union[str, List[str]]] = ["seafloor_age"],
+        ):
+        """
+        Samples any grid at points.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.get_iterable(cases, self.settings.gpe_cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
 
-        # Define variables, if not provided
-        _variables = utils_data.get_variables(variables, seafloor_grid.data_vars)
+        # Define variables if not provided
+        if vars is not None and isinstance(vars, str):
+            _vars = [vars]
+        elif vars is not None and isinstance(vars, list):
+            _vars = vars
+        else:
+            _vars = []
 
         # Loop through valid times
-        for _age in _tqdm(_ages, desc="Sampling points", disable = self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(_ages, desc="Sampling points", disable=self.settings.logger.level == logging.INFO):
             for key, entries in _iterable.items():
                 # Define plateIDs if not provided
-                _plateIDs = utils_data.get_plateIDs(plateIDs, self.data[_age][key].plateID.unique())
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][key].plateID.unique())
 
                 # Select points
                 _data = self.data[_age][key]
                 if plateIDs is not None:
                     _data = _data[_data.plateID.isin(_plateIDs)]
 
-                for _variable in _variables:
-                    # Sample grid at points for key
+                # Determine the appropriate grid
+                _grid = None
+                if _age in grids.keys():
+                    if isinstance(grids[_age], _xarray.Dataset):
+                        _grid = grids[_age]
+                    elif key in grids[_age] and isinstance(grids[_age][key], _xarray.Dataset):
+                        _grid = grids[_age][key]
+                
+                if _grid is None:
+                    logging.warning(f"No valid grid found for age {_age} and key {key}.")
+                    continue  # Skip this iteration if no valid grid is found
+
+                # Set _vars to the grid's data variables if not already defined
+                _vars = list(_grid.data_vars) if not _vars else _vars
+
+                # Set columns to _vars if not already defined or if not of the same length
+                _cols = _vars if not cols or len(cols) != len(_vars) else cols
+
+                # Sample grid at points for each variable
+                for _var, _col in zip(_vars, _cols):
                     sampled_data = utils_calc.sample_grid(
-                        _data.lat,
-                        _data.lon,
-                        seafloor_grid[_variable]
+                        _data[sampling_coords[0]],
+                        _data[sampling_coords[1]],
+                        _grid[_var],
                     )
 
-                    # Enter sampled data in DataFrame
-                    self.data[_age][key].loc[_data.index, _variable] = sampled_data
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index, _col] = sampled_data
                     
                     # Copy to other entries
-                    self.data[_age] = utils_calc.copy_values(
-                                self.data[_age], 
-                                key, 
-                                entries, 
-                                [_variable], 
-                            )
-                
-        # Set flag to True
-        self.sampled_points = True
+                    self.data[_age] = utils_data.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries, 
+                        [_col],
+                    )
     
-    def compute_gpe_force(
+    def calculate_gpe_force(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            PROGRESS_BAR: Optional[bool] = True,    
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            seafloor_grid: Optional[Dict] = None,
         ):
         """
         Function to compute gravitational potential energy (GPE) torque.
-
-        :param _ages:    reconstruction times to compute residual torque for
-        :type _ages:     list
-        :param cases:                   cases to compute GPE torque for (defaults to GPE cases if not specified).
-        :type cases:                    list
-        :param PROGRESS_BAR:            whether or not to display a progress bar
-        :type PROGRESS_BAR:             bool
         """
-        # Define reconstruction times if not provided
-        if ages is None:
-            ages = self.settings.ages
-        else:
-            if isinstance(ages, str):
-                ages = [ages]
-
-        # Check if points have been sampled
-        if self.sampled_points == False:
-            self.sample_points(ages, cases)
-
-        # Make iterable
-        if cases is None:
-            iterable = self.mantle_drag_cases
-        else:
-            if isinstance(cases, str):
-                cases = [cases]
-            iterable = {case: [] for case in cases}
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
 
         # Loop through reconstruction times
-        for i, _age in _tqdm(enumerate(_ages), desc="Computing GPE torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.settings.DEBUG_MODE:
-                print(f"Computing slab bend torques at {_age} Ma")
-
+        for i, _age in _tqdm(enumerate(_ages), desc="Computing GPE forces", disable=(self.settings.logger.level==logging.INFO)):
             # Loop through gpe cases
-            for key, entries in iterable.items():
-                if self.settings.DEBUG_MODE:
-                    print(f"Computing GPE torque for cases {entries}")
+            for key, entries in _iterable.items():
+                if self.settings.options[key]["GPE torque"]:
+                    # Select points
+                    _data = self.data[_age][key]
 
-                # Calculate GPE torque
-                if self.options[key]["GPE torque"]: 
-                    self.points[_age][key] = utils_calc.compute_GPE_force(self.points[_age][key], self.seafloor[_age], self.options[key], self.mech)
-                    self.plates[_age][key] = utils_calc.compute_torque_on_plates(
-                        self.plates[_age][key], 
-                        self.points[_age][key].lat, 
-                        self.points[_age][key].lon, 
-                        self.points[_age][key].plateID, 
-                        self.points[_age][key].GPE_force_lat, 
-                        self.points[_age][key].GPE_force_lon,
-                        self.points[_age][key].segment_length_lat, 
-                        self.points[_age][key].segment_length_lon,
-                        self.constants,
-                        torque_variable="GPE_torque"
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID.unique())
+
+                    # Select points
+                    if plateIDs is not None:
+                        _data = _data[_data.plateID.isin(_plateIDs)]
+
+                    # Calculate GPE force
+                    _data = utils_calc.compute_GPE_force(
+                        _data,
+                        seafloor_grid[_age].seafloor_age,
+                        self.settings.options[key],
+                        self.settings.mech,
                     )
 
-                    # Copy DataFrames
-                    if len(entries) > 1 and cases is None:
-                        [[self.points[_age][entry].update(
-                            {"GPE_force_" + coord: self.points[_age][key]["GPE_force_" + coord]}
-                        ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                        [[self.plates[_age][entry].update(
-                            {"GPE_torque_" + axis: self.plates[_age][key]["GPE_torque_" + axis]}
-                        ) for axis in ["x", "y", "z", "mag"]] for entry in entries[1:]]
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index] = _data
+                    
+                    # Copy to other entries
+                    cols = [
+                        "lithospheric_mantle_thickness",
+                        "crustal_thickness",
+                        "water_depth",
+                        "U",
+                        "GPE_force_lat",
+                        "GPE_force_lon",
+                    ]
+                    self.data[_age] = utils_data.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries,
+                        cols,
+                    )
 
     def compute_mantle_drag_force(
             self,
@@ -424,10 +456,10 @@ class Points:
         Function to save the 'Points' object.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
@@ -459,10 +491,10 @@ class Points:
         Data of the points object is saved to .csv files.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir

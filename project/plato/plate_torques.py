@@ -142,57 +142,64 @@ class PlateTorques():
             cases,
         )
 
-    def sample_all(
+    def sample_seafloor_ages(
             self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
         ):
         """
         Function to sample the seafloor ages and other variables (if available)
         """
         # Sample points
-        self.sample_points(ages, cases, plateIDs, self.grids)
+        self.sample_point_seafloor_ages(ages, cases, plateIDs)
     
         # Sample slabs
-        self.sample_slabs(ages, cases, self.grids)
-    
-        # Sample upper plates
-        self.sample_upper_plates(ages, cases, self.grids)
+        self.sample_slab_seafloor_ages(ages, cases, plateIDs)
 
-    def sample_slabs(
-            self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-        ):
-        """
-        Function to sample the seafloor ages and other variables (if available)
-        """
-        self.slabs.sample_slabs(ages, cases, plateIDs, self.grids)
-
-    def sample_upper_plates(
-            self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-        ):
-        """
-        Function to sample the seafloor ages and other variables (if available)
-        """
-        self.slabs.sample_upper_plates(ages, cases, plateIDs, self.grids)
-
-    def sample_points(
+    def sample_point_seafloor_ages(
             self,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
-            variables: Optional[Union[str, List[str]]] = None,
         ):
         """
         Function to sample the seafloor ages and other variables (if available)
         """
-        self.points.sample_seafloor_at_points(ages, cases, plateIDs, self.grids, variables)
+        self.points.sample_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
+
+    def sample_slab_seafloor_ages(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+        ):
+        """
+        Function to sample the seafloor ages and other variables (if available)
+        """
+        self.slabs.sample_slab_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
+
+    # def sample_sediment_thickness_at_slabs(
+    #         self,
+    #         ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+    #         cases: Optional[Union[str, List]],
+    #         plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+    #     ):
+    #     """
+    #     Function to sample the seafloor ages and other variables (if available)
+    #     """
+    #     self.slabs.sample_slabs(ages, cases, plateIDs, self.grids.sediment)
+
+    # def sample_seafloor_age_at_upper_plates(
+    #         self,
+    #         ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+    #         cases: Optional[Union[str, List]],
+    #         plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+    #     ):
+    #     """
+    #     Function to sample the seafloor ages and other variables (if available)
+    #     """
+    #     self.slabs.sample_upper_plates(ages, cases, plateIDs, self.grids.seafloor_age)
 
     def calculate_all_torques(
             self,
@@ -206,14 +213,14 @@ class PlateTorques():
         # Calculate slab pull torque
         self.calculate_slab_pull_torque(ages, cases, plateIDs)
 
-        # Calculate slab bend torque
-        self.calculate_slab_bend_torque(ages, cases, plateIDs)
-
         # Calculate GPE torque
         self.calculate_gpe_torque(ages, cases, plateIDs)
 
         # Calculate mantle drag torque
         self.calculate_mantle_drag_torque(ages, cases, plateIDs)
+
+        # Calculate slab bend torque
+        self.calculate_slab_bend_torque(ages, cases, plateIDs)
 
         # Calculate driving torque
         self.calculate_driving_torque(ages, cases, plateIDs)
@@ -223,11 +230,39 @@ class PlateTorques():
 
         logging.info("Calculated all torques!")
 
+    def calculate_gpe_torque(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+        ):
+        """
+        Function to calculate the GPE torque
+        """
+        # Calculate GPE force at points
+        self.points.calculate_gpe_force(
+            ages,
+            cases,
+            plateIDs,
+            self.grids.seafloor_age,
+        )
+
+        # Calculate GPE torque acting on plate
+        self.plates.calculate_torque_on_plates(
+            self.points.data,
+            ages,
+            cases,
+            plateIDs,
+            torque_var = "GPE",
+        )
+
+        logging.info("Calculated GPE torque!")
+
     def calculate_slab_pull_torque(
             self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
         ):
         """
         Function to calculate the slab pull torque
@@ -245,59 +280,11 @@ class PlateTorques():
 
         logging.info("Calculated slab pull torque!")
 
-    def calculate_slab_bend_torque(
-            self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-        ):
-        """
-        Function to calculate the slab bend torque
-        """
-        # Calculate the slab bend force along the trenches
-        self.slabs.calculate_slab_bend_force(ages, cases, plateIDs)
-
-        # Calculate the torque on 
-        self.plates.calculate_torque_on_plates(
-            ages,
-            cases,
-            plateIDs,
-            self.plates.data,
-            self.slabs.data,
-            torque_var = "slab_bend",
-        )
-
-        logging.info("Calculated slab bend torque!")
-
-    def calculate_gpe_torque(
-            self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-        ):
-        """
-        Function to calculate the GPE torque
-        """
-        # Calculate GPE force at points
-        self.points.calculate_gpe_force(ages, cases)
-
-        # Calculate GPE torque acting on plate
-        self.plates.calculate_torque_on_plates(
-            ages,
-            cases,
-            plateIDs,
-            self.plates.data,
-            self.point.data,
-            torque_var = "GPE",
-        )
-
-        logging.info("Calculated GPE torque!")
-
     def calculate_mantle_drag_torque(
             self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
         ):
         """
         Function to calculate the mantle drag torque
@@ -317,11 +304,35 @@ class PlateTorques():
 
         logging.info("Calculated mantle drag torque!")
 
+    def calculate_slab_bend_torque(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+        ):
+        """
+        Function to calculate the slab bend torque
+        """
+        # Calculate the slab bend force along the trenches
+        self.slabs.calculate_slab_bend_force(ages, cases, plateIDs)
+
+        # Calculate the torque on 
+        self.plates.calculate_torque_on_plates(
+            ages,
+            cases,
+            plateIDs,
+            self.plates.data,
+            self.slabs.data,
+            torque_var = "slab_bend",
+        )
+
+        logging.info("Calculated slab bend torque!")
+
     def calculate_driving_torque(
             self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
         ):
         """
         Function to calculate the driving torque.

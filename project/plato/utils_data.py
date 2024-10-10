@@ -9,6 +9,7 @@
 # Standard libraries
 import contextlib
 import io
+import inspect
 import os as _os
 import logging as logging
 import tempfile
@@ -30,81 +31,6 @@ from tqdm import tqdm as _tqdm
 
 # Local libraries
 from utils_calc import set_constants, mag_azi2lat_lon, project_points
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# INITIALISATION 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def load_data(
-        data: dict,
-        reconstruction_name: str,
-        age: Union[list, _numpy.array],
-        type: str,
-        all_cases: list,
-        matching_case_dict: dict,
-        files_dir: Optional[str] = None,
-        PARALLEL_MODE: Optional[bool] = False,
-    ):
-    """
-    Function to load DataFrames from a folder, or initialise new DataFrames
-
-    :return:                      data
-    :rtype:                       dict
-    """
-    # Initialise list to store available and unavailable cases
-    unavailable_cases = all_cases.copy()
-    available_cases = []
-
-    # If a file directory is provided, check for the existence of files
-    if files_dir:
-        for case in all_cases:
-            # Load DataFrame if found
-            data[case] = DataFrame_from_parquet(files_dir, type, reconstruction_name, case, age)
-
-            if data[case] is not None:
-                unavailable_cases.remove(case)
-                available_cases.append(case)
-            else:
-                logging.info(f"DataFrame for {type} for {reconstruction_name} at {age} Ma for case {case} not found, checking for similar cases...")
-
-    # Get available cases
-    for unavailable_case in unavailable_cases:
-        data[unavailable_case] = get_available_cases(data, unavailable_case, available_cases, matching_case_dict)
-
-        if data[unavailable_case] is not None:
-            available_cases.append(unavailable_case)
-
-    return data
-
-def get_available_cases(data, unavailable_case, available_cases, matching_case_dict):
-    # Copy dataframes for unavailable cases
-    matching_key = None
-
-    # Find dictionary key of list in which unavailable case is located
-    for key, matching_cases in matching_case_dict.items():
-        for matching_case in matching_cases:
-            if matching_case == unavailable_case:
-                matching_key = key
-                break
-        if matching_key:
-            break
-
-    # Check if there is an available case in the corresponding list
-    for matching_case in matching_case_dict[matching_key]:
-        # Copy DataFrame if found
-        if matching_case in available_cases:
-            # Ensure that matching_case data is not None
-            if data[matching_case] is not None:
-                data[unavailable_case] = data[matching_case].copy()
-                return data[unavailable_case]
-            
-            else:
-                logging.info(f"Data for matching case '{matching_case}' is None; cannot copy to '{unavailable_case}'.")
-
-    # If no matching case is found, return None
-    data[unavailable_case] = None
-
-    return data[unavailable_case]
 
 def get_plate_data(
         rotations: _pygplates.RotationModel,
@@ -243,7 +169,11 @@ def get_slab_data(
         constants = set_constants()
 
         # Tesselate subduction zones and get slab pull and bend torques along subduction zones
-        slabs = reconstruction.tessellate_subduction_zones(age, ignore_warnings=True, tessellation_threshold_radians=(options["Slab tesselation spacing"]/constants.mean_Earth_radius_km))
+        slabs = reconstruction.tessellate_subduction_zones(
+            age,
+            ignore_warnings=True,
+            tessellation_threshold_radians=(options["Slab tesselation spacing"]/constants.mean_Earth_radius_km)
+        )
 
         # Convert to _pandas.DataFrame
         slabs = _pandas.DataFrame(slabs)
@@ -255,20 +185,30 @@ def get_slab_data(
         # Convert trench segment length from degree to m
         slabs.trench_segment_length *= constants.equatorial_Earth_circumference / 360
 
-        # Get plateIDs of overriding plates
-        sampling_lat, sampling_lon = project_points(
+        # Get slab sampling points
+        slabs["slab_sampling_lat"], slabs["slab_sampling_lon"] = project_points(
             slabs.lat,
             slabs.lon,
             slabs.trench_normal_azimuth,
-            100
+            -30,
         )
+
+        # Get arc sampling points
+        slabs["arc_sampling_lat"], slabs["arc_sampling_lon"] = project_points(
+            slabs.lat,
+            slabs.lon,
+            slabs.trench_normal_azimuth,
+            200,
+        )
+
+        # Get plateIDs for upper plates
         slabs["upper_plateID"] = get_plateIDs(
             reconstruction,
             topology_geometries,
-            sampling_lat,
-            sampling_lon,
+            slabs["arc_sampling_lat"],
+            slabs["arc_sampling_lon"],
             age,
-            PARALLEL_MODE=PARALLEL_MODE
+            PARALLEL_MODE=PARALLEL_MODE,
         )
 
         # Initialise columns to store convergence rates
@@ -278,14 +218,14 @@ def get_slab_data(
 
         # Initialise other columns to store seafloor ages and forces
         # Upper plate
-        slabs["upper_plate_thickness"] = 0.
-        slabs["upper_plate_age"] = 0.
+        slabs["arc_thickness"] = 0.
+        slabs["arc_age"] = 0.
         slabs["continental_arc"] = False
         slabs["erosion_rate"] = 0.
 
         # Lower plate
-        slabs["lower_plate_age"] = 0.
-        slabs["lower_plate_thickness"] = 0.
+        slabs["slab_age"] = 0.
+        slabs["slab_thickness"] = 0.
         slabs["sediment_thickness"] = 0.
         slabs["sediment_fraction"] = 0.
         slabs["slab_length"] = options["Slab length"]
@@ -366,11 +306,11 @@ def get_point_data(
     points[[component for component in components]] = [[0.] * len(components) for _ in range(len(points))]
 
     # Add additional columns to store seafloor properties
-    points["seafloor_age"] = 0
-    points["lithospheric_thickness"] = 0
-    points["crustal_thickness"] = 0
-    points["water_depth"] = 0
-    points["U"] = 0
+    points["seafloor_age"] = 0.
+    points["lithospheric_thickness"] = 0.
+    points["crustal_thickness"] = 0.
+    points["water_depth"] = 0.
+    points["U"] = 0.
 
     # Add additional columns to store forces
     forces = ["GPE", "mantle_drag"]
@@ -973,7 +913,7 @@ def get_velocity_grid(
 
     return velocity_grid
 
-def get_ages(
+def select_ages(
         ages: Union[None, int, float, list, _numpy.integer, _numpy.floating, _numpy.ndarray],
         default_ages: _numpy.ndarray,
     ) -> _numpy.ndarray:
@@ -1005,7 +945,7 @@ def get_ages(
         # If a single value is provided, convert to numpy array
         return _numpy.array([ages])
 
-def get_cases(
+def select_cases(
     cases: Union[None, str, List[str]],
     default_cases: List[str],
     ) -> List[str]:
@@ -1033,7 +973,7 @@ def get_cases(
         # If cases is a string, put it in a list
        return [cases]
 
-def get_iterable(
+def select_iterable(
         cases: Union[None, str, List[str]],
         default_iterable: List[str],
     ) -> Dict[str, List[str]]:
@@ -1054,7 +994,7 @@ def get_iterable(
 
     return _iterable
 
-def get_plates(
+def select_plateIDs(
         plateIDs: Union[None, int, list, _numpy.integer, _numpy.floating, _numpy.ndarray],
         default_plates: List,
     ) -> Union[List, _numpy.ndarray]:
@@ -1073,6 +1013,30 @@ def get_plates(
     elif isinstance(plateIDs, (int, float, _numpy.floating, _numpy.integer)):
         # If plateIDs is a single value, put it in a list
         return [plateIDs]
+    
+def copy_values(
+        data: Dict,
+        key: str,
+        entries: List[str],
+        cols: Optional[Union[None, str, List[str]]] = None,
+        check: bool = False
+    ):
+    """
+    Function to copy values from one dataframe in a dictionary to another.
+    """
+    # Loop through entries
+    for entry in entries[1:]:
+        # Loop through columns
+        for col in cols:
+            # Check if mean column value is zero (a proxy for a column with no data)
+            if check is True:
+                if data[entry][col].mean() != 0:
+                    continue
+            
+            # Copy column
+            data[entry][col] = data[key][col]
+
+    return data
 
 def get_variables(
         variables: Union[None, str, List[str]],
@@ -1090,24 +1054,10 @@ def get_variables(
     elif isinstance(variables, str):
         return [variables]
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PROCESS CASES 
-# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
 def process_cases(cases, options, target_options):
     """
     Function to process cases and options to accelerate computation. Each case is assigned a dictionary of identical cases for a given set of target options.
     The goal here is that if these target options are identical, the computation is only peformed once and the results are copied to the other cases.
-
-    :param cases:           cases
-    :type cases:            list
-    :param options:         options
-    :type options:          dict
-    :param target_options:  target options
-    :type target_options:   list
-
-    :return:                case_dict
-    :rtype:                 dict
     """
     # Initialise dictionary to store processed cases
     processed_cases = set()
@@ -1138,10 +1088,6 @@ def process_cases(cases, options, target_options):
 
     return case_dict
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# SAVING 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 def DataFrame_to_parquet(
         data: _pandas.DataFrame,
         data_name: str,
@@ -1154,7 +1100,7 @@ def DataFrame_to_parquet(
     Function to save DataFrame to a Parquet file in a folder efficiently.
     """
     # Get the file path
-    file_path = get_file_path(data, data_name, "parquet", reconstruction_name, age, case, folder)
+    file_path = get_file_path(data_name, "parquet", reconstruction_name, age, case, folder)
 
     # Save the data to Parquet
     data.to_parquet(file_path, index=False)
@@ -1166,13 +1112,12 @@ def DataFrame_to_csv(
         age: int,
         case: str,
         folder: str,
-        DEBUG_MODE: bool = False
     ):
     """
     Function to save DataFrame to a folder efficiently.
     """
     # Get the file path
-    file_path = get_file_path(data, data_name, "csv", reconstruction_name, age, case, folder)
+    file_path = get_file_path(data_name, "csv", reconstruction_name, age, case, folder)
 
     # Save the data to CSV
     data.to_csv(file_path, index=False)
@@ -1189,7 +1134,7 @@ def GeoDataFrame_to_geoparquet(
     Function to save GeoDataFrame to a GeoParquet file in a folder efficiently.
     """
     # Get the file path
-    file_path = get_file_path(data, data_name, "parquet", reconstruction_name, age, case, folder)
+    file_path = get_file_path(data_name, "parquet", reconstruction_name, age, case, folder)
 
     # Save the data to a GeoParquet file
     data.to_parquet(file_path)
@@ -1201,13 +1146,12 @@ def GeoDataFrame_to_shapefile(
         age: int,
         case: str,
         folder: str,
-        DEBUG_MODE: bool = False
     ):
     """
     Function to save GeoDataFrame to a folder efficiently.
     """
     # Get the file path
-    file_path = get_file_path(data, data_name, "shp", reconstruction_name, age, case, folder)
+    file_path = get_file_path(data_name, "shp", reconstruction_name, age, case, folder)
 
     # Save the data to a shapefile
     data.to_file(file_path)
@@ -1219,19 +1163,122 @@ def Dataset_to_netcdf(
         age: int,
         case: Optional[str] = None,
         folder: Optional[str] = None,
-        DEBUG_MODE: bool = False
     ):
     """
     Function to save Dataset to a NetCDF file in a folder efficiently.
     """
     # Get the file path
-    file_path = get_file_path(data, data_name, "nc", reconstruction_name, age, case, folder)
+    file_path = get_file_path(data_name, "nc", reconstruction_name, age, case, folder)
 
     # Save the data to a NetCDF file
     data.to_netcdf(file_path)
 
+def DataFrame_from_parquet(
+        folder: str,
+        data_name: str,
+        reconstruction_name: str,
+        age: int,
+        case: str,
+    ) -> _pandas.DataFrame:
+    """
+    Function to load DataFrames from a folder efficiently.
+    """
+    # Construct the target file path
+    file_path = get_file_path(data_name, "parquet", reconstruction_name, age, case, folder)
+
+    # Check if target file exists and if so, load data
+    if _os.path.exists(file_path):
+        return _pandas.read_parquet(file_path)
+    else:
+        return None
+    
+def DataFrame_from_csv(
+        folder: str,
+        data_name: str,
+        reconstruction_name: str,
+        age: int,
+        case: str,
+    ) -> _pandas.DataFrame:
+    """
+    Function to load DataFrames from a folder efficiently.
+    """
+    # Construct the target file path
+    file_path = get_file_path(data_name, "csv", reconstruction_name, age, case, folder)
+
+    # Check if target file exists and if so, load data
+    if _os.path.exists(file_path):
+        return _pandas.read_csv(file_path)
+    else:
+        return None
+    
+def GeoDataFrame_from_geoparquet(
+        folder: str,
+        type: str,
+        reconstruction_name: str,
+        age: int,
+        case: str,
+    ) -> _geopandas.GeoDataFrame:
+    """
+    Function to load GeoDataFrame from a folder efficiently.
+    """
+    # Construct the target file path
+    file_path = get_file_path(type, "parquet", reconstruction_name, age, case, folder)
+
+    # Check if target file exists and load data
+    if _os.path.exists(file_path):
+        return _geopandas.read_parquet(file_path)
+    else:
+        return None
+    
+def GeoDataFrame_from_shapefile(
+        folder: str,
+        type: str,
+        reconstruction_name: str,
+        age: int,
+        case: str,
+    ) -> _geopandas.GeoDataFrame:
+    """
+    Function to load GeoDataFrame from a folder efficiently.
+    """
+    # Construct the target file path
+    file_path = get_file_path(type, "shp", reconstruction_name, age, case, folder)
+
+    # Check if target file exists and load data
+    if _os.path.exists(file_path):
+        return _geopandas.read_file(file_path)
+    else:
+        return None
+    
+def Dataset_from_netCDF(
+        folder: str,
+        data_name: str,
+        reconstruction_name: str,
+        age: int,
+        case: str,
+    ) -> _xarray.Dataset:
+    """
+    Function to load xarray Dataset from a folder efficiently.
+    """
+    # Construct the file name based on whether a case is provided
+    file_path = get_file_path(data_name, "nc", reconstruction_name, age, case, folder)
+
+    # Check if the target file exists and load the dataset
+    if _os.path.exists(file_path):
+        return _xarray.open_dataset(file_path)
+    else:
+        return None
+    
+def check_dir(
+        target_dir: str,
+    ):
+    """
+    Function to check if a directory exists, and create it if it doesn't
+    """
+    # Check if a directory exists, and create it if it doesn't
+    if not _os.path.exists(target_dir):
+        _os.makedirs(target_dir)
+
 def get_file_path(
-        data: _xarray.Dataset,
         data_name: str,
         file_extension: str,
         reconstruction_name: str,
@@ -1266,251 +1313,80 @@ def get_file_path(
         pass
 
     return file_path
-
-def check_dir(target_dir):
-    """
-    Function to check if a directory exists, and create it if it doesn't
-    """
-    # Check if a directory exists, and create it if it doesn't
-    if not _os.path.exists(target_dir):
-        _os.makedirs(target_dir)
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# LOADING 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def load_grid(
-        grid: dict,
-        reconstruction_name: str,
-        ages: list,
-        type: str,
-        files_dir: str,
-        points: Optional[dict] = None,
-        seafloor_grid: Optional[_xarray.Dataset] = None,
-        cases: Optional[list] = None,
-        DEBUG_MODE: Optional[bool] = False
-    ) -> dict:
-    """
-    Function to load grid from a folder.
-
-    :param grids:                  grids
-    :type grids:                   dict
-    :param reconstruction_name:    name of reconstruction
-    :type reconstruction_name:     string
-    :param ages:   reconstruction times
-    :type ages:    list or numpy.array
-    :param type:                   type of grid
-    :type type:                    string
-    :param files_dir:              files directory
-    :type files_dir:               string
-    :param points:                 points
-    :type points:                  dict
-    :param seafloor_grid:          seafloor grid
-    :type seafloor_grid:           xarray.Dataset
-    :param cases:                  cases
-    :type cases:                   list
-    :param DEBUG_MODE:             whether or not to run in debug mode
-    :type DEBUG_MODE:              bool
-
-    :return:                       grids
-    :rtype:                        xarray.Dataset
-    """
-    # Loop through times
-    for _age in _tqdm(ages, desc=f"Loading {type} grids", disable=(DEBUG_MODE, logging.getLogger().getEffectiveLevel() > logging.INFO)):
-        # Check if the grid for the reconstruction time is already in the dictionary
-        if _age in grid:
-            # Rename variables and coordinates in seafloor age grid for clarity
-            if type == "Seafloor":
-                if "z" in grid[_age].data_vars:
-                    grid[_age] = grid[_age].rename({"z": "seafloor_age"})
-                if "lat" in grid[_age].coords:
-                    grid[_age] = grid[_age].rename({"lat": "latitude"})
-                if "lon" in grid[_age].coords:
-                    grid[_age] = grid[_age].rename({"lon": "longitude"})
-
-            continue
-
-        # Load grid if found
-        if type == "Seafloor":
-            # Load grid if found
-            grid[_age] = Dataset_from_netCDF(files_dir, type, _age, reconstruction_name)
-
-            # Download seafloor age grid from GPlately DataServer
-            grid[_age] = get_seafloor_grid(reconstruction_name, _age)
-
-        elif type == "Velocity" and cases:
-            # Initialise dictionary to store velocity grids for cases
-            grid[_age] = {}
-
-            # Loop through cases
-            for case in cases:
-                # Load grid if found
-                grid[_age][_case] = Dataset_from_netCDF(files_dir, type, _age, reconstruction_name, case=case)
-
-                # If not found, initialise a new grid
-                if grid[_age][_case] is None:
-                
-                    # Interpolate velocity grid from points
-                    if type == "Velocity":
-                        for case in cases:
-                            if DEBUG_MODE:
-                                print(f"{type} grid for {reconstruction_name} at {_age} Ma not found, interpolating from points...")
-
-                            # Get velocity grid
-                            grid[_age][_case] = get_velocity_grid(points[_age][_case], seafloor_grid[_age])
-
-    return grid
-
-def DataFrame_from_parquet(
-        folder: str,
-        type: str,
-        reconstruction_name: str,
-        age: int,
-        case: str,
-    ) -> _pandas.DataFrame:
-    """
-    Function to load DataFrames from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param type:                 type of data
-    :type type:                  str
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-    :param case:                 case
-    :type case:                  str
-    :param _age:  reconstruction time
-    :type _age:   int
     
-    :return:                     data
-    :rtype:                      pandas.DataFrame or None
+def get_variable_name(
+        var
+    ):
     """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{case}_{age}Ma.parquet"
+    Function to get the name of a python variable
+    """
+    # Get the frame of the caller function
+    callers_local_vars = inspect.currentframe().f_back.f_locals.items()
+
+    # Find the variable name that matches the passed object
+    return [var_name for var_name, var_val in callers_local_vars if var_val is var][0]
+
+def rename_coordinates_and_variables(
+        grid: _xarray.Dataset,
+        var_old_name: Optional[str],
+        var_new_name: Optional["str"],
+    ):
+    """
+    Function to rename coordinates and variables 
+    """
+    # Clean up the grid a little
+    if "lat" in grid.coords:
+        grid = grid.rename({"lat": "latitude"})
+    if "lon" in grid.coords:
+        grid = grid.rename({"lon": "longitude"})
+    if var_old_name and "z" in grid.data_vars:
+        grid = grid.rename({"z": var_new_name})
+
+def array2data_array(
+        lats: Union[list, _numpy.ndarray],
+        lons: Union[list, _numpy.ndarray],
+        data: Union[list, _numpy.ndarray],
+        var_name: str,
+    ):
+    """
+    Interpolates data to the resolution seafloor grid.
+    """
+    # Convert to numpy arrays
+    lats = _numpy.asarray(lats)
+    lons = _numpy.asarray(lons)
+    data = _numpy.asarray(data)
+
+    # Check if the data is the right shape
+    if lats.shape == data.shape:
+        lats = _numpy.unique(lats.flatten())
+    
+    if lons.shape == data.shape:
+        lons = _numpy.unique(lons.flatten())
+
+    # Create the grid
+    data_array = _xarray.DataArray(
+        data,
+        coords = {
+            "lat": lats,
+            "lon": lons
+        },
+        dims = ["lat", "lon"],
+        name = var_name
     )
 
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _pandas.read_parquet(target_file)
-    else:
-        return None
+    return data_array
 
-def DataFrame_from_csv(
-        folder: str,
-        type: str,
-        reconstruction_name: str,
-        age: int,
-        case: str,
-    ) -> _pandas.DataFrame:
+def data_arrays2dataset(
+        data_arrays: dict,
+        grid_name: str,
+    ):
     """
-    Function to load DataFrames from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param type:                 type of data
-    :type type:                  str
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-    :param case:                 case
-    :type case:                  str
-    :param _age:  reconstruction time
-    :type _age:   int
-    
-    :return:                     data
-    :rtype:                      pandas.DataFrame or None
+    Creates a grid object from a dictionary of data arrays.
     """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{case}_{age}Ma.csv"
+    # Create the grid
+    grid = _xarray.Dataset(
+        data_vars = data_arrays
     )
 
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _pandas.read_csv(target_file)
-    else:
-        return None
-
-def Dataset_from_netCDF(
-        folder: str,
-        type: str,
-        reconstruction_name: str,
-        age: int,
-        case: str,
-    ) -> _xarray.Dataset:
-    """
-    Function to load xarray Dataset from a folder efficiently.
-
-    :param folder:               folder
-    :type folder:                str
-    :param _age:  reconstruction time
-    :type _age:   int
-    :param reconstruction_name:  name of reconstruction
-    :type reconstruction_name:   str
-    :param case:                 optional case
-    :type case:                  str, optional
-
-    :return:                     data
-    :rtype:                      xarray.Dataset or None
-    """
-    # Construct the file name based on whether a case is provided
-    file_name = f"{type}_{reconstruction_name}_{case + '_' if case else ''}{age}Ma.nc"
-
-    # Construct the full path to the target file
-    target_file = _os.path.join(folder if folder else _os.getcwd(), type, file_name)
-
-    # Check if the target file exists and load the dataset
-    if _os.path.exists(target_file):
-        return _xarray.open_dataset(target_file)
-    else:
-        return None
-    
-def GeoDataFrame_from_geoparquet(
-        folder: str,
-        type: str,
-        reconstruction_name: str,
-        age: int,
-        case: str,
-    ) -> _geopandas.GeoDataFrame:
-    """
-    Function to load GeoDataFrame from a folder efficiently.
-    """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{case}_{age}Ma.parquet"
-    )
-
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _geopandas.read_parquet(target_file)
-    else:
-        return None
-    
-def GeoDataFrame_from_shapefile(
-        folder: str,
-        type: str,
-        reconstruction_name: str,
-        age: int,
-        case: str,
-    ) -> _geopandas.GeoDataFrame:
-    """
-    Function to load GeoDataFrame from a folder efficiently.
-    """
-    # Construct the target file path
-    target_file = _os.path.join(
-        folder if folder else _os.getcwd(),
-        type,
-        f"{type}_{reconstruction_name}_{case}_{age}Ma.shp"
-    )
-
-    # Check if target file exists and load data
-    if _os.path.exists(target_file):
-        return _geopandas.read_file(target_file)
-    else:
-        return None
+    # Dynamically assign the grid to an attribute using the var_name
+    setattr(grid_name, grid)

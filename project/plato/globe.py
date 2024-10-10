@@ -121,10 +121,10 @@ class Globe:
         :type plates_data: Optional[dict]
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Calculate the number of plates for each time step
         for i, _age in enumerate(_ages):
@@ -155,10 +155,10 @@ class Globe:
         :type slabs_data: Optional[dict]
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Calculate the subduction length for each time step
         for i, _age in enumerate(_ages):
@@ -204,10 +204,10 @@ class Globe:
         :type plates_data: Optional[dict]
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Calculate the net rotation of the Earth's lithosphere
         for i, _age in enumerate(_ages):
@@ -237,7 +237,7 @@ class Globe:
         Calculate the fraction of the Earth's surface that has been lost to subduction.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Check that the polygons are provided
         if not reconstructed_polygons:
@@ -288,7 +288,7 @@ class Globe:
         Data of the 'Globe' object is saved to .parquet files.
         """
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
@@ -314,7 +314,7 @@ class Globe:
         Data of the 'Globe' object is export to .csv files.
         """
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir

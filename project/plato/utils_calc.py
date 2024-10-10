@@ -385,21 +385,14 @@ def project_points(lat, lon, azimuth, distance):
 # GRAVITATIONAL POTENTIAL ENERGY
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_GPE_force(points, seafloor, options, mech, age_variable="seafloor_age"):
+def compute_GPE_force(
+        points: _pandas.DataFrame,
+        seafloor_grid: _xarray.DataArray,
+        options: Dict,
+        mech: Dict,
+    ):
     """
-    Function to calculate GPE force at points
-
-    :param points:                  pandas.DataFrame containing data of points including columns with latitude, longitude and plateID
-    :type points:                   pandas.DataFrame
-    :param seafloor:                xarray.Dataset containing seafloor age data
-    :type seafloor:                 xarray.Dataset
-    :param options:                 dictionary with options
-    :type options:                  dict
-    :param age_variable:            name of variable in _xarray.dataset containing seafloor ages
-    :type age_variable:             str
-
-    :return:                        points
-    :rtype:                         pandas.DataFrame
+    Function to calculate GPE force at points.
     """
     # Get grid spacing
     grid_spacing_deg = options["Grid spacing"]
@@ -448,7 +441,6 @@ def compute_GPE_force(points, seafloor, options, mech, age_variable="seafloor_ag
     )
     
     # Sample ages and compute crustal thicknesses at nearby points
-    # dx_lon
     ages = {}
     for i in range(0,4):
         if i == 0:
@@ -460,7 +452,7 @@ def compute_GPE_force(points, seafloor, options, mech, age_variable="seafloor_ag
         if i == 3:
             sampling_lat = minus_dy_lat; sampling_lon = minus_dy_lon
 
-        ages[i] = sample_ages(sampling_lat, sampling_lon, seafloor[age_variable])
+        ages[i] = sample_grid(sampling_lat, sampling_lon, seafloor_grid)
         lithospheric_mantle_thickness, crustal_thickness, water_depth = compute_thicknesses(
                     ages[i],
                     options
@@ -986,7 +978,7 @@ def compute_torque_on_plates(
         segment_length_lat,
         segment_length_lon,
         constants,
-        torque_variable="torque",
+        torque_var="torque",
     ):
     """
     Calculate and update torque information on plates based on latitudinal, longitudinal forces, and segment dimensions.
@@ -1009,8 +1001,8 @@ def compute_torque_on_plates(
     :type segment_length_lon:   float or array-like
     :param constants:           Constants used in coordinate conversions and calculations.
     :type constants:            class
-    :param torque_variable:     Name of the torque variable. Defaults to "torque".
-    :type torque_variable:      str
+    :param torque_var:     Name of the torque variable. Defaults to "torque".
+    :type torque_var:      str
 
     :return: Updated torques DataFrame with added columns for torque components at the centroid, force components at the centroid, and latitudinal and longitudinal components of the force.
     :rtype: pd.DataFrame
@@ -1028,13 +1020,11 @@ def compute_torque_on_plates(
     # Calculate torques in Cartesian coordinates
     torques_xyz = force2torque(position_xyz, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon)
     
-    # Assign the calculated torques to the new torque_variable columns
-    point_data[torque_variable + "_x"] = torques_xyz[0]
-    point_data[torque_variable + "_y"] = torques_xyz[1]
-    point_data[torque_variable + "_z"] = torques_xyz[2]
-    point_data[torque_variable + "_mag"] = _numpy.sqrt(
-        torques_xyz[0] ** 2 + torques_xyz[1] ** 2 + torques_xyz[2] ** 2
-    )
+    # Assign the calculated torques to the new torque_var columns
+    point_data[torque_var + "_x"] = torques_xyz[0]
+    point_data[torque_var + "_y"] = torques_xyz[1]
+    point_data[torque_var + "_z"] = torques_xyz[2]
+    point_data[torque_var + "_mag"] = _numpy.linalg.norm(torques_xyz[0], torques_xyz[1], torques_xyz[2])
 
     # Sum components of plates based on plateID
     summed_data = point_data.groupby("plateID", as_index=True).sum().fillna(0)
@@ -1052,11 +1042,11 @@ def compute_torque_on_plates(
     centroid_position = spherical2cartesian(plate_data.centroid_lat, plate_data.centroid_lon, constants.mean_Earth_radius_m)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
-    summed_torques_xyz = _numpy.asarray([plate_data[torque_variable + "_x"], plate_data[torque_variable + "_y"], plate_data[torque_variable + "_z"]])
+    summed_torques_xyz = _numpy.asarray([plate_data[torque_var + "_x"], plate_data[torque_var + "_y"], plate_data[torque_var + "_z"]])
     centroid_force_xyz = _numpy.cross(summed_torques_xyz, centroid_position, axis=0) 
 
     # Compute force magnitude at centroid
-    force_variable = torque_variable.replace("torque", "force")
+    force_variable = torque_var.replace("torque", "force")
     centroid_force_sph = cartesian2spherical_azimuth(centroid_force_xyz)
 
     # Store values in the torques DataFrame
@@ -1395,33 +1385,3 @@ def rotate_vector(vector, rotation):
     rotated_vector = _numpy.dot(rotation_matrix, vector.values.T)
 
     return rotated_vector.T
-
-def copy_values(data, key, entries, columns, check=False):
-    """
-    Function to copy values from a column from one case to another.
-    
-    :param key:         Key to match entries.
-    :type key:          str
-    :param entries:     Entries to match.
-    :type entries:      list
-    :param ages:        Ages to match.
-    :type ages:         list or numpy.array
-    :param columns:     Columns to copy.
-    :type columns:      list
-
-    :return:            Data with copied columns.
-    :rtype:             dict
-    """
-    # Loop through entries
-    for entry in entries[1:]:
-        # Loop through columns
-        for column in columns:
-            # Check if mean column value is zero (a proxy for a column with no data)
-            if check is True:
-                if data[entry][column].mean() != 0:
-                    continue
-            
-            # Copy column
-            data[entry][column] = data[key][column]
-
-    return data

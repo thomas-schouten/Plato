@@ -426,3 +426,324 @@ def get_data(
             )
     
     return data
+    
+   def load_grid(
+        grid: dict,
+        reconstruction_name: str,
+        ages: list,
+        type: str,
+        files_dir: str,
+        points: Optional[dict] = None,
+        seafloor_grid: Optional[_xarray.Dataset] = None,
+        cases: Optional[list] = None,
+        DEBUG_MODE: Optional[bool] = False
+    ) -> dict:
+    """
+    Function to load grid from a folder.
+
+    :param grids:                  grids
+    :type grids:                   dict
+    :param reconstruction_name:    name of reconstruction
+    :type reconstruction_name:     string
+    :param ages:   reconstruction times
+    :type ages:    list or numpy.array
+    :param type:                   type of grid
+    :type type:                    string
+    :param files_dir:              files directory
+    :type files_dir:               string
+    :param points:                 points
+    :type points:                  dict
+    :param seafloor_grid:          seafloor grid
+    :type seafloor_grid:           xarray.Dataset
+    :param cases:                  cases
+    :type cases:                   list
+    :param DEBUG_MODE:             whether or not to run in debug mode
+    :type DEBUG_MODE:              bool
+
+    :return:                       grids
+    :rtype:                        xarray.Dataset
+    """
+    # Loop through times
+    for _age in _tqdm(ages, desc=f"Loading {type} grids", disable=(DEBUG_MODE, logging.getLogger().getEffectiveLevel() > logging.INFO)):
+        # Check if the grid for the reconstruction time is already in the dictionary
+        if _age in grid:
+            # Rename variables and coordinates in seafloor age grid for clarity
+            if type == "Seafloor":
+                if "z" in grid[_age].data_vars:
+                    grid[_age] = grid[_age].rename({"z": "seafloor_age"})
+                if "lat" in grid[_age].coords:
+                    grid[_age] = grid[_age].rename({"lat": "latitude"})
+                if "lon" in grid[_age].coords:
+                    grid[_age] = grid[_age].rename({"lon": "longitude"})
+
+            continue
+
+        # Load grid if found
+        if type == "Seafloor":
+            # Load grid if found
+            grid[_age] = Dataset_from_netCDF(files_dir, type, _age, reconstruction_name)
+
+            # Download seafloor age grid from GPlately DataServer
+            grid[_age] = get_seafloor_grid(reconstruction_name, _age)
+
+        elif type == "Velocity" and cases:
+            # Initialise dictionary to store velocity grids for cases
+            grid[_age] = {}
+
+            # Loop through cases
+            for case in cases:
+                # Load grid if found
+                grid[_age][_case] = Dataset_from_netCDF(files_dir, type, _age, reconstruction_name, case=case)
+
+                # If not found, initialise a new grid
+                if grid[_age][_case] is None:
+                
+                    # Interpolate velocity grid from points
+                    if type == "Velocity":
+                        for case in cases:
+                            if DEBUG_MODE:
+                                print(f"{type} grid for {reconstruction_name} at {_age} Ma not found, interpolating from points...")
+
+                            # Get velocity grid
+                            grid[_age][_case] = get_velocity_grid(points[_age][_case], seafloor_grid[_age])
+
+    return grid
+    
+def load_data(
+        data: dict,
+        reconstruction_name: str,
+        age: Union[list, _numpy.array],
+        type: str,
+        all_cases: list,
+        matching_case_dict: dict,
+        files_dir: Optional[str] = None,
+        PARALLEL_MODE: Optional[bool] = False,
+    ):
+    """
+    Function to load DataFrames from a folder, or initialise new DataFrames
+
+    :return:                      data
+    :rtype:                       dict
+    """
+    # Initialise list to store available and unavailable cases
+    unavailable_cases = all_cases.copy()
+    available_cases = []
+
+    # If a file directory is provided, check for the existence of files
+    if files_dir:
+        for case in all_cases:
+            # Load DataFrame if found
+            data[case] = DataFrame_from_parquet(files_dir, type, reconstruction_name, case, age)
+
+            if data[case] is not None:
+                unavailable_cases.remove(case)
+                available_cases.append(case)
+            else:
+                logging.info(f"DataFrame for {type} for {reconstruction_name} at {age} Ma for case {case} not found, checking for similar cases...")
+
+    # Get available cases
+    for unavailable_case in unavailable_cases:
+        data[unavailable_case] = get_available_cases(data, unavailable_case, available_cases, matching_case_dict)
+
+        if data[unavailable_case] is not None:
+            available_cases.append(unavailable_case)
+
+    return data
+
+def get_available_cases(data, unavailable_case, available_cases, matching_case_dict):
+    # Copy dataframes for unavailable cases
+    matching_key = None
+
+    # Find dictionary key of list in which unavailable case is located
+    for key, matching_cases in matching_case_dict.items():
+        for matching_case in matching_cases:
+            if matching_case == unavailable_case:
+                matching_key = key
+                break
+        if matching_key:
+            break
+
+    # Check if there is an available case in the corresponding list
+    for matching_case in matching_case_dict[matching_key]:
+        # Copy DataFrame if found
+        if matching_case in available_cases:
+            # Ensure that matching_case data is not None
+            if data[matching_case] is not None:
+                data[unavailable_case] = data[matching_case].copy()
+                return data[unavailable_case]
+            
+            else:
+                logging.info(f"Data for matching case '{matching_case}' is None; cannot copy to '{unavailable_case}'.")
+
+    # If no matching case is found, return None
+    data[unavailable_case] = None
+
+    return data[unavailable_case]
+    
+    
+def sample_slabs(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            seafloor_grid: Optional[_xarray.Dataset] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
+        ):
+        """
+        Samples seafloor age (and optionally, sediment thickness) the lower plate along subduction zones
+        The results are stored in the `slabs` DataFrame, specifically in the `lower_plate_age`, `sediment_thickness`, and `lower_plate_thickness` fields for each case and reconstruction time.
+
+        :param _ages:    reconstruction times to sample slabs for
+        :type _ages:     list
+        :param cases:                   cases to sample slabs for (defaults to slab pull cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
+        """
+        # Define reconstruction times if not provided
+        if ages is None:
+            ages = self.settings.ages
+        else:
+            if isinstance(ages, str):
+                ages = [ages]
+
+        # Make iterable
+        if cases is None:
+            iterable = self.settings.slab_pull_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {_case: [] for _case in cases}
+
+        # Check options for slabs
+        for _age in _tqdm(ages, desc="Sampling slabs", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.DEBUG_MODE:
+                print(f"Sampling slabs at {_age} Ma")
+
+            # Select cases
+            for key, entries in iterable.items():
+                if self.DEBUG_MODE:
+                    print(f"Sampling overriding plate for case {key} and entries {entries}...")
+                    
+                if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
+                    # Sample age and sediment thickness of lower plate from seafloor
+                    self.data[_age][key]["lower_plate_age"], self.data[_age][key]["sediment_thickness"] = utils_calc.sample_slabs_from_seafloor(
+                        self.data[_age][key].lat, 
+                        self.data[_age][key].lon,
+                        self.data[_age][key].trench_normal_azimuth,
+                        self.seafloor[_age], 
+                        self.options[key],
+                        "lower plate",
+                        sediment_thickness=self.data[_age][key].sediment_thickness,
+                        continental_arc=self.data[_age][key].continental_arc,
+                    )
+
+                    # Calculate lower plate thickness
+                    self.data[_age][key]["lower_plate_thickness"], _, _ = utils_calc.compute_thicknesses(
+                        self.data[_age][key].lower_plate_age,
+                        self.options[key],
+                        crust = False, 
+                        water = False
+                    )
+
+                    # Calculate slab flux
+                    self.plates[_age][key] = utils_calc.compute_subduction_flux(
+                        self.plates[_age][key],
+                        self.data[_age][key],
+                        type="slab"
+                    )
+
+                    if self.options[key]["Sediment subduction"]:
+                        # Calculate sediment subduction
+                        self.plates[_age][key] = utils_calc.compute_subduction_flux(
+                            self.plates[_age][key],
+                            self.data[_age][key],
+                            type="sediment"
+                        )
+
+                    if len(entries) > 1:
+                        for entry in entries[1:]:
+                            self.data[_age][entry]["lower_plate_age"] = self.data[_age][key]["lower_plate_age"]
+                            self.data[_age][entry]["sediment_thickness"] = self.data[_age][key]["sediment_thickness"]
+                            self.data[_age][entry]["lower_plate_thickness"] = self.data[_age][key]["lower_plate_thickness"]
+
+        # Set flag to True
+        self.sampled_slabs = True
+
+    def sample_upper_plates(
+            self,
+            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            PROGRESS_BAR: Optional[bool] = True,    
+        ):
+        """
+        Samples seafloor age the upper plate along subduction zones
+        The results are stored in the `slabs` DataFrame, specifically in the `upper_plate_age`, `upper_plate_thickness` fields for each case and reconstruction time.
+
+        :param _ages:    reconstruction times to sample upper plates for
+        :type _ages:     list
+        :param cases:                   cases to sample upper plates for (defaults to slab pull cases if not specified).
+        :type cases:                    list
+        :param PROGRESS_BAR:            whether or not to display a progress bar
+        :type PROGRESS_BAR:             bool
+        """
+        # Define reconstruction times if not provided
+        if _ages is None:
+            _ages = self.settings.ages
+        else:
+            # Check if reconstruction times is a single value
+            if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
+                _ages = [_ages]
+        
+        # Make iterable
+        if cases is None:
+            iterable = self.slab_pull_cases
+        else:
+            if isinstance(cases, str):
+                cases = [cases]
+            iterable = {case: [] for case in cases}
+
+        # Loop through valid times    
+        for _age in tqdm(_ages, desc="Sampling upper plates", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
+            if self.DEBUG_MODE:
+                print(f"Sampling overriding plate at {_age} Ma")
+
+            # Select cases
+            for key, entries in iterable.items():
+                if self.DEBUG_MODE:
+                    print(f"Sampling overriding plate for case {key} and entries {entries}...")
+
+                # Check whether to output erosion rate and sediment thickness
+                if self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0 and self.options[key]["Sample erosion grid"] in self.seafloor[_age].data_vars:
+                    # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
+                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"], self.data[_age][key]["erosion_rate"], self.data[_age][key]["sediment_thickness"] = utils_calc.sample_slabs_from_seafloor(
+                        self.data[_age][key].lat, 
+                        self.data[_age][key].lon,
+                        self.data[_age][key].trench_normal_azimuth,  
+                        self.seafloor[_age],
+                        self.options[key],
+                        "upper plate",
+                        sediment_thickness=self.data[_age][key].sediment_thickness,
+                    )
+
+                elif self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0:
+                    # Sample age and arc type of upper plate from seafloor
+                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"] = utils_calc.sample_slabs_from_seafloor(
+                        self.data[_age][key].lat, 
+                        self.data[_age][key].lon,
+                        self.data[_age][key].trench_normal_azimuth,  
+                        self.seafloor[_age],
+                        self.options[key],
+                        "upper plate",
+                    )
+                
+                # Copy DataFrames to other cases
+                if len(entries) > 1 and cases is None:
+                    for entry in entries[1:]:
+                        self.data[_age][entry]["upper_plate_age"] = self.data[_age][key]["upper_plate_age"]
+                        self.data[_age][entry]["continental_arc"] = self.data[_age][key]["continental_arc"]
+                        if self.options[key]["Sample erosion grid"]:
+                            self.data[_age][entry]["erosion_rate"] = self.data[_age][key]["erosion_rate"]
+                            self.data[_age][entry]["sediment_thickness"] = self.data[_age][key]["sediment_thickness"]
+        
+        # Set flag to True
+        self.sampled_upper_plates = True

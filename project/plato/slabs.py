@@ -110,7 +110,7 @@ class Slabs:
 
         # Set flag for sampling slabs and upper plates
         self.sampled_slabs = False
-        self.sampled_upper_plates = False
+        self.sampled_arcs = False
 
     def calculate_velocities(
             self,
@@ -122,10 +122,10 @@ class Slabs:
         Function to compute velocities at slabs.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Loop through ages and cases
         for _age in _ages:
@@ -163,172 +163,138 @@ class Slabs:
                         self.data[_age][_case].loc[mask, f"v_{plate}_mag"] = velocities[2]
                         self.data[_age][_case].loc[mask, f"omega_{plate}"] = velocities[3]
 
-    def sample_slabs(
+    def sample_slab_seafloor_ages(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            seafloor_grid: Optional[_xarray.Dataset] = None,
-            PROGRESS_BAR: Optional[bool] = True,    
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            seafloor_grids: Optional[Dict] = None,
         ):
         """
-        Samples seafloor age (and optionally, sediment thickness) the lower plate along subduction zones
-        The results are stored in the `slabs` DataFrame, specifically in the `lower_plate_age`, `sediment_thickness`, and `lower_plate_thickness` fields for each case and reconstruction time.
-
-        :param _ages:    reconstruction times to sample slabs for
-        :type _ages:     list
-        :param cases:                   cases to sample slabs for (defaults to slab pull cases if not specified).
-        :type cases:                    list
-        :param PROGRESS_BAR:            whether or not to display a progress bar
-        :type PROGRESS_BAR:             bool
+        Samples seafloor age at slabs.
         """
-        # Define reconstruction times if not provided
-        if ages is None:
-            ages = self.settings.ages
-        else:
-            if isinstance(ages, str):
-                ages = [ages]
+        # Sample grid
+        self.sample_grid(
+            ages,
+            cases,
+            plateIDs,
+            seafloor_grids,
+            plate = "lower",
+            vars = ["seafloor_age"],
+            cols = ["slab_age"],
+        )
 
-        # Make iterable
-        if cases is None:
-            iterable = self.settings.slab_pull_cases
-        else:
-            if isinstance(cases, str):
-                cases = [cases]
-            iterable = {_case: [] for _case in cases}
+        # Set sampling flag to true
+        self.sampled_seafloor_at_slabs = True
 
-        # Check options for slabs
-        for _age in tqdm(ages, desc="Sampling slabs", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
-                print(f"Sampling slabs at {_age} Ma")
-
-            # Select cases
-            for key, entries in iterable.items():
-                if self.DEBUG_MODE:
-                    print(f"Sampling overriding plate for case {key} and entries {entries}...")
-                    
-                if self.options[key]["Slab pull torque"] or self.options[key]["Slab bend torque"]:
-                    # Sample age and sediment thickness of lower plate from seafloor
-                    self.data[_age][key]["lower_plate_age"], self.data[_age][key]["sediment_thickness"] = utils_calc.sample_slabs_from_seafloor(
-                        self.data[_age][key].lat, 
-                        self.data[_age][key].lon,
-                        self.data[_age][key].trench_normal_azimuth,
-                        self.seafloor[_age], 
-                        self.options[key],
-                        "lower plate",
-                        sediment_thickness=self.data[_age][key].sediment_thickness,
-                        continental_arc=self.data[_age][key].continental_arc,
-                    )
-
-                    # Calculate lower plate thickness
-                    self.data[_age][key]["lower_plate_thickness"], _, _ = utils_calc.compute_thicknesses(
-                        self.data[_age][key].lower_plate_age,
-                        self.options[key],
-                        crust = False, 
-                        water = False
-                    )
-
-                    # Calculate slab flux
-                    self.plates[_age][key] = utils_calc.compute_subduction_flux(
-                        self.plates[_age][key],
-                        self.data[_age][key],
-                        type="slab"
-                    )
-
-                    if self.options[key]["Sediment subduction"]:
-                        # Calculate sediment subduction
-                        self.plates[_age][key] = utils_calc.compute_subduction_flux(
-                            self.plates[_age][key],
-                            self.data[_age][key],
-                            type="sediment"
-                        )
-
-                    if len(entries) > 1:
-                        for entry in entries[1:]:
-                            self.data[_age][entry]["lower_plate_age"] = self.data[_age][key]["lower_plate_age"]
-                            self.data[_age][entry]["sediment_thickness"] = self.data[_age][key]["sediment_thickness"]
-                            self.data[_age][entry]["lower_plate_thickness"] = self.data[_age][key]["lower_plate_thickness"]
-
-        # Set flag to True
-        self.sampled_slabs = True
-
-    def sample_upper_plates(
+    def sample_arc_seafloor_ages(
             self,
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            PROGRESS_BAR: Optional[bool] = True,    
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            seafloor_grids: Optional[Dict] = None,
         ):
         """
-        Samples seafloor age the upper plate along subduction zones
-        The results are stored in the `slabs` DataFrame, specifically in the `upper_plate_age`, `upper_plate_thickness` fields for each case and reconstruction time.
-
-        :param _ages:    reconstruction times to sample upper plates for
-        :type _ages:     list
-        :param cases:                   cases to sample upper plates for (defaults to slab pull cases if not specified).
-        :type cases:                    list
-        :param PROGRESS_BAR:            whether or not to display a progress bar
-        :type PROGRESS_BAR:             bool
+        Samples seafloor age at slabs.
         """
-        # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.settings.ages
-        else:
-            # Check if reconstruction times is a single value
-            if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-                _ages = [_ages]
+        # Ensure variables is a list
+        if isinstance(vars, str):
+            vars = [vars]
         
-        # Make iterable
-        if cases is None:
-            iterable = self.slab_pull_cases
+        # Sample grid
+        self.sample_grid(
+            ages,
+            cases,
+            plateIDs,
+            seafloor_grids,
+            plate = "upper",
+            vars = ["seafloor_age"],
+            cols = ["arc_age"],
+        )
+
+        # Set sampling flag to true
+        self.sampled_seafloor_at_arcs = True
+
+    def sample_grid(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            grids: Optional[Dict] = None,
+            plate: Optional[str] = "lower",
+            vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
+            cols = ["lower_plate_age"],
+        ):
+        """
+        Samples any grid at slabs.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.slab_cases)
+
+        # Define variables if not provided
+        if vars is not None and isinstance(vars, str):
+            _vars = [vars]
+        elif vars is not None and isinstance(vars, list):
+            _vars = vars
+
+        # Define sampling points
+        if plate == "upper":
+            sampling_coords = ["arc_sampling_lat", "arc_sampling_lon"]
         else:
-            if isinstance(cases, str):
-                cases = [cases]
-            iterable = {case: [] for case in cases}
+            sampling_coords = ["slab_sampling_lat", "slab_sampling_lon"]
 
-        # Loop through valid times    
-        for _age in tqdm(_ages, desc="Sampling upper plates", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
-                print(f"Sampling overriding plate at {_age} Ma")
+        # Loop through valid times
+        for _age in _tqdm(_ages, desc="Sampling points", disable=self.settings.logger.level == logging.INFO):
+            for key, entries in _iterable.items():
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][key][f"{plate}_plateID"].unique())
 
-            # Select cases
-            for key, entries in iterable.items():
-                if self.DEBUG_MODE:
-                    print(f"Sampling overriding plate for case {key} and entries {entries}...")
+                # Select points
+                _data = self.data[_age][key]
+                if plateIDs is not None:
+                    _data = _data[_data.plateID.isin(_plateIDs)]
 
-                # Check whether to output erosion rate and sediment thickness
-                if self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0 and self.options[key]["Sample erosion grid"] in self.seafloor[_age].data_vars:
-                    # Sample age and arc type, erosion rate and sediment thickness of upper plate from seafloor
-                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"], self.data[_age][key]["erosion_rate"], self.data[_age][key]["sediment_thickness"] = utils_calc.sample_slabs_from_seafloor(
-                        self.data[_age][key].lat, 
-                        self.data[_age][key].lon,
-                        self.data[_age][key].trench_normal_azimuth,  
-                        self.seafloor[_age],
-                        self.options[key],
-                        "upper plate",
-                        sediment_thickness=self.data[_age][key].sediment_thickness,
-                    )
-
-                elif self.options[key]["Sediment subduction"] and self.options[key]["Active margin sediments"] != 0:
-                    # Sample age and arc type of upper plate from seafloor
-                    self.data[_age][key]["upper_plate_age"], self.data[_age][key]["continental_arc"] = utils_calc.sample_slabs_from_seafloor(
-                        self.data[_age][key].lat, 
-                        self.data[_age][key].lon,
-                        self.data[_age][key].trench_normal_azimuth,  
-                        self.seafloor[_age],
-                        self.options[key],
-                        "upper plate",
-                    )
+                # Determine the appropriate grid
+                _grid = None
+                if _age in grids.keys():
+                    if isinstance(grids[_age], _xarray.Dataset):
+                        _grid = grids[_age]
+                    elif key in grids[_age] and isinstance(grids[_age][key], _xarray.Dataset):
+                        _grid = grids[_age][key]
                 
-                # Copy DataFrames to other cases
-                if len(entries) > 1 and cases is None:
-                    for entry in entries[1:]:
-                        self.data[_age][entry]["upper_plate_age"] = self.data[_age][key]["upper_plate_age"]
-                        self.data[_age][entry]["continental_arc"] = self.data[_age][key]["continental_arc"]
-                        if self.options[key]["Sample erosion grid"]:
-                            self.data[_age][entry]["erosion_rate"] = self.data[_age][key]["erosion_rate"]
-                            self.data[_age][entry]["sediment_thickness"] = self.data[_age][key]["sediment_thickness"]
-        
-        # Set flag to True
-        self.sampled_upper_plates = True
+                if _grid is None:
+                    logging.warning(f"No valid grid found for age {_age} and key {key}.")
+                    continue  # Skip this iteration if no valid grid is found
+
+                # Set _vars to the grid's data variables if not already defined
+                _vars = list(_grid.data_vars) if not _vars else _vars
+
+                # Set columns to _vars if not already defined or if not of the same length
+                _cols = _vars if not cols or len(cols) != len(_vars) else cols
+
+                # Sample grid at points for each variable
+                for _var, _col in zip(_vars, _cols):
+                    sampled_data = utils_calc.sample_grid(
+                        _data[sampling_coords[0]],
+                        _data[sampling_coords[1]],
+                        _grid[_var],
+                    )
+
+                    print(_var, _col, _grid.data_vars)
+
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index, _col] = sampled_data
+                    
+                    # Copy to other entries
+                    self.data[_age] = utils_data.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries, 
+                        [_col]
+                    )
 
     def compute_slab_pull_force(
             self,
@@ -502,10 +468,10 @@ class Slabs:
         Data of the 'Slabs' object is saved to .parquet files.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
@@ -537,10 +503,10 @@ class Slabs:
         Data of the 'Slabs' object is exported to .csv files.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir

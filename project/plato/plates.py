@@ -170,7 +170,7 @@ class Plates:
         Function to calculate the root mean square (RMS) velocity of the plates.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Check if no points are passed, initialise Points object
         if points is None:
@@ -182,7 +182,7 @@ class Plates:
             )
         
         # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
-        _iterable = utils_data.get_iterable(cases, self.settings.point_cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.point_cases)
 
         # Loop through ages
         for _age in _tqdm(_ages, desc="Calculating RMS velocities", disable=self.settings.logger.level==logging.INFO):
@@ -203,7 +203,7 @@ class Plates:
                         logging.info(f"Initialised Points object for case {key} at {_age} Ma to calculate RMS velocities")
 
                     # Define plateIDs if not provided
-                    _plateIDs = utils_data.get_plates(
+                    _plateIDs = utils_data.select_plateIDs(
                         plateIDs,
                         self.data[_age][key].plateID,
                     )
@@ -227,7 +227,7 @@ class Plates:
                         self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_azi"] = rms_velocity[1]
                         self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "omega_rms"] = rms_velocity[2]
 
-                    self.data[_age] = utils_calc.copy_values(
+                    self.data[_age] = utils_data.copy_values(
                         self.data[_age], 
                         key, 
                         entries, 
@@ -236,10 +236,10 @@ class Plates:
 
     def calculate_torque_on_plates(
             self,
-            type: str,
+            point_data: Dict,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            plate_IDs: Optional[
+            plateIDs: Optional[
                 Union[
                     int,
                     float,
@@ -249,67 +249,75 @@ class Plates:
                     _numpy.ndarray
                 ]
             ] = None,
-            force_data: Optional[Union[Dict, str]] = None,
+            torque_var: str = "torque",
         ):
         """
-        Function to calculate the torque on plates
+        Function to calculate the torque on plates from the forces acting on a set of points on Earth.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
      
         # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
-        if type == "slab_pull_torque" or type == "slab_bend_torque":
-            matching_cases = self.settings.slab_cases
-        elif type == "GPE_torque":
+        if torque_var == "slab_pull":
+            matching_cases = self.settings.slab_pull_cases
+        elif torque_var == "slab_bend":
+            matching_cases = self.settings.slab_bend_cases
+        elif torque_var == "GPE":
             matching_cases = self.settings.gpe_cases
-        elif type == "mantle_drag_torque":
+        elif torque_var == "mantle_drag":
             matching_cases = self.settings.mantle_drag_cases
         
-        _iterable = utils_data.get_iterable(cases, matching_cases)
+        # Define iterable, if cases not provided
+        _iterable = utils_data.select_iterable(cases, matching_cases)    
 
-        # Select plates
-        if plate_IDs is not None:
-            if isinstance(plate_IDs, (int, float, _numpy.floating, _numpy.integer)):
-                plate_IDs = [plate_IDs]
-        
         # Loop through ages
         for _age in _tqdm(_ages, desc="Calculating torque on plates"):
             logging.info(f"Calculating torque on plates at {_age} Ma")
+            for key, entries in _iterable.items():
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(
+                    plateIDs,
+                    self.data[_age][key].plateID,
+                )
 
-            for key in cases:
-                # Select plates, if necessary
-                selected_data = self.data[_age][key].copy()
-                if plate_IDs is not None:
-                    selected_data = selected_data.loc[selected_data.plateID.isin(plate_IDs)].copy()
+                # Define masks
+                plates_mask = self.data[_age][key].loc[:, "plateID"].isin(_plateIDs)
+                points_mask = point_data[_age][key].loc[:, "plateID"].isin(_plateIDs)
 
-                # Define length and width of segment
-                if type == "slab_pull_torque" or type == "slab_bend_torque":
-                    length = force_data[_age][key].trench_segment_length
-                    width = 1.
+                print(plates_mask)
+
+                if torque_var == "slab_pull" or torque_var == "slab_bend":
+                    selected_points_plateID = point_data[_age][key].lower_plateID.values[points_mask]
+                    selected_points_area = point_data[_age][key].trench_segment_length.values[points_mask]
                 else:
-                    length = force_data[_age][key].segment_length_lat
-                    width = force_data[_age][key].segment_length_lat
+                    selected_points_plateID = point_data[_age][key].plateID.values[points_mask]
+                    selected_points_area = point_data[_age][key].segment_length_lat.values[points_mask] * point_data[_age][key].segment_length_lon.values[points_mask]
 
                 # Calculate torques
-                selected_data = utils_calc.compute_torque_on_plates(
-                    self.data[_age][key], 
-                    self.force_data[_age][key].lat, 
-                    self.force_data[_age][key].lon, 
-                    self.force_data[_age][key].plateID, 
-                    self.force_data[_age][key][f"{type}_lat"], 
-                    self.force_data[_age][key][f"{type}_lat"],
-                    length,
-                    width,
-                    self.constants,
-                    torque_variable=type
+                computed_data = utils_calc.compute_torque_on_plates(
+                    self.data[_age][key].loc[plates_mask], 
+                    point_data[_age][key].lat.values[points_mask],
+                    point_data[_age][key].lon.values[points_mask],
+                    selected_points_plateID,
+                    point_data[_age][key][f"{torque_var}_force_lat"].values[points_mask], 
+                    point_data[_age][key][f"{torque_var}_force_lon"].values[points_mask],
+                    selected_points_area,
+                    self.settings.constants,
+                    torque_var = torque_var,
                 )
 
                 # Feed back into plates
-                if plate_IDs is not None:
-                    mask = self.data[_age][key].plateID.isin(plate_IDs)
-                    self.data[_age][key].loc[mask, :] = selected_data
-                else:
-                    self.data[_age][key] = selected_data
+                self.data[_age][key].loc[plates_mask].update(computed_data)
+
+                # Copy DataFrames, if necessary
+                if len(entries) > 1:
+                    columns = [f"{torque_var}_torque" + axis for axis in ["x", "y", "z", "mag"]]
+                    self.data[_age] = utils_data.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries, 
+                        columns, 
+                    )
 
     def optimise_torques(
             self,
@@ -340,17 +348,17 @@ class Plates:
         :type PROGRESS_BAR:             bool
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(
+        _ages = utils_data.select_ages(
             ages,
             self.settings.ages,
         )
 
         # Define iterable if cases not provided
-        _slab_iterable = utils_data.get_iterable(
+        _slab_iterable = utils_data.select_iterable(
             cases,
             self.settings.slab_cases,
         )
-        _mantle_iterable = utils_data.get_iterable(
+        _mantle_iterable = utils_data.select_iterable(
             cases,
             self.settings.mantle_drag_cases,
         )
@@ -403,7 +411,7 @@ class Plates:
                     # Copy DataFrames, if necessary
                     if len(entries) > 1 and cases is None:
                         columns = ["slab_pull_torque_opt" + axis for axis in ["x", "y", "z", "mag"]]
-                        self.data[_age] = utils_calc.copy_values(
+                        self.data[_age] = utils_data.copy_values(
                             self.data[_age], 
                             key, 
                             entries, 
@@ -433,7 +441,7 @@ class Plates:
                     # Copy DataFrames, if necessary
                     if len(entries) > 1 and cases is None:
                         columns = ["mantle_drag_torque_opt" + axis for axis in ["x", "y", "z", "mag"]]
-                        self.data[_age] = utils_calc.copy_values(
+                        self.data[_age] = utils_data.copy_values(
                             self.data[_age], 
                             key, 
                             entries, 
@@ -469,13 +477,13 @@ class Plates:
         :type PROGRESS_BAR:             bool
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(
+        _ages = utils_data.select_ages(
             ages,
             self.settings.ages,
         )
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(
+        _cases = utils_data.select_cases(
             cases,
             self.settings.cases,
         )
@@ -605,10 +613,10 @@ class Plates:
         Function to save the 'Plates' object.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
@@ -661,10 +669,10 @@ class Plates:
         Geometries are saved as shapefiles, data are saved as .csv files.
         """
         # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
+        _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.get_cases(cases, self.settings.cases)
+        _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir

@@ -6,6 +6,7 @@ import sys
 import traceback
 
 # Third-party imports
+import matplotlib.pyplot as plt
 import numpy as np
 import gplately
 import pandas as pd
@@ -528,13 +529,63 @@ def test_plate_torques(
 
         # Try sampling of seafloor age grid at points
         try:
-            plate_torques_test.sample_points()
+            plate_torques_test.sample_point_seafloor_ages()
             logging.info("Successfully sampled seafloor age grid at points.")
 
         except Exception as e:
             logging.error(f"An error occurred during sampling of the seafloor age grid at points: {e}")
             traceback.print_exc()
 
+        # Try sampling of seafloor age grid at slabs
+        try:
+            plate_torques_test.sample_slab_seafloor_ages()
+            logging.info("Successfully sampled seafloor age grid at points.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during sampling of the seafloor age grid at points: {e}")
+            traceback.print_exc()
+
+        # Try computation of GPE torque
+        try:
+            plate_torques_test.calculate_gpe_torque()
+            logging.info("Successfully computed GPE torque.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during computation of the GPE torque: {e}")
+            traceback.print_exc()
+
+            plot_age = plate_torques_test.settings.ages[0]
+            plot_case = plate_torques_test.settings.cases[0]
+
+            plt.scatter(
+                plate_torques_test.points.data[plot_age][plot_case].lon.values,
+                plate_torques_test.points.data[plot_age][plot_case].lat.values,
+                c=plate_torques_test.points.data[plot_age][plot_case].GPE_force_mag.values,
+            )
+            plt.show()
+
+        # plt.scatter(
+        #     plate_torques_test.slabs.data[plot_age][plot_case].slab_sampling_lon.values,
+        #     plate_torques_test.slabs.data[plot_age][plot_case].slab_sampling_lat.values,
+        #     color="blue",
+        #     marker="d",
+        # )
+        # plt.scatter(
+        #     plate_torques_test.slabs.data[plot_age][plot_case].arc_sampling_lon.values,
+        #     plate_torques_test.slabs.data[plot_age][plot_case].arc_sampling_lat.values,
+        #     color="red",
+        #     marker="^",
+        # )
+        # plt.scatter(
+        #     plate_torques_test.slabs.data[plot_age][plot_case].lon.values,
+        #     plate_torques_test.slabs.data[plot_age][plot_case].lat.values,
+        #     c=plate_torques_test.slabs.data[plot_age][plot_case].slab_age.values,
+        #     marker="o"
+        # )
+        # plt.show()
+
+        # print(plate_torques_test.slabs.data[plot_age][plot_case].slab_age.values)
+        
     logging.info("Testing of the 'plate_torques' module complete.")
 
 def plot_test(plate_torques=None, print_results=False):
@@ -562,9 +613,3 @@ def plot_test(plate_torques=None, print_results=False):
         traceback.print_exc()
 
     return plot_test
-
-if __name__ == "__main__":
-    # Run tests
-    test_settings()
-    test_reconstruction()
-    test_plates()

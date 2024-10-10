@@ -4,7 +4,6 @@
 # Import the functions to test
 # Standard library imports
 import os
-import sys
 import logging
 import warnings
 warnings.simplefilter("error", RuntimeWarning)
