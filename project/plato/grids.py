@@ -194,7 +194,7 @@ class Grids():
         """
         Function to save the the seafloor age grid.
         """
-        self.save_grid(self.seafloor_age, "Seafloor", ages, None, file_dir)
+        self.save_grid(self.seafloor_age, "Seafloor_age", ages, None, file_dir)
 
     def save_sediment(
             self,
@@ -253,7 +253,7 @@ class Grids():
 
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
-
+        
         # Loop through ages
         for _age in _tqdm(_ages, desc=f"Saving {type} grids", disable=self.settings.logger.level==logging.INFO):
             if cases is not None:
@@ -264,8 +264,8 @@ class Grids():
                         type,
                         self.settings.name,
                         _age,
-                        file_dir,
                         _case,
+                        _file_dir,
                     )
             else:
                 utils_data.Dataset_to_netcdf(
@@ -273,5 +273,6 @@ class Grids():
                         type,
                         self.settings.name,
                         _age,
-                        file_dir,
+                        None,
+                        _file_dir,
                     )

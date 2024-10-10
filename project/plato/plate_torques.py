@@ -146,12 +146,13 @@ class PlateTorques():
             self,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
             cases: Optional[Union[str, List]],
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
         ):
         """
         Function to sample the seafloor ages and other variables (if available)
         """
         # Sample points
-        self.sample_points(ages, cases, self.grids)
+        self.sample_points(ages, cases, plateIDs, self.grids)
     
         # Sample slabs
         self.sample_slabs(ages, cases, self.grids)
@@ -183,14 +184,15 @@ class PlateTorques():
 
     def sample_points(
             self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            variables: Optional[Union[str, List[str]]] = None,
         ):
         """
         Function to sample the seafloor ages and other variables (if available)
         """
-        self.points.sample_seafloor_at_points(ages, cases, plateIDs, self.grids)
+        self.points.sample_seafloor_at_points(ages, cases, plateIDs, self.grids, variables)
 
     def calculate_all_torques(
             self,
@@ -344,10 +346,10 @@ class PlateTorques():
         self.save_slabs(ages, cases, plateIDs, file_dir)
 
         # Save grids
-        self.save_grids(ages, cases, plateIDs, file_dir)
+        self.save_grids(ages, cases, file_dir)
 
         # Save globe
-        self.save_globe(ages, cases, plateIDs, file_dir)
+        self.save_globe(cases, file_dir)
 
     def save_plates(
             self,
@@ -402,16 +404,14 @@ class PlateTorques():
 
     def save_globe(
             self,
-            ages,
             cases,
-            plateIDs,
             file_dir,
         ):
         """
         Function to save globe.
         """
         # Save globe
-        self.globe.save(ages, cases, plateIDs, file_dir)
+        self.globe.save(cases, file_dir)
 
     def export_all(
             self,
@@ -433,7 +433,7 @@ class PlateTorques():
         self.save_grids(ages, cases, file_dir)
 
         # Save globe
-        self.export_globe(ages, cases, plateIDs, file_dir)
+        self.export_globe(cases, file_dir)
 
     def export_plates(
             self,
@@ -488,13 +488,11 @@ class PlateTorques():
 
     def export_globe(
             self,
-            ages,
             cases,
-            plateIDs,
             file_dir,
         ):
         """
         Function to expprt globe.
         """
         # Save globe
-        self.globe.export(ages, cases, plateIDs, file_dir)
+        self.globe.export(cases, file_dir)

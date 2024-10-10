@@ -1152,47 +1152,9 @@ def DataFrame_to_parquet(
     ):
     """
     Function to save DataFrame to a Parquet file in a folder efficiently.
-
-    :param data:                  data
-    :type data:                   pandas.DataFrame
-    :param data_name:             name of dataset
-    :type data_name:              string
-    :param reconstruction_name:   name of reconstruction
-    :type reconstruction_name:    string
-    :param _age:   reconstruction time
-    :type _age:    integer
-    :param case:                  case
-    :type case:                   string
-    :param folder:                folder name
-    :type folder:                 string
-    :param DEBUG_MODE:            whether to run in debug mode
-    :type DEBUG_MODE:             bool
     """
-    # Construct the file path
-    target_dir = folder if folder else _os.getcwd()
-    if age is not None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.parquet"
-    elif age is None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}.parquet"
-    elif age is not None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.parquet"
-    elif age is None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}.parquet"
-    file_path = _os.path.join(target_dir, data_name, file_name)
-    
-    # Debug information
-    logging.info(f"Saving {data_name} to {file_path}.")
-
-    # Ensure the directory exists
-    _os.makedirs(_os.path.dirname(file_path), exist_ok=True)
-    
-    # Delete old file if it exists
-    try:
-        _os.remove(file_path)
-        logging.info(f"Deleted {file_path}.")
-
-    except FileNotFoundError:
-        pass  # No need to remove if file does not exist
+    # Get the file path
+    file_path = get_file_path(data, data_name, "parquet", reconstruction_name, age, case, folder)
 
     # Save the data to Parquet
     data.to_parquet(file_path, index=False)
@@ -1208,47 +1170,9 @@ def DataFrame_to_csv(
     ):
     """
     Function to save DataFrame to a folder efficiently.
-
-    :param data:                  data
-    :type data:                   pandas.DataFrame
-    :param data_name:             name of dataset
-    :type data_name:              string
-    :param reconstruction_name:   name of reconstruction
-    :type reconstruction_name:    string
-    :param _age:   reconstruction time
-    :type _age:    integer
-    :param case:                  case
-    :type case:                   string
-    :param folder:                folder name
-    :type folder:                 string
-    :param DEBUG_MODE:            whether to run in debug mode
-    :type DEBUG_MODE:             bool
     """
-    # Construct the file path
-    target_dir = folder if folder else _os.getcwd()
-    if age is not None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.csv"
-    elif age is None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}.csv"
-    elif age is not None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.csv"
-    elif age is None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}.csv"
-    file_path = _os.path.join(target_dir, data_name, file_name)
-    
-    # Debug information
-    logging.info(f"Exporting {data_name} to {file_path}.")
-
-    # Ensure the directory exists
-    _os.makedirs(_os.path.dirname(file_path), exist_ok=True)
-    
-    # Delete old file if it exists
-    try:
-        _os.remove(file_path)
-        logging.info(f"Deleted {file_path}.")
-
-    except FileNotFoundError:
-        pass  # No need to remove if file does not exist
+    # Get the file path
+    file_path = get_file_path(data, data_name, "csv", reconstruction_name, age, case, folder)
 
     # Save the data to CSV
     data.to_csv(file_path, index=False)
@@ -1263,44 +1187,9 @@ def GeoDataFrame_to_geoparquet(
     ):
     """
     Function to save GeoDataFrame to a GeoParquet file in a folder efficiently.
-
-    :param data:                  data
-    :type data:                   geopandas.GeoDataFrame
-    :param data_name:             name of dataset
-    :type data_name:              string
-    :param reconstruction_name:   name of reconstruction
-    :type reconstruction_name:    string
-    :param _age:   age of reconstruction in Ma
-    :type _age:    int
-    :param folder:                folder name
-    :type folder:                 string
-    :param DEBUG_MODE:            whether to run in debug mode
-    :type DEBUG_MODE:             bool
     """
-    # Construct the file path
-    target_dir = folder if folder else _os.getcwd()
-    if age is not None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.parquet"
-    elif age is None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}.parquet"
-    elif age is not None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.parquet"
-    elif age is None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}.parquet"
-    file_path = _os.path.join(target_dir, data_name, file_name)
-    
-    logging.info(f"Saving {data_name} to {file_path}.")
-
-    # Ensure the directory exists
-    _os.makedirs(target_dir, exist_ok=True)
-    
-    # Delete old file if it exists
-    try:
-        _os.remove(file_path)
-        logging.info(f"Deleted {file_path}.")
-
-    except FileNotFoundError:
-        pass  # File does not exist, no need to remove
+    # Get the file path
+    file_path = get_file_path(data, data_name, "parquet", reconstruction_name, age, case, folder)
 
     # Save the data to a GeoParquet file
     data.to_parquet(file_path)
@@ -1316,44 +1205,9 @@ def GeoDataFrame_to_shapefile(
     ):
     """
     Function to save GeoDataFrame to a folder efficiently.
-
-    :param data:                  data
-    :type data:                   geopandas.GeoDataFrame
-    :param data_name:             name of dataset
-    :type data_name:              string
-    :param reconstruction_name:   name of reconstruction
-    :type reconstruction_name:    string
-    :param _age:   age of reconstruction in Ma
-    :type _age:    int
-    :param folder:                folder
-    :type folder:                 string
-    :param DEBUG_MODE:            whether to run in debug mode
-    :type DEBUG_MODE:             bool
     """
-    # Construct the file path
-    target_dir = folder if folder else _os.getcwd()
-    if age is not None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.shp"
-    elif age is None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}.shp"
-    elif age is not None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.shp"
-    elif age is None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}.shp"
-    file_path = _os.path.join(target_dir, data_name, file_name)
-    
-    logging.info(f"Exporting {data_name} to {file_path}.")
-
-    # Ensure the directory exists
-    _os.makedirs(target_dir, exist_ok=True)
-    
-    # Delete old file if it exists
-    try:
-        _os.remove(file_path)
-        logging.info(f"Deleted old file {file_path}")
-
-    except FileNotFoundError:
-        pass  # File does not exist, no need to remove
+    # Get the file path
+    file_path = get_file_path(data, data_name, "shp", reconstruction_name, age, case, folder)
 
     # Save the data to a shapefile
     data.to_file(file_path)
@@ -1369,35 +1223,40 @@ def Dataset_to_netcdf(
     ):
     """
     Function to save Dataset to a NetCDF file in a folder efficiently.
+    """
+    # Get the file path
+    file_path = get_file_path(data, data_name, "nc", reconstruction_name, age, case, folder)
 
-    :param data:                  data
-    :type data:                   xarray.Dataset
-    :param data_name:             name of dataset
-    :type data_name:              string
-    :param reconstruction_name:   name of reconstruction
-    :type reconstruction_name:    string
-    :param _age:   age of reconstruction in Ma
-    :type _age:    int
-    :param folder:                folder
-    :type folder:                 string
-    :param DEBUG_MODE:            whether to run in debug mode
-    :type DEBUG_MODE:             bool
+    # Save the data to a NetCDF file
+    data.to_netcdf(file_path)
+
+def get_file_path(
+        data: _xarray.Dataset,
+        data_name: str,
+        file_extension: str,
+        reconstruction_name: str,
+        age: int,
+        case: Optional[str] = None,
+        folder: Optional[str] = None,
+    ):
+    """
+    Function to save a file
     """
     # Construct the file path
     target_dir = folder if folder else _os.getcwd()
     if age is not None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.nc"
+        file_name = f"{data_name}_{reconstruction_name}_{case}_{age}Ma.{file_extension}"
     elif age is None and case is not None:
-        file_name = f"{data_name}_{reconstruction_name}_{case}.nc"
+        file_name = f"{data_name}_{reconstruction_name}_{case}.{file_extension}"
     elif age is not None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.nc"
+        file_name = f"{data_name}_{reconstruction_name}_{age}Ma.{file_extension}"
     elif age is None and case is None:
-        file_name = f"{data_name}_{reconstruction_name}.nc"
+        file_name = f"{data_name}_{reconstruction_name}.{file_extension}"
     file_path = _os.path.join(target_dir, data_name, file_name)
 
     # Ensure the directory exists
-    _os.makedirs(target_dir, exist_ok=True)
-
+    _os.makedirs(_os.path.join(target_dir, data_name), exist_ok=True)
+    
     # Delete old file if it exists
     try:
         _os.remove(file_path)
@@ -1406,8 +1265,7 @@ def Dataset_to_netcdf(
     except FileNotFoundError:
         pass
 
-    # Save the data to a NetCDF file
-    data.to_netcdf(file_path)
+    return file_path
 
 def check_dir(target_dir):
     """

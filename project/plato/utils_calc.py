@@ -1117,6 +1117,10 @@ def cartesian2spherical_azimuth(x, y, z):
     # Calculate magnitude
     mag = _numpy.linalg.norm([x, y, z])
     
+    # Check if magnitude is zero or NaN and return 0 values
+    if mag == 0 or mag == _numpy.nan:
+        return 0, 0, 0, _numpy.nan
+
     # Calculate latitude
     lat_rads = _numpy.arcsin(z / mag)
     lat = _numpy.rad2deg(lat_rads)

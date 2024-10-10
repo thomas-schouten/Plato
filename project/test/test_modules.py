@@ -6,6 +6,8 @@
 import os
 import sys
 import logging
+import warnings
+warnings.simplefilter("error", RuntimeWarning)
 
 # Import the test functions
 import functions_test

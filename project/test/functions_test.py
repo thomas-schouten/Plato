@@ -376,7 +376,17 @@ def test_grids(
 
     # Test functions of the Grids object
     # TODO: Actually implement these functions in such a way that they can be tested
-    # if grids_test is not None and test_functions:
+    if grids_test is not None and test_functions:
+        # Test saving
+        try:
+            grids_test.save_all(
+                ages=test_ages,
+            )
+        
+        except Exception as e:
+            logging.error(f"An error occurred during saving of the 'Grids' object: {e}")
+            traceback.print_exc()
+
     #     # Test making an xarray dataset from an a series of xarray data arrays
     #     try:
     #         grids_test.data_arrays2dataset(point_data_var=point_data_var)
@@ -514,6 +524,15 @@ def test_plate_torques(
 
         except Exception as e:
             logging.error(f"An error occurred during calculation of the RMS velocity in the 'PlateTorques' object: {e}")
+            traceback.print_exc()
+
+        # Try sampling of seafloor age grid at points
+        try:
+            plate_torques_test.sample_points()
+            logging.info("Successfully sampled seafloor age grid at points.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during sampling of the seafloor age grid at points: {e}")
             traceback.print_exc()
 
     logging.info("Testing of the 'plate_torques' module complete.")

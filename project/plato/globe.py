@@ -280,18 +280,13 @@ class Globe:
 
     def save(
             self,
-            ages,
             cases,
-            plateIDs,
             file_dir,
         ):
         """
         Function to save 'Globe' object.
         Data of the 'Globe' object is saved to .parquet files.
         """
-        # Define ages if not provided
-        _ages = utils_data.get_ages(ages, self.settings.ages)
-
         # Define cases if not provided
         _cases = utils_data.get_cases(cases, self.settings.cases)
         
@@ -299,7 +294,7 @@ class Globe:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _case in _tqdm(_ages, desc="Saving Globe", disable=self.settings.logger.level==logging.INFO):
+        for _case in _tqdm(_cases, desc="Saving Globe", disable=self.settings.logger.level==logging.INFO):
             utils_data.DataFrame_to_parquet(
                 self.data[_case],
                 "Globe",
@@ -308,3 +303,29 @@ class Globe:
                 _case,
                 _file_dir,
                 )
+            
+    def export(
+            self,
+            cases,
+            file_dir,
+        ):
+        """
+        Function to export 'Globe' object.
+        Data of the 'Globe' object is export to .csv files.
+        """
+        # Define cases if not provided
+        _cases = utils_data.get_cases(cases, self.settings.cases)
+        
+        # Get file dir
+        _file_dir = self.settings.dir_path if file_dir is None else file_dir
+
+        # Loop through ages
+        for _case in _tqdm(_cases, desc="Saving Globe", disable=self.settings.logger.level==logging.INFO):
+            utils_data.DataFrame_to_csv(
+                self.data[_case],
+                "Globe",
+                self.settings.name,
+                None,
+                _case,
+                _file_dir,
+                )        

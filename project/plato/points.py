@@ -172,6 +172,7 @@ class Points:
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
             seafloor_grid: Optional[_xarray.Dataset] = None,
             variables: Optional[Union[str, List[str]]] = ["seafloor_age"],
         ):
@@ -188,15 +189,26 @@ class Points:
         _variables = utils_data.get_variables(variables, seafloor_grid.data_vars)
 
         # Loop through valid times
-        for _age in _tqdm(ages, desc="Sampling points", disable = self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(_ages, desc="Sampling points", disable = self.settings.logger.level == logging.INFO):
             for key, entries in _iterable.items():
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.get_plateIDs(plateIDs, self.data[_age][key].plateID.unique())
+
+                # Select points
+                _data = self.data[_age][key]
+                if plateIDs is not None:
+                    _data = _data[_data.plateID.isin(_plateIDs)]
+
                 for _variable in _variables:
-                    # Sample seafloor age at points for key
-                    self.data[_age][key]["seafloor_age"] = utils_calc.sample_grid(
-                        self.data[_age][key].lat,
-                        self.data[_age][key].lon,
+                    # Sample grid at points for key
+                    sampled_data = utils_calc.sample_grid(
+                        _data.lat,
+                        _data.lon,
                         seafloor_grid[_variable]
                     )
+
+                    # Enter sampled data in DataFrame
+                    self.data[_age][key].loc[_data.index, _variable] = sampled_data
                     
                     # Copy to other entries
                     self.data[_age] = utils_calc.copy_values(

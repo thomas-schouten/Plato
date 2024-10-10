@@ -185,48 +185,54 @@ class Plates:
         _iterable = utils_data.get_iterable(cases, self.settings.point_cases)
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Calculating RMS velocities"):
+        for _age in _tqdm(_ages, desc="Calculating RMS velocities", disable=self.settings.logger.level==logging.INFO):
             # Check if age in point data
             if _age in points.data.keys():
                 # Loop through cases
                 for key, entries in _iterable.items():
                     # Check if case in point data
-                    if key in points.data[_age].keys():
-                        # Define plateIDs if not provided
-                        _plateIDs = utils_data.get_plates(
-                            plateIDs,
-                            self.data[_age][key].plateID,
+                    if key not in points.data[_age].keys():
+                        # Initialise a Points object for this age and case
+                        points = Points(
+                            settings = self.settings,
+                            reconstruction = self.reconstruction,
+                            ages = _age,
+                            cases = key,
+                            resolved_geometries = self.resolved_geometries,
                         )
-                        
-                        # Loop through plates
-                        for _plateID in _plateIDs:
-                            # Select points belonging to plate 
-                            mask = points.data[_age][key].plateID == _plateID
+                        logging.info(f"Initialised Points object for case {key} at {_age} Ma to calculate RMS velocities")
 
-                            # Calculate RMS velocity for plate
-                            rms_velocity = utils_calc.compute_rms_velocity(
-                                points.data[_age][key].segment_length_lat.values[mask],
-                                points.data[_age][key].segment_length_lon.values[mask],
-                                points.data[_age][key].v_mag.values[mask],
-                                points.data[_age][key].v_azi.values[mask],
-                                points.data[_age][key].omega.values[mask],
-                            )
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.get_plates(
+                        plateIDs,
+                        self.data[_age][key].plateID,
+                    )
+                    
+                    # Loop through plates
+                    for _plateID in _plateIDs:
+                        # Select points belonging to plate 
+                        mask = points.data[_age][key].plateID == _plateID
 
-                            # Store RMS velocity components 
-                            self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_mag"] = rms_velocity[0]
-                            self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_azi"] = rms_velocity[1]
-                            self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "omega_rms"] = rms_velocity[2]
-
-                        self.data[_age] = utils_calc.copy_values(
-                            self.data[_age], 
-                            key, 
-                            entries, 
-                            ["v_rms_mag", "v_rms_azi", "omega_rms"], 
+                        # Calculate RMS velocity for plate
+                        rms_velocity = utils_calc.compute_rms_velocity(
+                            points.data[_age][key].segment_length_lat.values[mask],
+                            points.data[_age][key].segment_length_lon.values[mask],
+                            points.data[_age][key].v_mag.values[mask],
+                            points.data[_age][key].v_azi.values[mask],
+                            points.data[_age][key].omega.values[mask],
                         )
-                    else:
-                        logging.error(f"No point data available for {key} at {_age} Ma, no RMS velocity calculated.")
-            else:
-                logging.error(f"No point data available for {_age} Ma, no RMS velocity calculated.")
+
+                        # Store RMS velocity components 
+                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_mag"] = rms_velocity[0]
+                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_azi"] = rms_velocity[1]
+                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "omega_rms"] = rms_velocity[2]
+
+                    self.data[_age] = utils_calc.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries, 
+                        ["v_rms_mag", "v_rms_azi", "omega_rms"], 
+                    )
 
     def calculate_torque_on_plates(
             self,
