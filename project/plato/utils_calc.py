@@ -102,7 +102,6 @@ def compute_slab_pull_force(slabs, options, mech):
     """
     # Calculate thicknesses
     slabs["slab_lithospheric_thickness"], slabs["slab_crustal_thickness"], slabs["slab_water_depth"] = compute_thicknesses(slabs.slab_seafloor_age, options)
-    slabs_thickness = slabs["slab_lithospheric_thickness"] + slabs["slab_crustal_thickness"]
 
     # Calculate length of slab
     slabs["slab_length"] = options["Slab length"]
