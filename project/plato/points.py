@@ -282,7 +282,7 @@ class Points:
         _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
 
         # Loop through reconstruction times
-        for i, _age in _tqdm(enumerate(_ages), desc="Computing GPE forces", disable=(self.settings.logger.level==logging.INFO)):
+        for _age in _tqdm(_ages, desc="Computing GPE forces", disable=(self.settings.logger.level==logging.INFO)):
             # Loop through gpe cases
             for key, entries in _iterable.items():
                 if self.settings.options[key]["GPE torque"]:

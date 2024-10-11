@@ -64,7 +64,6 @@ class Grids():
 
         # Load seafloor grids
         for _age in _tqdm(self.settings.ages, desc="Loading grids", disable=self.settings.logger.level==logging.INFO):
-            print(seafloor_age_grids[_age])
 
             if seafloor_age_grids is not None and _age in seafloor_age_grids.keys() and seafloor_age_grids[_age] is _xarray.Dataset:
                 # If the seafloor is present in the provided dictionary, copy

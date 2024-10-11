@@ -271,7 +271,7 @@ class Plates:
         _iterable = utils_data.select_iterable(cases, matching_cases)    
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Calculating torque on plates"):
+        for _age in _tqdm(_ages, desc="Calculating torque on plates", disable=(self.settings.logger.level==logging.INFO)):
             logging.info(f"Calculating torque on plates at {_age} Ma")
             for key, entries in _iterable.items():
                 # Define plateIDs if not provided

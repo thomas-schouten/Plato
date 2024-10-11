@@ -495,7 +495,7 @@ def compute_GPE_force(
             points["GPE_force_lat"] = _numpy.where(_numpy.isnan(ages[i]), 0, points["GPE_force_lat"])
             points["GPE_force_lon"] = _numpy.where(_numpy.isnan(ages[i]), 0, points["GPE_force_lon"])
 
-    points["GPE_force_mag"] = _numpy.linalg.norm([points["GPE_force_lat"], points["GPE_force_lon"]])
+    points["GPE_force_mag"] = _numpy.sqrt(points["GPE_force_lat"]**2 + points["GPE_force_lon"]**2)
 
     return points
 
@@ -1025,7 +1025,7 @@ def compute_torque_on_plates(
     point_data[torque_var + "_x"] = torques_xyz[0]
     point_data[torque_var + "_y"] = torques_xyz[1]
     point_data[torque_var + "_z"] = torques_xyz[2]
-    point_data[torque_var + "_mag"] = _numpy.linalg.norm(torques_xyz[0], torques_xyz[1], torques_xyz[2])
+    point_data[torque_var + "_mag"] = _numpy.sqrt(torques_xyz[0]**2 + torques_xyz[1]**2 + torques_xyz[2])
 
     # Sum components of plates based on plateID
     summed_data = point_data.groupby("plateID", as_index=True).sum().fillna(0)
@@ -1043,7 +1043,9 @@ def compute_torque_on_plates(
     centroid_position = spherical2cartesian(plate_data.centroid_lat, plate_data.centroid_lon, constants.mean_Earth_radius_m)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
-    summed_torques_xyz = _numpy.asarray([plate_data[torque_var + "_x"], plate_data[torque_var + "_y"], plate_data[torque_var + "_z"]])
+    summed_torques_xyz = _numpy.asarray([
+        plate_data[f"{torque_var}_torque_x"], plate_data[f"{torque_var}_torque_y"], plate_data[f"{torque_var}_torque_z"]
+    ])
     centroid_force_xyz = _numpy.cross(summed_torques_xyz, centroid_position, axis=0) 
 
     # Compute force magnitude at centroid
@@ -1091,7 +1093,11 @@ def compute_subduction_flux(
 # CONVERSIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def cartesian2spherical_azimuth(x, y, z):
+def cartesian2spherical_azimuth(
+        x: _numpy.ndarray,
+        y: Optional[_numpy.ndarray] = None,
+        z: Optional[_numpy.ndarray] = None,
+    ):
     """
     Convert Cartesian coordinates to latitude, longitude, magnitude, and azimuth.
 
@@ -1105,6 +1111,10 @@ def cartesian2spherical_azimuth(x, y, z):
     :return:            Latitude (degrees), Longitude (degrees), Magnitude, Azimuth (degrees).
     :rtype:             tuple (float, float, float, float)
     """
+    # Check if y and z are None
+    if y is None and z is None:
+        x, y, z = x[0], x[1], x[2]
+
     # Calculate magnitude
     mag = _numpy.linalg.norm([x, y, z])
     
@@ -1187,20 +1197,16 @@ def forces2torques(
     # Calculate force_magnitude
     forces_mag = _numpy.sqrt((forces_lat*areas)**2 + (forces_lon*areas)**2)
 
-    print(len(forces_lon[forces_lon == 0])/len(forces_lon))
-
     # Calculate theta
-    theta = _numpy.where(
-        _numpy.logical_or(forces_lon == 0, _numpy.isnan(forces_lon)),
-        _numpy.nan,
+    theta = _numpy.empty_like(forces_lon)
+    mask = ~_numpy.logical_or(forces_lon == 0, _numpy.isnan(forces_lon), _numpy.isnan(forces_lat))
+    theta[mask] = _numpy.where(
+        (forces_lon[mask] > 0) & (forces_lat[mask] >= 0),  
+        _numpy.arctan(forces_lat[mask] / forces_lon[mask]),                          
         _numpy.where(
-            (forces_lon > 0) & (forces_lat >= 0),  
-            _numpy.arctan(forces_lat/forces_lon),                          
-            _numpy.where(
-                (forces_lon < 0) & (forces_lat >= 0) | (forces_lon < 0) & (forces_lat < 0),    
-                _numpy.pi + _numpy.arctan(forces_lat/forces_lon),              
-                (2*_numpy.pi) + _numpy.arctan(forces_lat/forces_lon)           
-            )
+            (forces_lon[mask] < 0) & (forces_lat[mask] >= 0) | (forces_lon[mask] < 0) & (forces_lat[mask] < 0),    
+            _numpy.pi + _numpy.arctan(forces_lat[mask] / forces_lon[mask]),              
+            (2*_numpy.pi) + _numpy.arctan(forces_lat[mask] / forces_lon[mask])           
         )
     )
 

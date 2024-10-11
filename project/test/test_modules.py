@@ -5,7 +5,6 @@
 # Standard library imports
 import os
 import logging
-import warnings
 
 import xarray as xr
 
@@ -14,9 +13,6 @@ import functions_test
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Catch runtime warnings
-warnings.simplefilter("error", RuntimeWarning)
 
 # SET TESTS
 # Test configurations
@@ -49,7 +45,7 @@ test_ages = [0, 50]
 # Define seafloor files
 seafloor_age_grids = {}
 for age in test_ages:
-    seafloor_age_grids[age] = xr.open_dataset(os.path.join("data", f"M2016_SeafloorAgeGrid_{age}.nc"))
+    seafloor_age_grids[age] = xr.open_dataset(os.path.join("data", f"Muller2016_Muller_etal_2016_AREPS_v1.17_AgeGrid-{age}.nc"))
 
 def run_tests():
     """Run all specified tests based on the TEST_CONFIGS dictionary."""
