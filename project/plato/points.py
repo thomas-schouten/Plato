@@ -295,7 +295,7 @@ class Points:
                     # Select points
                     if plateIDs is not None:
                         _data = _data[_data.plateID.isin(_plateIDs)]
-
+                        
                     # Calculate GPE force
                     _data = utils_calc.compute_GPE_force(
                         _data,

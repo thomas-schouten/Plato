@@ -275,6 +275,7 @@ class PlateTorques():
             plateIDs,
             self.plates.data,
             self.slabs.data,
+            self.settings.constants,
             torque_var = "slab_pull",
         )
 

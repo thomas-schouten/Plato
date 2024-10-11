@@ -284,8 +284,6 @@ class Plates:
                 plates_mask = self.data[_age][key].loc[:, "plateID"].isin(_plateIDs)
                 points_mask = point_data[_age][key].loc[:, "plateID"].isin(_plateIDs)
 
-                print(plates_mask)
-
                 if torque_var == "slab_pull" or torque_var == "slab_bend":
                     selected_points_plateID = point_data[_age][key].lower_plateID.values[points_mask]
                     selected_points_area = point_data[_age][key].trench_segment_length.values[points_mask]

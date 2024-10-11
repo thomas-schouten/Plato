@@ -1328,8 +1328,8 @@ def get_variable_name(
 
 def rename_coordinates_and_variables(
         grid: _xarray.Dataset,
-        var_old_name: Optional[str],
-        var_new_name: Optional["str"],
+        var_old_name: Optional[str] = "z",
+        var_new_name: Optional["str"] = "z",
     ):
     """
     Function to rename coordinates and variables 
@@ -1339,8 +1339,10 @@ def rename_coordinates_and_variables(
         grid = grid.rename({"lat": "latitude"})
     if "lon" in grid.coords:
         grid = grid.rename({"lon": "longitude"})
-    if var_old_name and "z" in grid.data_vars:
+    if var_old_name in grid.data_vars:
         grid = grid.rename({"z": var_new_name})
+
+    return grid
 
 def array2data_array(
         lats: Union[list, _numpy.ndarray],

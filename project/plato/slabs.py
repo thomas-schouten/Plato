@@ -283,8 +283,6 @@ class Slabs:
                         _grid[_var],
                     )
 
-                    print(_var, _col, _grid.data_vars)
-
                     # Enter sampled data back into the DataFrame
                     self.data[_age][key].loc[_data.index, _col] = sampled_data
                     

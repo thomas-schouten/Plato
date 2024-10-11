@@ -495,6 +495,8 @@ def compute_GPE_force(
             points["GPE_force_lat"] = _numpy.where(_numpy.isnan(ages[i]), 0, points["GPE_force_lat"])
             points["GPE_force_lon"] = _numpy.where(_numpy.isnan(ages[i]), 0, points["GPE_force_lon"])
 
+    points["GPE_force_mag"] = _numpy.linalg.norm([points["GPE_force_lat"], points["GPE_force_lon"]])
+
     return points
 
 def sample_grid(
@@ -970,13 +972,12 @@ def compute_thicknesses(ages, options, crust=True, water=True):
 
 def compute_torque_on_plates(
         plate_data,
-        lat,
-        lon,
-        plateID,
-        force_lat,
-        force_lon,
-        segment_length_lat,
-        segment_length_lon,
+        lats,
+        lons,
+        plateIDs,
+        forces_lat,
+        forces_lon,
+        areas,
         constants,
         torque_var="torque",
     ):
@@ -1012,13 +1013,13 @@ def compute_torque_on_plates(
     Finally, it calculates the force components at the centroid, converts them to latitudinal and longitudinal components, and adds these to the torques DataFrame.
     """
     # Initialise dataframes and sort plateIDs
-    point_data = _pandas.DataFrame({"plateID": plateID})
+    point_data = _pandas.DataFrame({"plateID": plateIDs})
 
     # Convert points to Cartesian coordinates
-    position_xyz = spherical2cartesian(lat, lon, constants)
+    positions_xyz = spherical2cartesian(lats, lons, constants.mean_Earth_radius_m)
     
     # Calculate torques in Cartesian coordinates
-    torques_xyz = force2torque(position_xyz, lat, lon, force_lat, force_lon, segment_length_lat, segment_length_lon)
+    torques_xyz = forces2torques(positions_xyz, lats, lons, forces_lat, forces_lon, areas)
     
     # Assign the calculated torques to the new torque_var columns
     point_data[torque_var + "_x"] = torques_xyz[0]
@@ -1150,14 +1151,13 @@ def spherical2cartesian(lat, lon, mag):
 
     return x, y, z
 
-def force2torque(
-        position, 
-        lat, 
-        lon, 
-        force_lat, 
-        force_lon, 
-        segment_length_lat, 
-        segment_length_lon
+def forces2torques(
+        positions_xyz, 
+        lats, 
+        lons, 
+        forces_lat, 
+        forces_lon, 
+        areas,
     ):
     """
     Calculate plate torque vector from force vectors.
@@ -1181,32 +1181,39 @@ def force2torque(
     :rtype:                     numpy.array
     """
     # Convert lon, lat to radian
-    lon_rads = _numpy.deg2rad(lon)
-    lat_rads = _numpy.deg2rad(lat)
+    lons_rad = _numpy.deg2rad(lons)
+    lats_rad = _numpy.deg2rad(lats)
 
     # Calculate force_magnitude
-    force_magnitude = _numpy.sqrt((force_lat*segment_length_lat*segment_length_lon)**2 + (force_lon*segment_length_lat*segment_length_lon)**2)
+    forces_mag = _numpy.sqrt((forces_lat*areas)**2 + (forces_lon*areas)**2)
 
+    print(len(forces_lon[forces_lon == 0])/len(forces_lon))
+
+    # Calculate theta
     theta = _numpy.where(
-        (force_lon >= 0) & (force_lat >= 0),                     
-        _numpy.arctan(force_lat/force_lon),                          
+        _numpy.logical_or(forces_lon == 0, _numpy.isnan(forces_lon)),
+        _numpy.nan,
         _numpy.where(
-            (force_lon < 0) & (force_lat >= 0) | (force_lon < 0) & (force_lat < 0),    
-            _numpy.pi + _numpy.arctan(force_lat/force_lon),              
-            (2*_numpy.pi) + _numpy.arctan(force_lat/force_lon)           
+            (forces_lon > 0) & (forces_lat >= 0),  
+            _numpy.arctan(forces_lat/forces_lon),                          
+            _numpy.where(
+                (forces_lon < 0) & (forces_lat >= 0) | (forces_lon < 0) & (forces_lat < 0),    
+                _numpy.pi + _numpy.arctan(forces_lat/forces_lon),              
+                (2*_numpy.pi) + _numpy.arctan(forces_lat/forces_lon)           
+            )
         )
     )
 
-    force_x = force_magnitude * _numpy.cos(theta) * (-1.0 * _numpy.sin(lon_rads))
-    force_y = force_magnitude * _numpy.cos(theta) * _numpy.cos(lon_rads)
-    force_z = force_magnitude * _numpy.sin(theta) * _numpy.cos(lat_rads)
-
-    force = _numpy.asarray([force_x, force_y, force_z])
+    # Calculate force in Cartesian coordinates
+    forces_x = forces_mag * _numpy.cos(theta) * (-1.0 * _numpy.sin(lons_rad))
+    forces_y = forces_mag * _numpy.cos(theta) * _numpy.cos(lons_rad)
+    forces_z = forces_mag * _numpy.sin(theta) * _numpy.cos(lats_rad)
+    forces_xyz = _numpy.asarray([forces_x, forces_y, forces_z])
 
     # Calculate torque
-    torque = _numpy.cross(position, force, axis=0)
+    torques = _numpy.cross(positions_xyz, forces_xyz, axis=0)
 
-    return torque    
+    return torques   
 
 def mag_azi2lat_lon(magnitude, azimuth):
     """
@@ -1249,31 +1256,6 @@ def lat_lon2mag_azi(component_lat, component_lon):
     azimuth_deg = _numpy.rad2deg(azimuth_rad)
 
     return magnitude, azimuth_deg
-
-def xyz2lat_lon(position):
-    """
-    Function to convert a 2D vector into magnitude and azimuth [degrees from north]
-
-    :param position:    Position vector in Cartesian coordinates.
-    :type position:     tuple
-    :param constants:   Constants used in the calculation.
-    :type constants:    class
-
-    :return:            Latitude and longitude in degrees.
-    :rtype:             float or numpy.array, float or numpy.array
-    """
-    # Unpack coordinates
-    x, y, z = position
-
-    # Calculate latitude (phi) and longitude (lambda) in radians
-    lat_rads = _numpy.arcsin(z)
-    lon_rads = _numpy.arctan2(y, x)
-
-    # Convert to degrees
-    lat = _numpy.rad2deg(lat_rads)
-    lon = _numpy.rad2deg(lon_rads)
-
-    return lat, lon
 
 def xyz2mag(x, y, z):
     """

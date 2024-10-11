@@ -364,6 +364,7 @@ def test_grids(
             cases_file=settings_file,
             reconstruction=reconstruction,
             reconstruction_name=reconstruction_name,
+            seafloor_age_grids=seafloor_age_grids,
             files_dir="output",
         )
         logging.info("Successfully initialised 'Grids' object.")
@@ -542,7 +543,7 @@ def test_plate_torques(
             logging.info("Successfully sampled seafloor age grid at points.")
 
         except Exception as e:
-            logging.error(f"An error occurred during sampling of the seafloor age grid at points: {e}")
+            logging.error(f"An error occurred during sampling of the seafloor age grid at slabs: {e}")
             traceback.print_exc()
 
         # Try computation of GPE torque
