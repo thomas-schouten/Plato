@@ -31,6 +31,7 @@ class set_mech_params:
         self.rho_sw = 1020                                  # water density for plate model
         self.rho_s = 2650                                   # density of sediments (quartz sand)
         self.rho_c = 2868                                   # density of continental crust
+        self.rho_e = 3300                                   # density of eclogite
         self.rho_l = 3412                                   # lithosphere density
         self.rho_a = 3350                                   # asthenosphere density 
         self.alpha = 3e-5                                   # thermal expansivity [K-1]
@@ -51,6 +52,7 @@ class set_mech_params:
 
         # Derived parameters
         self.drho_slab = self.rho0 * self.alpha * self.dT   # Density contrast between slab and surrounding mantle [kg/m3]
+        self.drho_e = self.rho_e - self.rho0                # Density contrast between eclogite and surrounding mantle [kg/m3]
         self.drho_sed = self.rho_s - self.rho0              # Density contrast between sediments (quartz sand) and surrounding mantle [kg/m3]
 
 # Create instance of mech
@@ -98,23 +100,31 @@ def compute_slab_pull_force(slabs, options, mech):
     :return:            slabs
     :rtype:             pandas.DataFrame
     """
+    # Calculate thicknesses
+    slabs["slab_lithospheric_thickness"], slabs["slab_crustal_thickness"], slabs["slab_water_depth"] = compute_thicknesses(slabs.slab_seafloor_age, options)
+    slabs_thickness = slabs["slab_lithospheric_thickness"] + slabs["slab_crustal_thickness"]
+
+    # Calculate length of slab
+    slabs["slab_length"] = options["Slab length"]
+
     # Calculate slab pull force acting on point along subduction zone
     slabs["slab_pull_force_mag"] = _numpy.where(
         _numpy.isnan(slabs.lower_plate_age),
         0,
-        slabs["lower_plate_thickness"] * slabs.slab_length * mech.drho_slab * mech.g * 1/_numpy.sqrt(_numpy.pi)
+        slabs["slab_lithospheric_thickness"] * slabs.slab_length * mech.drho_slab * mech.g * 1/_numpy.sqrt(_numpy.pi) + \
+        slabs["slab_crustal_thickness"] * slabs.slab_length * mech.drho_e * mech.g * 1/_numpy.sqrt(_numpy.pi)
         )
 
     if options["Sediment subduction"]:
         # Add positive buoyancy of sediments
-        slabs.slab_pull_force_mag = _numpy.where(
-            _numpy.isnan(slabs.lower_plate_age), 
-            slabs.slab_pull_force_mag,
-            slabs.slab_pull_force_mag + slabs.sediment_thickness * slabs.slab_length * mech.drho_sed * mech.g * 1/_numpy.sqrt(_numpy.pi)
+        slabs["slab_pull_force_mag"] = _numpy.where(
+            _numpy.isnan(slabs["slab_seafloor_age"]), 
+            slabs["slab_pull_force_mag"],
+            slabs["slab_pull_force_mag"] + slabs["sediment_thickness"] * slabs["slab_length"] * mech.drho_sed * mech.g * 1/_numpy.sqrt(_numpy.pi)
         )
 
     # Decompose into latitudinal and longitudinal components
-    slabs["slab_pull_force_lat"], slabs["slab_pull_force_lon"] = mag_azi2lat_lon(slabs.slab_pull_force_mag, slabs.trench_normal_azimuth)
+    slabs["slab_pull_force_lat"], slabs["slab_pull_force_lon"] = mag_azi2lat_lon(slabs["slab_pull_force_mag"], slabs["trench_normal_azimuth"])
 
     return slabs
 

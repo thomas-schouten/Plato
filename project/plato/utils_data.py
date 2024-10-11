@@ -228,7 +228,7 @@ def get_slab_data(
         slabs["slab_thickness"] = 0.
         slabs["sediment_thickness"] = 0.
         slabs["sediment_fraction"] = 0.
-        slabs["slab_length"] = options["Slab length"]
+        slabs["slab_length"] = 0.
 
         # Forces
         forces = ["slab_pull", "slab_bend", "residual"]

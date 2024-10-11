@@ -223,7 +223,7 @@ class Slabs:
             grids: Optional[Dict] = None,
             plate: Optional[str] = "lower",
             vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
-            cols = ["lower_plate_age"],
+            cols = ["slab_seafloor_age"],
         ):
         """
         Samples any grid at slabs.
@@ -302,7 +302,7 @@ class Slabs:
             seafloor_grid: Optional[Dict] = None,
         ):
         """
-        Function to compute gravitational potential energy (GPE) torque.
+        Function to compute slab pull force along trenches.
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -311,10 +311,10 @@ class Slabs:
         _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
         # Loop through reconstruction times
-        for _age in _tqdm(_ages, desc="Computing GPE forces", disable=(self.settings.logger.level==logging.INFO)):
+        for _age in _tqdm(_ages, desc="Computing slab pull forces", disable=(self.settings.logger.level==logging.INFO)):
             # Loop through gpe cases
             for key, entries in _iterable.items():
-                if self.settings.options[key]["GPE torque"]:
+                if self.settings.options[key]["Slab pull torque"]:
                     # Select points
                     _data = self.data[_age][key]
 
@@ -338,12 +338,11 @@ class Slabs:
                     
                     # Copy to other entries
                     cols = [
-                        "lower_plate_thickness",
-                        "crustal_thickness",
-                        "water_depth",
-                        "U",
-                        "GPE_force_lat",
-                        "GPE_force_lon",
+                        "slab_lithospheric_thickness",
+                        "slab_crustal_thickness",
+                        "slab_water_depth",
+                        "slab_pull_force_lat",
+                        "slab_pull_force_lon",
                     ]
                     self.data[_age] = utils_data.copy_values(
                         self.data[_age], 
