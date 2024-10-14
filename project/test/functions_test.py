@@ -446,7 +446,26 @@ def test_globe(
         globe_test = None
 
     if globe_test is not None and test_functions:
-        pass
+        # Test saving
+        try:
+            globe_test.save()
+            logging.info(f"Successfully saved 'Globe' object!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during saving of the 'Globe' object: {e}")
+            traceback.print_exc()
+
+        # Test exporting
+        try:
+            globe_test.export()
+            logging.info(f"Successfully exported 'Globe' object!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during exporting of the 'Globe' object: {e}")
+            traceback.print_exc()
+
+        # Print some results to check
+        print(globe_test.data["test"])
 
     logging.info("Testing of the 'globe' module complete.")
 
@@ -517,7 +536,7 @@ def test_plate_torques(
             logging.error(f"An error occurred during exporting of the 'PlateTorques' object: {e}")
             traceback.print_exc()
         
-        # Test calculating RMS velocities
+        # Test calculation of RMS velocity
         try:
             plate_torques_test.calculate_rms_velocity(
                 ages=test_ages
@@ -526,6 +545,17 @@ def test_plate_torques(
 
         except Exception as e:
             logging.error(f"An error occurred during calculation of the RMS velocity in the 'PlateTorques' object: {e}")
+            traceback.print_exc()
+
+        # Test calculation of net lithospheric rotation
+        try:
+            plate_torques_test.calculate_net_rotation(
+                ages=test_ages
+            )
+            logging.info(f"Successfully calculated net lithospheric rotation!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during calculation of the net lithospheric rotation in the 'PlateTorques' object: {e}")
             traceback.print_exc()
 
         # Try sampling of seafloor age grid at points
@@ -540,7 +570,7 @@ def test_plate_torques(
         # Try sampling of seafloor age grid at slabs
         try:
             plate_torques_test.sample_slab_seafloor_ages()
-            logging.info("Successfully sampled seafloor age grid at points.")
+            logging.info("Successfully sampled seafloor age grid at slabs.")
 
         except Exception as e:
             logging.error(f"An error occurred during sampling of the seafloor age grid at slabs: {e}")
@@ -555,37 +585,23 @@ def test_plate_torques(
             logging.error(f"An error occurred during computation of the GPE torque: {e}")
             traceback.print_exc()
 
-            plot_age = plate_torques_test.settings.ages[0]
-            plot_case = plate_torques_test.settings.cases[0]
+        # Try computation of slab pull torque
+        try:
+            plate_torques_test.calculate_slab_pull_torque()
+            logging.info("Successfully computed slab pull torque.")
 
-            plt.scatter(
-                plate_torques_test.points.data[plot_age][plot_case].lon.values,
-                plate_torques_test.points.data[plot_age][plot_case].lat.values,
-                c=plate_torques_test.points.data[plot_age][plot_case].GPE_force_mag.values,
-            )
-            plt.show()
+        except Exception as e:
+            logging.error(f"An error occurred during computation of the slab pull torque: {e}")
+            traceback.print_exc()
 
-        # plt.scatter(
-        #     plate_torques_test.slabs.data[plot_age][plot_case].slab_sampling_lon.values,
-        #     plate_torques_test.slabs.data[plot_age][plot_case].slab_sampling_lat.values,
-        #     color="blue",
-        #     marker="d",
-        # )
-        # plt.scatter(
-        #     plate_torques_test.slabs.data[plot_age][plot_case].arc_sampling_lon.values,
-        #     plate_torques_test.slabs.data[plot_age][plot_case].arc_sampling_lat.values,
-        #     color="red",
-        #     marker="^",
-        # )
-        # plt.scatter(
-        #     plate_torques_test.slabs.data[plot_age][plot_case].lon.values,
-        #     plate_torques_test.slabs.data[plot_age][plot_case].lat.values,
-        #     c=plate_torques_test.slabs.data[plot_age][plot_case].slab_age.values,
-        #     marker="o"
-        # )
-        # plt.show()
+        # Try computation of mantle drag torque
+        try:
+            plate_torques_test.calculate_mantle_drag_torque()
+            logging.info("Successfully computed mantle drag torque.")
 
-        # print(plate_torques_test.slabs.data[plot_age][plot_case].slab_age.values)
+        except Exception as e:
+            logging.error(f"An error occurred during computation of the mantle drag torque: {e}")
+            traceback.print_exc()
         
     logging.info("Testing of the 'plate_torques' module complete.")
 

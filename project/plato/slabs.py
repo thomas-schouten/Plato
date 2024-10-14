@@ -129,9 +129,10 @@ class Slabs:
 
         # Loop through ages and cases
         for _age in _ages:
-            for plate in ["upper", "lower", "trench"]:
+            for plate in ["upper_plate", "lower_plate", "trench"]:
+                plateID_col = f"{plate}ID" if plate != "trench" else "trench_plateID"
                 for _case in _cases:
-                    for plateID in self.data[_age][_case][f"{plate}_plateID"].unique():
+                    for plateID in self.data[_age][_case][plateID_col].unique():
                         # Get stage rotation, if not provided
                         if stage_rotation is None:
                             _stage_rotation = self.reconstruction.rotation_model.get_rotation(
@@ -145,7 +146,7 @@ class Slabs:
                             _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
                                         
                         # Make mask for plate
-                        mask = self.data[_age][_case][f"{plate}_plateID"] == plateID
+                        mask = self.data[_age][_case][plateID_col] == plateID
                                                 
                         # Compute velocities
                         velocities = utils_calc.compute_velocity(
@@ -158,10 +159,10 @@ class Slabs:
                         )
 
                         # Store velocities
-                        self.data[_age][_case].loc[mask, f"v_{plate}_lat"] = velocities[0]
-                        self.data[_age][_case].loc[mask, f"v_{plate}_lon"] = velocities[1]
-                        self.data[_age][_case].loc[mask, f"v_{plate}_mag"] = velocities[2]
-                        self.data[_age][_case].loc[mask, f"omega_{plate}"] = velocities[3]
+                        self.data[_age][_case].loc[mask, f"{plate}_v_lat"] = velocities[0]
+                        self.data[_age][_case].loc[mask, f"{plate}_v_lon"] = velocities[1]
+                        self.data[_age][_case].loc[mask, f"{plate}_v_mag"] = velocities[2]
+                        self.data[_age][_case].loc[mask, f"{plate}_omega"] = velocities[3]
 
     def sample_slab_seafloor_ages(
             self,
@@ -181,7 +182,7 @@ class Slabs:
             seafloor_grids,
             plate = "lower",
             vars = ["seafloor_age"],
-            cols = ["slab_age"],
+            cols = ["slab_seafloor_age"],
         )
 
         # Set sampling flag to true
@@ -241,10 +242,7 @@ class Slabs:
             _vars = vars
 
         # Define sampling points
-        if plate == "upper":
-            sampling_coords = ["arc_sampling_lat", "arc_sampling_lon"]
-        else:
-            sampling_coords = ["slab_sampling_lat", "slab_sampling_lon"]
+        type = "arc" if plate == "upper" else "slab"
 
         # Loop through valid times
         for _age in _tqdm(_ages, desc="Sampling points", disable=self.settings.logger.level == logging.INFO):
@@ -273,13 +271,17 @@ class Slabs:
                 _vars = list(_grid.data_vars) if not _vars else _vars
 
                 # Set columns to _vars if not already defined or if not of the same length
-                _cols = _vars if not cols or len(cols) != len(_vars) else cols
+                _cols = (
+                    [f"variable type {var}" for var in _vars] 
+                    if not cols or len(cols) != len(_vars) 
+                    else cols
+                )
 
                 # Sample grid at points for each variable
                 for _var, _col in zip(_vars, _cols):
                     sampled_data = utils_calc.sample_grid(
-                        _data[sampling_coords[0]],
-                        _data[sampling_coords[1]],
+                        _data[f"{type}_sampling_lat"],
+                        _data[f"{type}_sampling_lon"],
                         _grid[_var],
                     )
 
@@ -299,7 +301,6 @@ class Slabs:
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            seafloor_grid: Optional[Dict] = None,
         ):
         """
         Function to compute slab pull force along trenches.
@@ -319,16 +320,15 @@ class Slabs:
                     _data = self.data[_age][key]
 
                     # Define plateIDs if not provided
-                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID.unique())
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
 
                     # Select points
                     if plateIDs is not None:
-                        _data = _data[_data.plateID.isin(_plateIDs)]
+                        _data = _data[_data.lower_plateID.isin(_plateIDs)]
                         
-                    # Calculate GPE force
+                    # Calculate slab pull force
                     _data = utils_calc.compute_slab_pull_force(
                         _data,
-                        seafloor_grid[_age].seafloor_age,
                         self.settings.options[key],
                         self.settings.mech,
                     )

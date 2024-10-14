@@ -257,7 +257,7 @@ class Plates:
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
      
-        # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
+        # Define cases if not provided, defaulting to the cases that are relevant for the torque variable
         if torque_var == "slab_pull":
             matching_cases = self.settings.slab_pull_cases
         elif torque_var == "slab_bend":
@@ -268,7 +268,15 @@ class Plates:
             matching_cases = self.settings.mantle_drag_cases
         
         # Define iterable, if cases not provided
-        _iterable = utils_data.select_iterable(cases, matching_cases)    
+        _iterable = utils_data.select_iterable(cases, matching_cases)
+
+        # Define plateID column of point data
+        point_data_plateID_col = "lower_plateID" if torque_var == "slab_pull" or torque_var == "slab_bend" else "plateID"
+
+        # Define columns to store torque and force components and store them in one list
+        torque_cols = [f"{torque_var}_torque_" + axis for axis in ["x", "y", "z", "mag"]]
+        force_cols = [f"{torque_var}_force_" + axis for axis in ["lat", "lon", "mag", "azi"]]
+        cols = torque_cols + force_cols 
 
         # Loop through ages
         for _age in _tqdm(_ages, desc="Calculating torque on plates", disable=(self.settings.logger.level==logging.INFO)):
@@ -277,22 +285,23 @@ class Plates:
                 # Define plateIDs if not provided
                 _plateIDs = utils_data.select_plateIDs(
                     plateIDs,
-                    self.data[_age][key].plateID,
+                    self.data[_age][key]["plateID"],
                 )
 
                 # Define masks
                 plates_mask = self.data[_age][key].loc[:, "plateID"].isin(_plateIDs)
-                points_mask = point_data[_age][key].loc[:, "plateID"].isin(_plateIDs)
+                points_mask = point_data[_age][key].loc[:, point_data_plateID_col].isin(_plateIDs)
 
                 if torque_var == "slab_pull" or torque_var == "slab_bend":
                     selected_points_plateID = point_data[_age][key].lower_plateID.values[points_mask]
                     selected_points_area = point_data[_age][key].trench_segment_length.values[points_mask]
                 else:
                     selected_points_plateID = point_data[_age][key].plateID.values[points_mask]
-                    selected_points_area = point_data[_age][key].segment_length_lat.values[points_mask] * point_data[_age][key].segment_length_lon.values[points_mask]
+                    selected_points_area = point_data[_age][key].segment_length_lat.values[points_mask] * \
+                        point_data[_age][key].segment_length_lon.values[points_mask]
 
                 # Calculate torques
-                computed_data = utils_calc.compute_torque_on_plates(
+                self.data[_age][key] = utils_calc.compute_torque_on_plates(
                     self.data[_age][key].loc[plates_mask], 
                     point_data[_age][key].lat.values[points_mask],
                     point_data[_age][key].lon.values[points_mask],
@@ -304,18 +313,38 @@ class Plates:
                     torque_var = torque_var,
                 )
 
-                # Feed back into plates
-                self.data[_age][key].loc[plates_mask].update(computed_data)
-
                 # Copy DataFrames, if necessary
                 if len(entries) > 1:
-                    columns = [f"{torque_var}_torque" + axis for axis in ["x", "y", "z", "mag"]]
                     self.data[_age] = utils_data.copy_values(
                         self.data[_age], 
                         key, 
                         entries, 
-                        columns, 
+                        cols, 
                     )
+
+    def calculate_synthetic_velocity(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+        ):
+        """
+        Function to calculate the synthetic velocity of the plates.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        
+
 
     def optimise_torques(
             self,

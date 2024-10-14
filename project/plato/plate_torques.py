@@ -133,11 +133,26 @@ class PlateTorques():
             cases = None,
         ):
         """
-        Function to calculate root mean square velocities for plates
+        Function to calculate root mean square velocities for plates.
         """
         # Calculate rms velocity
         self.plates.calculate_rms_velocity(
             self.points,
+            ages,
+            cases,
+        )
+
+    def calculate_net_rotation(
+            self,
+            ages = None,
+            cases = None,
+        ):
+        """
+        Function to calculate net rotation of the entire lithosphere.
+        """
+        # Calculate net rotation
+        self.globe.calculate_net_rotation(
+            self.plates.data,
             ages,
             cases,
         )
@@ -267,15 +282,19 @@ class PlateTorques():
         """
         Function to calculate the slab pull torque
         """
-        self.slabs.calculate_slab_pull_force(ages, cases, plateIDs)
-
-        self.plates.calculate_torque_on_plates(
+        # Calculate slab pull force along the trenches
+        self.slabs.calculate_slab_pull_force(
             ages,
             cases,
             plateIDs,
-            self.plates.data,
+        )
+
+        # Calculate slab pull force on plates
+        self.plates.calculate_torque_on_plates(
             self.slabs.data,
-            self.settings.constants,
+            ages,
+            cases,
+            plateIDs,
             torque_var = "slab_pull",
         )
 
@@ -291,16 +310,19 @@ class PlateTorques():
         Function to calculate the mantle drag torque
         """
         # Calculate mantle drag force
-        self.points.calculate_mantle_drag_force(ages, cases)
-
-        # Calculate mantle drag force on plates
-        self.plates.calculate_torque_on_plates(
+        self.points.calculate_mantle_drag_force(
             ages,
             cases,
             plateIDs,
-            self.plates.data,
-            self.point.data,
-            torque_var = "GPE",
+        )
+
+        # Calculate mantle drag force on plates
+        self.plates.calculate_torque_on_plates(
+            self.points.data,
+            ages,
+            cases,
+            plateIDs,
+            torque_var = "mantle_drag",
         )
 
         logging.info("Calculated mantle drag torque!")
@@ -340,6 +362,22 @@ class PlateTorques():
         """
         # Calculate 
         pass
+
+    def calculate_synthetic_velocities(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+        ):
+        """
+        Function to compute synthetic velocities.
+        """
+        # Get driving torque
+        self.calculate_driving_torque(ages, cases, plateIDs)
+
+        # Calculate synthetic velocities using driving torques
+        self.plates.calculate_synthetic_velocities(ages, cases, plateIDs)
+        self.points.calculate_synthetic_velocities(ages, cases, plateIDs, self.plates.data)
 
     def save_all(
             self,

@@ -163,10 +163,10 @@ class Points:
                     )
 
                     # Store velocities
-                    self.data[_age][_case].loc[mask, f"v_lat"] = velocities[0]
-                    self.data[_age][_case].loc[mask, f"v_lon"] = velocities[1]
-                    self.data[_age][_case].loc[mask, f"v_mag"] = velocities[2]
-                    self.data[_age][_case].loc[mask, f"omega"] = velocities[3]
+                    self.data[_age][_case].loc[mask, "velocity_lat"] = velocities[0]
+                    self.data[_age][_case].loc[mask, "velocity_lon"] = velocities[1]
+                    self.data[_age][_case].loc[mask, "velocity_mag"] = velocities[2]
+                    self.data[_age][_case].loc[mask, "spin_rate_mag"] = velocities[3]
 
     def sample_seafloor_ages(
             self,
@@ -273,7 +273,7 @@ class Points:
             seafloor_grid: Optional[Dict] = None,
         ):
         """
-        Function to compute gravitational potential energy (GPE) torque.
+        Function to compute gravitational potential energy (GPE) force acting at points.
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -323,127 +323,57 @@ class Points:
                         cols,
                     )
 
-    def compute_mantle_drag_force(
+    def calculate_mantle_drag_force(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
-            PROGRESS_BAR: Optional[bool] = True,    
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
         ):
         """
-        Function to calculate mantle drag torque
-
-        :param _ages:    reconstruction times to compute residual torque for
-        :type _ages:     list
-        :param cases:                   cases to compute mantle drag torque for (defaults to mantle drag cases if not specified).
-        :type cases:                    list
-        :param PROGRESS_BAR:            whether or not to display a progress bar
-        :type PROGRESS_BAR:             bool
+        Function to compute mantle drag force acting at points.
         """
-        # Define reconstruction times if not provided
-        if ages is None:
-            ages = self.settings.ages
-        else:
-            if isinstance(ages, str):
-                ages = [ages]
-
-        # Make iterable
-        if cases is None:
-            iterable = self.mantle_drag_cases
-        else:
-            if isinstance(cases, str):
-                cases = [cases]
-            iterable = {case: [] for case in cases}
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
 
         # Loop through reconstruction times
-        for i, _age in _tqdm(enumerate(ages), desc="Computing mantle drag torques", disable=(self.settings.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.settings.DEBUG_MODE:
-                print(f"Computing mantle drag torques at {_age} Ma")
+        for _age in _tqdm(_ages, desc="Computing mantle drag forces", disable=(self.settings.logger.level==logging.INFO)):
+            # Loop through gpe cases
+            for key, entries in _iterable.items():
+                if self.settings.options[key]["Mantle drag torque"] and self.settings.options[key]["Reconstructed motions"]:
+                    # Select points
+                    _data = self.data[_age][key]
 
-            # Loop through mantle drag cases
-            for key, entries in iterable.items():
-                if self.options[key]["Reconstructed motions"]:
-                    if self.settings.DEBUG_MODE:
-                        print(f"Computing mantle drag torque from reconstructed motions for cases {entries}")
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID.unique())
 
-                    # Calculate Mantle drag torque
-                    if self.options[key]["Mantle drag torque"]:
-                        # Calculate mantle drag force
-                        self.plates.data[_age][key], self.points[_age][key], self.slabs[_age][key] = utils_calc.compute_mantle_drag_force(
-                            self.plates.data[_age][key],
-                            self.points[_age][key],
-                            self.slabs[_age][key],
-                            self.options[key],
-                            self.mech,
-                            self.constants,
-                            self.settings.DEBUG_MODE,
-                        )
+                    # Select points
+                    if plateIDs is not None:
+                        _data = _data[_data.plateID.isin(_plateIDs)]
+                        
+                    # Calculate GPE force
+                    _data = utils_calc.compute_mantle_drag_force(
+                        _data,
+                        self.settings.options[key],
+                        self.settings.constants,
+                    )
 
-                        # Calculate mantle drag torque
-                        self.plates.data[_age][key] = utils_calc.compute_torque_on_plates(
-                            self.plates.data[_age][key], 
-                            self.points[_age][key].lat, 
-                            self.points[_age][key].lon, 
-                            self.points[_age][key].plateID, 
-                            self.points[_age][key].mantle_drag_force_lat, 
-                            self.points[_age][key].mantle_drag_force_lon,
-                            self.points[_age][key].segment_length_lat,
-                            self.points[_age][key].segment_length_lon,
-                            self.constants,
-                            torque_variable="mantle_drag_torque"
-                        )
-
-                        # Enter mantle drag torque in other cases
-                        if len(entries) > 1 and cases is None:
-                                [[self.points[_age][entry].update(
-                                    {"mantle_drag_force_" + coord: self.points[_age][key]["mantle_drag_force_" + coord]}
-                                ) for coord in ["lat", "lon", "mag"]] for entry in entries[1:]]
-                                [[self.plates[_age][entry].update(
-                                    {"mantle_drag_torque_" + coord: self.plates[_age][key]["mantle_drag_torque_" + coord]}
-                                ) for coord in ["x", "y", "z", "mag"]] for entry in entries[1:]]
-
-            # Loop through all cases
-            for case in self.cases:
-                if not self.options[case]["Reconstructed motions"]:
-                    if self.settings.DEBUG_MODE:
-                        print(f"Computing mantle drag torque using torque balance for case {case}")
-
-                    if self.options[case]["Mantle drag torque"]:
-                        # Calculate mantle drag force
-                        self.plates.data[_age][case], self.points[_age][case], self.slabs[_age][case] = utils_calc.compute_mantle_drag_force(
-                            self.plates.data[_age][case],
-                            self.points[_age][case],
-                            self.slabs[_age][case],
-                            self.options[case],
-                            self.mech,
-                            self.constants,
-                            self.settings.DEBUG_MODE,
-                        )
-
-                        # Calculate mantle drag torque
-                        self.plates.data[_age][case] = utils_calc.compute_torque_on_plates(
-                            self.plates.data[_age][case], 
-                            self.points[_age][case].lat, 
-                            self.points[_age][case].lon, 
-                            self.points[_age][case].plateID, 
-                            self.points[_age][case].mantle_drag_force_lat, 
-                            self.points[_age][case].mantle_drag_force_lon,
-                            self.points[_age][case].segment_length_lat,
-                            self.points[_age][case].segment_length_lon,
-                            self.constants,
-                            torque_variable="mantle_drag_torque"
-                        )
-
-                        # Compute velocity grid
-                        self.velocity[_age][case] = utils_data.get_velocity_grid(
-                            self.points[_age][case], 
-                            self.seafloor[_age]
-                        )
-
-                        # Compute RMS velocity
-                        self.plates.data[_age][case] = utils_calc.compute_rms_velocity(
-                            self.plates.data[_age][case],
-                            self.points[_age][case]
-                        )
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index] = _data
+                    
+                    # Copy to other entries
+                    cols = [
+                        "mantle_drag_force_lat",
+                        "mantle_drag_force_lon",
+                    ]
+                    self.data[_age] = utils_data.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries,
+                        cols,
+                    )
 
     def save(
             self,

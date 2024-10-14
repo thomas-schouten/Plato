@@ -747,3 +747,69 @@ def sample_slabs(
         
         # Set flag to True
         self.sampled_upper_plates = True
+
+def get_globe_data(
+        plates: dict,
+        slabs: dict,
+        points: dict,
+        seafloor_grid: dict,
+        ages: _numpy.array,
+        case: str,
+    ):
+    """
+    Function to get relevant geodynamic data for the entire globe.
+
+    :param plates:                plates
+    :type plates:                 dict
+    :param slabs:                 slabs
+    :type slabs:                  dict
+    :param points:                points
+    :type points:                 dict
+    :param seafloor_grid:         seafloor grid
+    :type seafloor_grid:          dict
+
+    :return:                      globe
+    :rtype:                       pandas.DataFrame
+    """
+    # Initialise empty arrays
+    num_plates = _numpy.zeros_like(ages)
+    slab_length = _numpy.zeros_like(ages)
+    v_rms_mag = _numpy.zeros_like(ages)
+    v_rms_azi = _numpy.zeros_like(ages)
+    mean_seafloor_age = _numpy.zeros_like(ages)
+
+    for i, age in enumerate(ages):
+        # Get number of plates
+        num_plates[i] = len(plates[age][case].plateID.values)
+
+        # Get slab length
+        slab_length[i] = slabs[age][case].trench_segment_length.sum()
+
+        # Get global RMS velocity
+        # Get area for each grid point as well as total area
+        areas = points[age][case].segment_length_lat.values * points[age][case].segment_length_lon.values
+        total_area = _numpy.sum(areas)
+
+        # Calculate RMS speed
+        v_rms_mag[i] = _numpy.sum(points[age][case].v_mag * areas) / total_area
+
+        # Calculate RMS azimuth
+        v_rms_sin = _numpy.sum(_numpy.sin(points[age][case]["velocity_lat"]) * areas) / total_area
+        v_rms_cos = _numpy.sum(_numpy.cos(points[age][case]["velocity_lat"]) * areas) / total_area
+        v_rms_azi[i] = _numpy.rad2deg(
+            -1 * (_numpy.arctan2(v_rms_sin, v_rms_cos) + 0.5 * _numpy.pi)
+        )
+
+        # Get mean seafloor age
+        mean_seafloor_age[i] = _numpy.nanmean(_seafloor_grid[_age].seafloor_age.values)
+
+    # Organise as pd.DataFrame
+    globe = _pandas.DataFrame({
+        "number_of_plates": num_plates,
+        "total_slab_length": slab_length,
+        "v_rms_mag": v_rms_mag,
+        "v_rms_azi": v_rms_azi,
+        "mean_seafloor_age": mean_seafloor_age,
+    })
+        
+    return globe

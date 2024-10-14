@@ -9,6 +9,9 @@ from tqdm import tqdm as _tqdm
 
 import utils_data, utils_calc, utils_init
 from settings import Settings
+from plates import Plates
+from points import Points
+from slabs import Slabs
 
 class Globe:
     """
@@ -27,9 +30,9 @@ class Globe:
             cases_sheet: Optional[str]= "Sheet1",
             files_dir: Optional[str]= None,
             resolved_geometries: Optional[Dict] = None,
-            plate_data: Optional[Dict] = None,
-            point_data: Optional[Dict] = None,
-            slab_data: Optional[Dict] = None,
+            plates: Optional['Plates'] = None,
+            points: Optional['Points'] = None,
+            slabs: Optional['Slabs'] = None,
             DEBUG_MODE: Optional[bool] = False,
             PARALLEL_MODE: Optional[bool] = False,
         ):
@@ -74,6 +77,11 @@ class Globe:
         # Store mechanical parameters
         self.mech = utils_calc.set_mech_params()
 
+        # Store plates, points and slabs objects, if provided
+        self.plates = plates
+        self.points = points
+        self.slabs = slabs
+
         # Initialise dataframe to store global properties for each case
         self.data = {case: _pandas.DataFrame(
             {'age': self.settings.ages,
@@ -87,30 +95,31 @@ class Globe:
 
         # Get the number of plates
         self.calculate_number_of_plates(
+            self.plates,
             self.settings.ages, 
             self.settings.cases,
-            plate_data,
         )
 
         # Get the subduction length
         self.calculate_subduction_length(
+            self.slabs,
             self.settings.ages, 
             self.settings.cases,
-            slab_data,
         )
 
         # Get the net rotation
         self.calculate_net_rotation(
+            self.plates,
+            self.points,
             self.settings.ages, 
             self.settings.cases,
-            plate_data,
         )
 
     def calculate_number_of_plates(
             self,
+            plates: 'Plates' = None,
             ages = None,
             cases = None,
-            plates_data = None,
         ):
         """
         Calculate the number of plates for each time step.
@@ -129,30 +138,25 @@ class Globe:
         # Calculate the number of plates for each time step
         for i, _age in enumerate(_ages):
             for _case in _cases:
-                if plates_data and _age in plates_data.keys() and _case in plates_data[_age].keys():
+                if isinstance(plates, Plates) and _age in plates.data.keys() and _case in plates.data[_age].keys():
                     logging.info(f"Calculating number of plates for case {_case} at age {_age} using provided data")
-                    self.data[_case].loc[i, "number_of_plates"] = len(plates_data[_age][_case].plateID.unique())
+                    self.data[_case].loc[i, "number_of_plates"] = len(plates.data[_age][_case].plateID.unique())
                 else:
                     logging.info(f"Calculating number of plates for case {_case} at age {_age} using resolved topologies")
                     resolved_topologies = utils_data.get_resolved_topologies(
                         self.reconstruction,
-                        [_age],
+                        _age,
                     )
-                    self.data[_case].loc[i, "number_of_plates"] = len(resolved_topologies[_age])
+                    self.data[_case].loc[i, "number_of_plates"] = len(resolved_topologies)
 
     def calculate_subduction_length(
             self,
+            slabs: Optional[Slabs] = None,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, list, _numpy.ndarray]] = None,
             cases: Optional[List[str]] = None,
-            slab_data: Optional[Dict] = None
         ):
         """
         Calculate the subduction length for each time step.
-
-        :param ages: List of ages for which to calculate subduction length (default: None)
-        :type ages: Optional[int, float, numpy.integer, numpy.floating, list, numpy.ndarray]
-        :param slabs_data: Optional slab data for each age and case (default: None)
-        :type slabs_data: Optional[dict]
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -164,9 +168,9 @@ class Globe:
         for i, _age in enumerate(_ages):
             for _case in _cases:
                 # Check if slab data is provided
-                if slab_data and _age in slab_data.keys() and _case in slab_data[_age].keys():
+                if isinstance(slabs, Slabs) and _age in slabs.data.keys() and _case in slabs.data[_age].keys():
                     logging.info(f"Calculating subduction length for case {_case} at age {_age} using provided data")
-                    self.data[_case].loc[i, "subduction_length"] = slab_data[_age][_case].trench_segment_length.sum()
+                    self.data[_case].loc[i, "subduction_length"] = slabs.data[_age][_case].trench_segment_length.sum()
                 else:
                     logging.info(f"Calculating subduction length for case {_case} at age {_age} by tesselating subduction zones")
                     slabs = self.reconstruction.tessellate_subduction_zones(
@@ -186,46 +190,68 @@ class Globe:
                     # Convert trench segment length from degree to m
                     slabs.trench_segment_length *= self.constants.equatorial_Earth_circumference / 360
 
+                    # Store subduction length
                     self.data[_case].loc[i, "subduction_length"] = slabs.trench_segment_length.sum()
 
     def calculate_net_rotation(
             self,
+            plates: 'Plates' = None,
+            points: 'Points' = None,
             ages = None,
             cases = None,
-            plate_data = None,
-            resolved_topologies = None,
+            plateIDs = None,
         ):
         """
         Calculate the net rotation of the Earth's lithosphere.
-
-        :param ages: List of ages for which to calculate net rotation (default: None)
-        :type ages: Optional[int, float, numpy.integer, numpy.floating, list, numpy.ndarray]
-        :param plates_data: Optional plate data for each case and age (default: None)
-        :type plates_data: Optional[dict]
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
         _cases = utils_data.select_cases(cases, self.settings.cases)
-        
+
         # Calculate the net rotation of the Earth's lithosphere
         for i, _age in enumerate(_ages):
             for _case in _cases:
-                if plate_data and _age in plate_data.keys() and _case in plate_data[_age].keys():
-                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided data")
-                    pass
-                else:
-                    if resolved_topologies and _age in resolved_topologies.keys():
-                        logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided topologies")
-                        pass
-                    logging.info(f"Calculating net rotation for case {_case} at age {_age} by resolving plate velocities")
-                    resolved_topologies = utils_data.get_resolved_topologies(
+                # Check if plate data is provided
+                if not isinstance(plates, Plates) or _age not in plates.data.keys() or _case not in plates.data[_age].keys():
+                    # Get a new plates object if not provided
+                    plates = Plates(
+                        self.settings,
                         self.reconstruction,
-                        [_age],
+                        ages = _age,
                     )
-                    for _topology in resolved_topologies[_age]:
-                        pass
+
+                # Check if point data is provided
+                if not isinstance(plates, Points) or _age not in points.data.keys() or _case not in points.data[_age].keys():
+                    # Get a new points object if not provided
+                    points = Points(
+                        self.settings,
+                        self.reconstruction,
+                        ages = _age,
+                    )
+
+                # Check if plates and points are provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, plates.data[_age][_case].plateID.unique())
+
+                # Select plates and points data
+                selected_plates = plates.data[_age][_case]
+                selected_points = points.data[_age][_case]
+                if plateIDs is not None:
+                    selected_plates = plates.data[_age][_case][plates.data[_age][_case].plateID.isin(_plateIDs)]
+                    selected_points = points.data[_age][_case][points.data[_age][_case].plateID.isin(_plateIDs)]
+
+                # Calculate net rotation
+                net_rotation_pole = utils_calc.compute_net_rotation(
+                    selected_plates,
+                    selected_points,
+                    self.settings.constants,
+                )
+
+                # Store net rotation
+                self.data[_case].loc[i, "net_rotation_pole_lat"] = net_rotation_pole[0]
+                self.data[_case].loc[i, "net_rotation_pole_lon"] = net_rotation_pole[1]
+                self.data[_case].loc[i, "net_rotation_rate"] = net_rotation_pole[2]
 
     def calculate_world_uncertainty(
             self,
@@ -280,8 +306,8 @@ class Globe:
 
     def save(
             self,
-            cases,
-            file_dir,
+            cases: Optional[Union[str, List[str]]] = None,
+            file_dir: Optional[str] = None,
         ):
         """
         Function to save 'Globe' object.
@@ -306,8 +332,8 @@ class Globe:
             
     def export(
             self,
-            cases,
-            file_dir,
+            cases: Optional[Union[str, List[str]]] = None,
+            file_dir: Optional[str] = None,
         ):
         """
         Function to export 'Globe' object.

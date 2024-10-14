@@ -24,8 +24,8 @@ TEST_CONFIGS = {
     "TEST_POINTS": False,
     "TEST_SLABS": False,
     "TEST_GRIDS": False,
-    "TEST_GLOBE": False,
-    "TEST_PLATE_TORQUES": True,
+    "TEST_GLOBE": True,
+    "TEST_PLATE_TORQUES": False,
 }
 
 # Define settings file

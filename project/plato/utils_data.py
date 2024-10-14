@@ -118,7 +118,7 @@ def get_plate_data(
 
         # Initialise columns to store other whole-plate properties
         merged_plates["trench_length"] = 0.; merged_plates["zeta"] = 0.
-        merged_plates["v_rms_mag"] = 0.; merged_plates["v_rms_azi"] = 0.; merged_plates["omega_rms"] = 0.
+        merged_plates["velocity_rms_mag"] = 0.; merged_plates["velocity_rms_azi"] = 0.; merged_plates["spin_rate_rms"] = 0.
         merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
 
         # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
@@ -212,19 +212,19 @@ def get_slab_data(
         )
 
         # Initialise columns to store convergence rates
-        types = ["upper_plate", "lower_plate", "convergence"]
+        types = ["upper_plate", "lower_plate", "trench", "convergence"]
         coords = ["lat", "lon", "mag"]
-        slabs[[f"{type}_v_{coord}" for type in types for coord in coords]] = [[0.] * len(coords) * len(types) for _ in range(len(slabs))]
+        slabs[[f"{type}_velocity_{coord}" for type in types for coord in coords]] = [[0.] * len(coords) * len(types) for _ in range(len(slabs))]
 
         # Initialise other columns to store seafloor ages and forces
         # Upper plate
         slabs["arc_thickness"] = 0.
-        slabs["arc_age"] = 0.
+        slabs["arc_seafloor_age"] = 0.
         slabs["continental_arc"] = False
         slabs["erosion_rate"] = 0.
 
         # Lower plate
-        slabs["slab_age"] = 0.
+        slabs["slab_seafloor_age"] = 0.
         slabs["slab_thickness"] = 0.
         slabs["sediment_thickness"] = 0.
         slabs["sediment_fraction"] = 0.
@@ -302,7 +302,7 @@ def get_point_data(
                         )
 
     # Add additional columns to store velocities
-    components = ["v_lat", "v_lon", "v_mag", "v_azi", "omega"]
+    components = ["velocity_lat", "velocity_lon", "velocity_mag", "velocity_azi", "spin_rate"]
     points[[component for component in components]] = [[0.] * len(components) for _ in range(len(points))]
 
     # Add additional columns to store seafloor properties
@@ -318,72 +318,6 @@ def get_point_data(
     points[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(forces) * len(coords) for _ in range(len(points))]
     
     return points
-
-def get_globe_data(
-        _plates: dict,
-        _slabs: dict,
-        _points: dict,
-        _seafloor_grid: dict,
-        _ages: _numpy.array,
-        _case: str,
-    ):
-    """
-    Function to get relevant geodynamic data for the entire globe.
-
-    :param plates:                plates
-    :type plates:                 dict
-    :param slabs:                 slabs
-    :type slabs:                  dict
-    :param points:                points
-    :type points:                 dict
-    :param seafloor_grid:         seafloor grid
-    :type seafloor_grid:          dict
-
-    :return:                      globe
-    :rtype:                       pandas.DataFrame
-    """
-    # Initialise empty arrays
-    num_plates = _numpy.zeros_like(_ages)
-    slab_length = _numpy.zeros_like(_ages)
-    v_rms_mag = _numpy.zeros_like(_ages)
-    v_rms_azi = _numpy.zeros_like(_ages)
-    mean_seafloor_age = _numpy.zeros_like(_ages)
-
-    for i, _age in enumerate(_ages):
-        # Get number of plates
-        num_plates[i] = len(_plates[_age][_case].plateID.values)
-
-        # Get slab length
-        slab_length[i] = _slabs[_age][_case].trench_segment_length.sum()
-
-        # Get global RMS velocity
-        # Get area for each grid point as well as total area
-        areas = _points[_age][_case].segment_length_lat.values * _points[_age][_case].segment_length_lon.values
-        total_area = _numpy.sum(areas)
-
-        # Calculate RMS speed
-        v_rms_mag[i] = _numpy.sum(_points[_age][_case].v_mag * areas) / total_area
-
-        # Calculate RMS azimuth
-        v_rms_sin = _numpy.sum(_numpy.sin(_points[_age][_case].v_lat) * areas) / total_area
-        v_rms_cos = _numpy.sum(_numpy.cos(_points[_age][_case].v_lat) * areas) / total_area
-        v_rms_azi[i] = _numpy.rad2deg(
-            -1 * (_numpy.arctan2(v_rms_sin, v_rms_cos) + 0.5 * _numpy.pi)
-        )
-
-        # Get mean seafloor age
-        mean_seafloor_age[i] = _numpy.nanmean(_seafloor_grid[_age].seafloor_age.values)
-
-    # Organise as pd.DataFrame
-    globe = _pandas.DataFrame({
-        "number_of_plates": num_plates,
-        "total_slab_length": slab_length,
-        "v_rms_mag": v_rms_mag,
-        "v_rms_azi": v_rms_azi,
-        "mean_seafloor_age": mean_seafloor_age,
-    })
-        
-    return globe
 
 def get_resolved_topologies(
         reconstruction: _gplately.PlateReconstruction,
