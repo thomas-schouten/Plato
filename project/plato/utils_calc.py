@@ -647,78 +647,73 @@ def compute_mantle_drag_force(
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def compute_velocity(
-        lats: _numpy.array,
-        lons: _numpy.array,
-        pole_lon: Union[List, _numpy.array],
-        pole_lat: Union[List, _numpy.array],
-        pole_angle: Union[List, _numpy.array],
-        constants
-    ):
+        point_data: _pandas.DataFrame,
+        stage_rotations: _numpy.ndarray,
+        constants,
+    ) -> Tuple[_numpy.ndarray, _numpy.ndarray, _numpy.ndarray, _numpy.ndarray, _numpy.ndarray]:
     """
     Function to compute lat, lon, magnitude and azimuth of velocity at a set of locations from a Cartesian torque vector.
-
-    :param slabs:               slab data
-    :type slabs:                pandas.DataFrame
-    :param plates:              plate data
-    :type plates:               pandas.DataFrame
-    :param torques_xyz:         summed torques in Cartesian coordinates
-    :type torques_xyz:          numpy.array
-    :param options:             options
-    :type options:              dict
-    :param constants:           constants used in calculations
-    :type constants:            class
-    :param DEBUG_MODE:          whether or not to run in debug mode
-    :type DEBUG_MODE:           bool
     """
     # Initialise arrays to store velocities
-    v_lats = _numpy.zeros_like(lats); v_lons = _numpy.zeros_like(lats)
-    v_mags = _numpy.zeros_like(lats); v_azis = _numpy.zeros_like(lats)
-    spin_rates = _numpy.zeros_like(lats)
+    v_lats = _numpy.zeros_like(point_data.lat); v_lons = _numpy.zeros_like(point_data.lat)
+    v_mags = _numpy.zeros_like(point_data.lat); v_azis = _numpy.zeros_like(point_data.lat)
+    spin_rates = _numpy.zeros_like(point_data.lat)
 
-    # Organise velocity vector
-    euler_pole = spherical2cartesian(pole_lat, pole_lon, pole_angle)
+    print(stage_rotations)
 
-    # Loop through points
-    for i, (lat, lon) in enumerate(zip(lats, lons)):
-        # Convert spherical to cartesian coordinates
-        position_xyz = spherical2cartesian(lat, lon, constants.mean_Earth_radius_m)
+    # Loop through plates more efficiently
+    for _, stage_rotation in stage_rotations.iterrows():
+        # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere
+        # The shape of the position vectors is (n, 3)
+        positions_x, positions_y, positions_z = spherical2cartesian(
+            point_data.lat, 
+            point_data.lon, 
+            constants.mean_Earth_radius_m,
+        )
+        positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
 
-        # Calculate the velocity as the cross product of the position and the torque
-        velocity_xyz = _numpy.cross(euler_pole, position_xyz, axis=0)
+        # Calculate rotation pole in Cartesian coordinates
+        # The shape of the rotation pole vector is (3,)
+        rotation_pole_xyz = _numpy.array(spherical2cartesian(
+            stage_rotation.pole_lat, 
+            stage_rotation.pole_lon, 
+            stage_rotation.pole_angle,
+        ))
 
-        # Calculate the magnitude of the velocity vector in degrees
-        w_mag = _numpy.deg2rad(_numpy.linalg.norm(velocity_xyz))
+        # Calculate the velocity as the cross product of the rotation and the position vectors
+        # The shape of the velocity vectors is (n, 3)
+        velocities_xyz = _numpy.cross(rotation_pole_xyz[None, :], positions_xyz)
 
         # Convert to spherical coordinates
-        velocity_sph = cartesian2spherical_azimuth(velocity_xyz[0], velocity_xyz[1], velocity_xyz[2])
+        velocities_sph = cartesian2spherical_azimuth(velocities_xyz[:, 0], velocities_xyz[:, 1], velocities_xyz[:, 2])
 
-        # Assign the velocity to the respective columns in the points DataFrame
-        v_lats[i] = velocity_sph[0]
-        v_lons[i] = velocity_sph[1]
-        v_mags[i] = velocity_sph[2]
-        v_azis[i] = velocity_sph[3]
+        # Assign the velocity to the respective arrays
+        v_lats = velocities_sph[0]
+        v_lons = velocities_sph[1]
+        v_mags = velocities_sph[2]
+        v_azis = velocities_sph[3]
 
         # Calculate the spin rate as the dot product of the velocity and the unit position vector
         spin_rate = _numpy.dot(
-            _numpy.asarray(spherical2cartesian(lat, lon, 1)).T,
-            euler_pole
+            _numpy.asarray(spherical2cartesian(point_data.lat, point_data.lon, 1)).T,
+            rotation_pole_xyz
         )
 
         # Assign the spin rate to the respective columns in the points DataFrame
-        spin_rates[i] = spin_rate
+        spin_rates = spin_rate
         
     # Convert to cm/a
     v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
 
-    return w_mag, v_lats, v_lons, v_mags, v_azis, spin_rates
+    return v_lats, v_lons, v_mags, v_azis, spin_rates
 
 def compute_rms_velocity(
-        segment_length_lat,
-        segment_length_lon,
-        v_mag,
-        v_azi,
-        omega
-    ):
+        segment_length_lat: Union[_numpy.ndarray, _pandas.Series],
+        segment_length_lon: Union[_numpy.ndarray, _pandas.Series],
+        v_mag: Union[_numpy.ndarray, _pandas.Series],
+        v_azi: Union[_numpy.ndarray, _pandas.Series],
+        omega: Union[_numpy.ndarray, _pandas.Series],
+    ) -> Tuple[float, float, float]:
     """
     Function to calculate area-weighted root mean square (RMS) velocity for a given plate.
     """
@@ -744,23 +739,73 @@ def compute_rms_velocity(
 
     return v_rms_mag, v_rms_azi, omega_rms
 
+def compute_net_rotation(
+        plate_data: _pandas.DataFrame,
+        point_data: _pandas.DataFrame,
+    ):
+    """
+    Function to calculate net rotation of the entire lithosphere.
+    """
+    # Initialise array to store net rotation vector
+    net_rotation_xyz = _numpy.zeros(3)
+
+    # Loop through plates more efficiently
+    for _, plate in plate_data.iterrows():
+        # Select points belonging to the current plate
+        selected_points = point_data[point_data.plateID == plate.plateID]
+
+        # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere
+        # The shape of the position vectors is (n, 3)
+        positions_x, positions_y, positions_z = spherical2cartesian(
+            selected_points.lat, 
+            selected_points.lon, 
+            1.,
+        )
+        positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
+
+        # Calculate rotation pole in Cartesian coordinates
+        # The shape of the rotation pole vector is (3,)
+        rotation_pole_xyz = _numpy.array(spherical2cartesian(
+            plate.pole_lat, 
+            plate.pole_lon, 
+            plate.pole_angle,
+        ))
+
+        # Calculate the double cross product of the position vector and the velocity vector (see Torsvik et al. (2010), https://doi.org/10.1016/j.epsl.2009.12.055)
+        # The shape of the rotation pole vector is modified to (1, 3) to allow broadcasting
+        point_rotations_xyz = _numpy.cross(_numpy.cross(rotation_pole_xyz[None, :], positions_xyz), positions_xyz)
+
+        # Weight the rotations by segment area (broadcasted multiplication)
+        segment_area = (selected_points.segment_length_lat * selected_points.segment_length_lon).values[:, None]
+        point_rotations_xyz *= segment_area
+
+        # Accumulate the net rotation vector by summing across all points
+        net_rotation_xyz += point_rotations_xyz.sum(axis=0)
+
+    # Normalise the net rotation vector by the total area of the lithosphere
+    net_rotation_xyz /= plate_data.area.sum()
+
+    # Convert the net rotation vector to spherical coordinates
+    net_rotation_pole_lat, net_rotation_pole_lon, _, _ = cartesian2spherical_azimuth(
+        net_rotation_xyz[0], net_rotation_xyz[1], net_rotation_xyz[2],
+    )
+
+    # Calculate the magnitude of the net rotation vector
+    net_rotation_rate = _numpy.linalg.norm(net_rotation_xyz)
+
+    return net_rotation_pole_lat, net_rotation_pole_lon, net_rotation_rate
+
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # DRIVING AND RESIDUAL TORQUES
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def sum_torque(plates, torque_type, constants):
+def sum_torque(
+        plates: _pandas.DataFrame,
+        torque_type: str,
+        constants: Dict,
+    ):
     """
     Function to calculate driving and residual torque on plates.
-
-    :param plates:          plate data
-    :type plates:           pandas.DataFrame
-    :param torque_type:     Type of torque to compute ("driving" or "residual")
-    :type torque_type:      str
-    :param constants:       constants used in calculations
-    :type constants:        class
-
-    :return:                plate data
-    :rtype:                 pandas.DataFrame
     """
     # Determine torque components based on torque type
     if torque_type == "driving":
@@ -812,19 +857,14 @@ def sum_torque(plates, torque_type, constants):
 
     return plates
 
-def compute_residual_along_trench(plates, slabs, constants, DEBUG_MODE=False):
+def compute_residual_along_trench(
+        plates: _pandas.DataFrame,
+        slabs: _pandas.DataFrame,
+        constants: Dict,
+        DEBUG_MODE: bool = False,
+    ) -> _pandas.DataFrame:
     """
     Function to calculate residual torque along trench.
-
-    :param plates:          plate data
-    :type plates:           pandas.DataFrame
-    :param slabs:           slab data
-    :type slabs:            pandas.DataFrame
-    :param constants:       constants used in calculations
-    :type constants:        class
-
-    :return:                slabs
-    :rtype:                 pandas.DataFrame
     """
     # Initialise arrays to store residual forces
     force_lats = _numpy.zeros_like(slabs.lat); force_lons = _numpy.zeros_like(slabs.lat)
@@ -888,19 +928,13 @@ def compute_residual_along_trench(plates, slabs, constants, DEBUG_MODE=False):
 
     return slabs
 
-def optimise_torques(plates, mech, options):
+def optimise_torques(
+        plates: _pandas.DataFrame,
+        mech: Dict,
+        options: Dict,
+    ) -> _pandas.DataFrame:
     """
     Function to optimise torques.
-
-    :param plates:          plate data
-    :type plates:           pandas.DataFrame
-    :param mech:            mechanical parameters used in calculations
-    :type mech:             class
-    :param options:         options
-    :type options:          dict
-
-    :return:                plate data
-    :rtype:                 pandas.DataFrame
     """
     for axis in ["_x", "_y", "_z", "_mag"]:
         plates["slab_pull_torque_opt" + axis] = plates["slab_pull_torque" + axis].values * options["Slab pull constant"]
@@ -1100,63 +1134,6 @@ def compute_subduction_flux(
             plates.loc[plates.plateID == plateID, "sediment_flux"] = (selected_slabs.sediment_thickness * selected_slabs.v_lower_plate_mag * selected_slabs.trench_segment_length).sum()
 
     return plates
-
-def compute_net_rotation(
-        plate_data,
-        point_data,
-        constants,
-    ):
-    """
-    Function to calculate net rotation of the entire lithosphere.
-    """
-    # Initialise array to store net rotation vector
-    net_rotation_xyz = _numpy.zeros(3)
-
-    # Loop through plates more efficiently
-    for _, plate in plate_data.iterrows():
-        # Select points belonging to the current plate
-        selected_points = point_data[point_data.plateID == plate.plateID]
-
-        # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere
-        # The shape of the position vectors is (n, 3)
-        positions_x, positions_y, positions_z = spherical2cartesian(
-            selected_points.lat, 
-            selected_points.lon, 
-            1.,
-        )
-        positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
-
-        # Calculate rotation pole in Cartesian coordinates
-        # The shape of the rotation pole vector is (3,)
-        rotation_pole_xyz = _numpy.array(spherical2cartesian(
-            plate.pole_lat, 
-            plate.pole_lon, 
-            plate.pole_angle,
-        ))
-
-        # Calculate the double cross product of the position vector and the velocity vector (see Torsvik et al. (2010), https://doi.org/10.1016/j.epsl.2009.12.055)
-        # The shape of the rotation pole vector is modified to (1, 3) to allow broadcasting
-        point_rotations_xyz = _numpy.cross(_numpy.cross(rotation_pole_xyz[None, :], positions_xyz), positions_xyz)
-
-        # Weight the rotations by segment area (broadcasted multiplication)
-        segment_area = (selected_points.segment_length_lat * selected_points.segment_length_lon).values[:, None]
-        point_rotations_xyz *= segment_area
-
-        # Accumulate the net rotation vector by summing across all points
-        net_rotation_xyz += point_rotations_xyz.sum(axis=0)
-
-    # Normalise the net rotation vector by the total area of the lithosphere
-    net_rotation_xyz /= plate_data.area.sum()
-
-    # Convert the net rotation vector to spherical coordinates
-    net_rotation_pole_lat, net_rotation_pole_lon, _, _ = cartesian2spherical_azimuth(
-        net_rotation_xyz[0], net_rotation_xyz[1], net_rotation_xyz[2],
-    )
-
-    # Calculate the magnitude of the net rotation vector
-    net_rotation_rate = _numpy.linalg.norm(net_rotation_xyz)
-
-    return net_rotation_pole_lat, net_rotation_pole_lon, net_rotation_rate
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CONVERSIONS

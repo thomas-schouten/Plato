@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 import gplately as _gplately
 import numpy as _numpy
+import pandas as _pandas
 import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
@@ -25,6 +26,7 @@ class Points:
             resolved_geometries: Optional[Dict] = None,
             PARALLEL_MODE: Optional[bool] = False,
             DEBUG_MODE: Optional[bool] = False,
+            CALCULATE_VELOCITIES: Optional[bool] = True,
         ):
         """
         Class to store and manipulate point data.
@@ -111,7 +113,8 @@ class Points:
                             self.data[_age][entry] = self.data[_age][key].copy()
 
         # Calculate velocities at points
-        self.calculate_velocities()
+        if CALCULATE_VELOCITIES:
+            self.calculate_velocities()
 
         # Set flags for computed torques
         self.sampled_seafloor = False
@@ -145,6 +148,15 @@ class Points:
                             from_time=_age + self.settings.options[_case]["Velocity time step"],
                             anchor_plate_id = self.settings.options[_case]["Anchor plateID"]
                         ).get_lat_lon_euler_pole_and_angle_degrees()
+
+                        # Organise as DataFrame
+                        _stage_rotation = _pandas.DataFrame({
+                                "plateID": [plateID],
+                                "pole_lat": [_stage_rotation[0]],
+                                "pole_lon": [_stage_rotation[1]],
+                                "pole_angle": [_stage_rotation[2]],
+                            })
+    
                     else:
                         # Get stage rotation from the provided DataFrame in the dictionary
                         _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
@@ -154,11 +166,8 @@ class Points:
                                             
                     # Compute velocities
                     velocities = utils_calc.compute_velocity(
-                        self.data[_age][_case].lat[mask],
-                        self.data[_age][_case].lon[mask],
-                        _stage_rotation[0],
-                        _stage_rotation[1],
-                        _stage_rotation[2],
+                        self.data[_age][_case].loc[mask],
+                        _stage_rotation,
                         self.settings.constants,
                     )
 

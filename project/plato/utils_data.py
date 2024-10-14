@@ -37,107 +37,95 @@ def get_plate_data(
         age: int,
         resolved_topologies: list, 
         options: dict,
-        ):
-        """
-        Function to get data on plates in reconstruction.
+    ) -> _pandas.DataFrame:
+    """
+    Function to get data on plates in reconstruction.
+    """
+    # Set constants
+    constants = set_constants()
 
-        :param rotations:           rotation model
-        :type rotations:            _pygplates.RotationModel object
-        :param age:                 reconstruction age
-        :type age:                  integer
-        :param resolved_topologies: resolved topologies
-        :type resolved_topologies:  list of resolved topologies
-        :param options:             options for the case
-        :type options:              dict
+    # Make _pandas.df with all plates
+    # Initialise list
+    plates = _numpy.zeros([len(resolved_topologies),10])
 
-        :return:                    plates
-        :rtype:                     pandas.DataFrame
-        """
-        # Set constants
-        constants = set_constants()
+    # Loop through plates
+    for n, topology in enumerate(resolved_topologies):
 
-        # Make _pandas.df with all plates
-        # Initialise list
-        plates = _numpy.zeros([len(resolved_topologies),10])
+        # Get plateID
+        plates[n,0] = topology.get_resolved_feature().get_reconstruction_plate_id()
 
-        # Loop through plates
-        for n, topology in enumerate(resolved_topologies):
+        # Get plate area
+        plates[n,1] = topology.get_resolved_geometry().get_area() * constants.mean_Earth_radius_m**2
 
-            # Get plateID
-            plates[n,0] = topology.get_resolved_feature().get_reconstruction_plate_id()
+        # Get Euler rotations
+        stage_rotation = rotations.get_rotation(
+            to_time=age,
+            moving_plate_id=int(plates[n,0]),
+            from_time=age + options["Velocity time step"],
+            anchor_plate_id=options["Anchor plateID"]
+        )
+        pole_lat, pole_lon, pole_angle = stage_rotation.get_lat_lon_euler_pole_and_angle_degrees()
+        plates[n,2] = pole_lat
+        plates[n,3] = pole_lon
+        plates[n,4] = pole_angle
 
-            # Get plate area
-            plates[n,1] = topology.get_resolved_geometry().get_area() * constants.mean_Earth_radius_m**2
+        # Get plate centroid
+        centroid = topology.get_resolved_geometry().get_interior_centroid()
+        centroid_lat, centroid_lon = centroid.to_lat_lon_array()[0]
+        plates[n,5] = centroid_lon
+        plates[n,6] = centroid_lat
 
-            # Get Euler rotations
-            stage_rotation = rotations.get_rotation(
-                to_time=age,
-                moving_plate_id=int(plates[n,0]),
-                from_time=age + options["Velocity time step"],
-                anchor_plate_id=options["Anchor plateID"]
-            )
-            pole_lat, pole_lon, pole_angle = stage_rotation.get_lat_lon_euler_pole_and_angle_degrees()
-            plates[n,2] = pole_lat
-            plates[n,3] = pole_lon
-            plates[n,4] = pole_angle
+        # Get velocity [cm/a] at centroid
+        centroid_velocity = get_velocities([centroid_lat], [centroid_lon], (pole_lat, pole_lon, pole_angle))
+    
+        plates[n,7] = centroid_velocity[1]
+        plates[n,8] = centroid_velocity[0]
+        plates[n,9] = centroid_velocity[2]
 
-            # Get plate centroid
-            centroid = topology.get_resolved_geometry().get_interior_centroid()
-            centroid_lat, centroid_lon = centroid.to_lat_lon_array()[0]
-            plates[n,5] = centroid_lon
-            plates[n,6] = centroid_lat
+    # Convert to DataFrame    
+    plates = _pandas.DataFrame(plates)
 
-            # Get velocity [cm/a] at centroid
-            centroid_velocity = get_velocities([centroid_lat], [centroid_lon], (pole_lat, pole_lon, pole_angle))
-        
-            plates[n,7] = centroid_velocity[1]
-            plates[n,8] = centroid_velocity[0]
-            plates[n,9] = centroid_velocity[2]
+    # Initialise columns
+    plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_v_lon", "centroid_v_lat", "centroid_v_mag"]
 
-        # Convert to DataFrame    
-        plates = _pandas.DataFrame(plates)
+    # Merge topological networks with main plate; this is necessary because the topological networks have the same PlateID as their host plate and this leads to computational issues down the road
+    main_plates_indices = plates.groupby("plateID")["area"].idxmax()
 
-        # Initialise columns
-        plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_v_lon", "centroid_v_lat", "centroid_v_mag"]
+    # Create new DataFrame with the main plates
+    merged_plates = plates.loc[main_plates_indices]
 
-        # Merge topological networks with main plate; this is necessary because the topological networks have the same PlateID as their host plate and this leads to computational issues down the road
-        main_plates_indices = plates.groupby("plateID")["area"].idxmax()
+    # Aggregating the area column by summing the areas of all plates with the same plateID
+    merged_plates["area"] = plates.groupby("plateID")["area"].sum().values
 
-        # Create new DataFrame with the main plates
-        merged_plates = plates.loc[main_plates_indices]
+    # Get plate names
+    merged_plates["name"] = _numpy.nan; merged_plates.name = get_plate_names(merged_plates.plateID)
+    merged_plates["name"] = merged_plates["name"].astype(str)
 
-        # Aggregating the area column by summing the areas of all plates with the same plateID
-        merged_plates["area"] = plates.groupby("plateID")["area"].sum().values
+    # Sort and index by plate ID
+    merged_plates = merged_plates.sort_values(by="plateID")
 
-        # Get plate names
-        merged_plates["name"] = _numpy.nan; merged_plates.name = get_plate_names(merged_plates.plateID)
-        merged_plates["name"] = merged_plates["name"].astype(str)
+    # Initialise columns to store other whole-plate properties
+    merged_plates["trench_length"] = 0.; merged_plates["zeta"] = 0.
+    merged_plates["velocity_rms_mag"] = 0.; merged_plates["velocity_rms_azi"] = 0.; merged_plates["spin_rate_rms"] = 0.
+    merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
 
-        # Sort and index by plate ID
-        merged_plates = merged_plates.sort_values(by="plateID")
+    # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
+    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "driving", "residual"]
+    axes = ["x", "y", "z", "mag"]
+    coords = ["lat", "lon", "mag", "azi"]
+    
+    merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0.] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["driving_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["residual_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
+    merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0.] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["driving_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
+    merged_plates[["residual_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
 
-        # Initialise columns to store other whole-plate properties
-        merged_plates["trench_length"] = 0.; merged_plates["zeta"] = 0.
-        merged_plates["velocity_rms_mag"] = 0.; merged_plates["velocity_rms_azi"] = 0.; merged_plates["spin_rate_rms"] = 0.
-        merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
-
-        # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
-        torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "driving", "residual"]
-        axes = ["x", "y", "z", "mag"]
-        coords = ["lat", "lon", "mag", "azi"]
-        
-        merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0.] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["driving_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["residual_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
-        merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0.] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["driving_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-        merged_plates[["residual_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-
-        return merged_plates
+    return merged_plates
 
 def get_slab_data(
         reconstruction: _gplately.PlateReconstruction,
@@ -145,102 +133,86 @@ def get_slab_data(
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
         PARALLEL_MODE: Optional[bool] = False,
-        ):
-        """
-        Function to get data on slabs in reconstruction.
+    ) -> _pandas.DataFrame:
+    """
+    Function to get data on slabs in reconstruction.
+    """
+    # Set constants
+    constants = set_constants()
 
-        :param reconstruction:      reconstruction
-        :type reconstruction:       _gplately.PlateReconstruction
-        :param age:                 reconstruction time
-        :type age:                  integer
-        :param topology_geometries: topology geometries
-        :type topology_geometries:  geopandas.GeoDataFrame
-        :param options:             options for the case
-        :type options:              dict
-        :param DEBUG_MODE:          whether to run in debug mode
-        :type DEBUG_MODE:           bool
-        :param PARALLEL_MODE:       whether to run in parallel mode
-        :type PARALLEL_MODE:        bool
-        
-        :return:                    slabs
-        :rtype:                     pandas.DataFrame
-        """
-        # Set constants
-        constants = set_constants()
+    # Tesselate subduction zones and get slab pull and bend torques along subduction zones
+    slabs = reconstruction.tessellate_subduction_zones(
+        age,
+        ignore_warnings=True,
+        tessellation_threshold_radians=(options["Slab tesselation spacing"]/constants.mean_Earth_radius_km)
+    )
 
-        # Tesselate subduction zones and get slab pull and bend torques along subduction zones
-        slabs = reconstruction.tessellate_subduction_zones(
-            age,
-            ignore_warnings=True,
-            tessellation_threshold_radians=(options["Slab tesselation spacing"]/constants.mean_Earth_radius_km)
-        )
+    # Convert to _pandas.DataFrame
+    slabs = _pandas.DataFrame(slabs)
 
-        # Convert to _pandas.DataFrame
-        slabs = _pandas.DataFrame(slabs)
+    # Kick unused columns and rename the rest
+    slabs = slabs.drop(columns=[2, 3, 4, 5])
+    slabs.columns = ["lon", "lat", "trench_segment_length", "trench_normal_azimuth", "lower_plateID", "trench_plateID"]
 
-        # Kick unused columns and rename the rest
-        slabs = slabs.drop(columns=[2, 3, 4, 5])
-        slabs.columns = ["lon", "lat", "trench_segment_length", "trench_normal_azimuth", "lower_plateID", "trench_plateID"]
+    # Convert trench segment length from degree to m
+    slabs.trench_segment_length *= constants.equatorial_Earth_circumference / 360
 
-        # Convert trench segment length from degree to m
-        slabs.trench_segment_length *= constants.equatorial_Earth_circumference / 360
+    # Get slab sampling points
+    slabs["slab_sampling_lat"], slabs["slab_sampling_lon"] = project_points(
+        slabs.lat,
+        slabs.lon,
+        slabs.trench_normal_azimuth,
+        -30,
+    )
 
-        # Get slab sampling points
-        slabs["slab_sampling_lat"], slabs["slab_sampling_lon"] = project_points(
-            slabs.lat,
-            slabs.lon,
-            slabs.trench_normal_azimuth,
-            -30,
-        )
+    # Get arc sampling points
+    slabs["arc_sampling_lat"], slabs["arc_sampling_lon"] = project_points(
+        slabs.lat,
+        slabs.lon,
+        slabs.trench_normal_azimuth,
+        200,
+    )
 
-        # Get arc sampling points
-        slabs["arc_sampling_lat"], slabs["arc_sampling_lon"] = project_points(
-            slabs.lat,
-            slabs.lon,
-            slabs.trench_normal_azimuth,
-            200,
-        )
+    # Get plateIDs for upper plates
+    slabs["upper_plateID"] = get_plateIDs(
+        reconstruction,
+        topology_geometries,
+        slabs["arc_sampling_lat"],
+        slabs["arc_sampling_lon"],
+        age,
+        PARALLEL_MODE = PARALLEL_MODE,
+    )
 
-        # Get plateIDs for upper plates
-        slabs["upper_plateID"] = get_plateIDs(
-            reconstruction,
-            topology_geometries,
-            slabs["arc_sampling_lat"],
-            slabs["arc_sampling_lon"],
-            age,
-            PARALLEL_MODE=PARALLEL_MODE,
-        )
+    # Initialise columns to store convergence rates
+    types = ["upper_plate", "lower_plate", "trench", "convergence"]
+    coords = ["lat", "lon", "mag"]
+    slabs[[f"{type}_velocity_{coord}" for type in types for coord in coords]] = [[0.] * len(coords) * len(types) for _ in range(len(slabs))]
 
-        # Initialise columns to store convergence rates
-        types = ["upper_plate", "lower_plate", "trench", "convergence"]
-        coords = ["lat", "lon", "mag"]
-        slabs[[f"{type}_velocity_{coord}" for type in types for coord in coords]] = [[0.] * len(coords) * len(types) for _ in range(len(slabs))]
+    # Initialise other columns to store seafloor ages and forces
+    # Upper plate
+    slabs["arc_thickness"] = 0.
+    slabs["arc_seafloor_age"] = 0.
+    slabs["continental_arc"] = False
+    slabs["erosion_rate"] = 0.
 
-        # Initialise other columns to store seafloor ages and forces
-        # Upper plate
-        slabs["arc_thickness"] = 0.
-        slabs["arc_seafloor_age"] = 0.
-        slabs["continental_arc"] = False
-        slabs["erosion_rate"] = 0.
+    # Lower plate
+    slabs["slab_seafloor_age"] = 0.
+    slabs["slab_thickness"] = 0.
+    slabs["sediment_thickness"] = 0.
+    slabs["sediment_fraction"] = 0.
+    slabs["slab_length"] = 0.
 
-        # Lower plate
-        slabs["slab_seafloor_age"] = 0.
-        slabs["slab_thickness"] = 0.
-        slabs["sediment_thickness"] = 0.
-        slabs["sediment_fraction"] = 0.
-        slabs["slab_length"] = 0.
+    # Forces
+    forces = ["slab_pull", "slab_bend", "residual"]
+    coords = ["mag", "lat", "lon"]
+    slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(coords) * len(forces) for _ in range(len(slabs))]
+    slabs["residual_force_azi"] = 0.
+    slabs["residual_alignment"] = 0.
 
-        # Forces
-        forces = ["slab_pull", "slab_bend", "residual"]
-        coords = ["mag", "lat", "lon"]
-        slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(coords) * len(forces) for _ in range(len(slabs))]
-        slabs["residual_force_azi"] = 0.
-        slabs["residual_alignment"] = 0.
+    # Make sure all the columns are floats
+    slabs = slabs.apply(lambda x: x.astype(float) if x.name != "continental_arc" else x)
 
-        # Make sure all the columns are floats
-        slabs = slabs.apply(lambda x: x.astype(float) if x.name != "continental_arc" else x)
-
-        return slabs
+    return slabs
 
 def get_point_data(
         reconstruction: _gplately.PlateReconstruction,
@@ -248,23 +220,9 @@ def get_point_data(
         topology_geometries: _geopandas.GeoDataFrame,
         options: dict,
         PARALLEL_MODE: Optional[bool] = False,
-    ):
+    ) -> _pandas.DataFrame:
     """
     Function to get data on regularly spaced grid points in reconstruction.
-
-    :param reconstruction:      Reconstruction
-    :type reconstruction:       gplately.PlateReconstruction
-    :param age:                 reconstruction time
-    :type age:                  integer
-    :param plates:              plates
-    :type plates:               pandas.DataFrame
-    :param topology_geometries: topology geometries
-    :type topology_geometries:  geopandas.GeoDataFrame
-    :param options:             options for the case
-    :type options:              dict
-
-    :return:                    points
-    :rtype:                     pandas.DataFrame    
     """
     # Set constants
     constants = set_constants()
@@ -376,35 +334,21 @@ def get_resolved_geometries(
 
     return resolved_geometries
 
-def extract_geometry_data(topology_geometries):
+def extract_geometry_data(
+        topology_geometries: _geopandas.GeoDataFrame
+    ) -> list:
     """
     Function to extract only the geometry and plateID from topology geometries.
-
-    :param topology_geometries:        topology geometries
-    :type topology_geometries:         geopandas.GeoDataFrame
-
-    :return:                           geometries_data
-    :rtype:                            list
     """
     return [(geom, plateID) for geom, plateID in zip(topology_geometries.geometry, topology_geometries.PLATEID1)]
 
 def process_plateIDs(
         geometries_data: list,
-        lats_chunk: _numpy.array,
-        lons_chunk: _numpy.array,
+        lats_chunk: _numpy.ndarray,
+        lons_chunk: _numpy.ndarray,
     ) -> list:
     """
     Function to process plateIDs for a chunk of latitudes and longitudes.
-
-    :param geometries_data:        geometry data
-    :type geometries_data:         list
-    :param lats_chunk:             chunk of latitudes
-    :type lats_chunk:              numpy.array
-    :param lons_chunk:             chunk of longitudes
-    :type lons_chunk:              numpy.array
-
-    :return:                       plateIDs
-    :rtype:                        numpy.array
     """
     plateIDs = _numpy.zeros(len(lats_chunk))
     
@@ -421,27 +365,13 @@ def process_plateIDs(
 def get_plateIDs(
         reconstruction: _gplately.PlateReconstruction,
         topology_geometries: _geopandas.GeoDataFrame,
-        lats: Union[List, _numpy.array],
-        lons: Union[List, _numpy.array],
+        lats: Union[List, _numpy.ndarray],
+        lons: Union[List, _numpy.ndarray],
         age: int,
         PARALLEL_MODE: Optional[bool] = False,
-    ):
+    ) -> _numpy.ndarray:
     """
     Function to get plate IDs for a set of latitudes and longitudes.
-
-    :param reconstruction:             reconstruction
-    :type reconstruction:              _gplately.PlateReconstruction
-    :param topology_geometries:        topology geometries
-    :type topology_geometries:         geopandas.GeoDataFrame
-    :param lats:                       latitudes
-    :type lats:                        list or _numpy.array
-    :param lons:                       longitudes
-    :type lons:                        list or _numpy.array
-    :param _age:        reconstruction time
-    :type _age:         integer
-
-    :return:                           plateIDs
-    :rtype:                            list
     """
     # Convert lats and lons to numpy arrays if they are not already
     lats = _numpy.asarray(lats)
@@ -474,16 +404,6 @@ def get_velocities(
     """
     Function to get velocities for a set of latitudes and longitudes.
     NOTE: This function is not vectorised yet, but has not been a bottleneck in the code so far.
-
-    :param lats:                     latitudes
-    :type lats:                      list or numpy.array
-    :param lons:                     longitudes
-    :type lons:                      list or numpy.array
-    :param stage_rotation:           stage rotation defined by pole latitude, pole longitude and pole angle
-    :type stage_rotation:            tuple
-
-    :return:                         velocities_lat, velocities_lon, velocities_mag, velocities_azi
-    :rtype:                          numpy.array, numpy.array, numpy.array, numpy.array
     """
     # Convert lats and lons to numpy arrays if they are not already
     lats = _numpy.asarray(lats)
@@ -525,18 +445,9 @@ def get_topology_geometries(
         reconstruction: _gplately.PlateReconstruction,
         age: int,
         anchor_plateID: int
-    ):
+    ) -> _geopandas.GeoDataFrame:
     """
     Function to resolve topologies and get geometries as a GeoDataFrame
-
-    :param reconstruction:        reconstruction
-    :type reconstruction:         gplately.PlateReconstruction
-    :param _age:   reconstruction time
-    :type _age:    integer
-    :param anchor_plateID:        anchor plate ID
-    :type anchor_plateID:         integer
-    :return:                      resolved_topologies
-    :rtype:                       geopandas.GeoDataFrame
     """
     # Make temporary directory to hold shapefiles
     temp_dir = tempfile.mkdtemp()
@@ -566,17 +477,9 @@ def get_topology_geometries(
 def get_geometric_properties(
         plates: _pandas.DataFrame,
         slabs: _pandas.DataFrame,
-    ):
+    ) -> _pandas.DataFrame:
     """
     Function to get geometric properties of plates.
-
-    :param plates:                plates
-    :type plates:                 pandas.DataFrame
-    :param slabs:                 slabs
-    :type slabs:                  pandas.DataFrame
-
-    :return:                      plates
-    :rtype:                       pandas.DataFrame
     """
     # Calculate trench length and omega
     for plateID in plates.plateID:
@@ -587,16 +490,10 @@ def get_geometric_properties(
     return plates
 
 def get_plate_names(
-        plate_id_list: Union[list or _numpy.array],
-    ):
+        plate_id_list: Union[list, _numpy.ndarray],
+    ) -> list[str]:
     """
     Function to get plate names corresponding to plate ids
-
-    :param plate_id_list:        list of plate ids
-    :type plate_id_list:         list or numpy.array
-
-    :return:                     plate_names
-    :rtype:                      list
     """
     plate_name_dict = {
         101: "N America",
@@ -645,14 +542,6 @@ def get_options(
     """
     Function to get options from excel file. If no arguments are provided,
     returns the default options and assigns 'ref' to the case.
-
-    :param file_name:            file name (optional)
-    :type file_name:             str, optional
-    :param sheet_name:           sheet name (optional)
-    :type sheet_name:            str, optional
-
-    :return:                     cases, options
-    :rtype:                      list, dict
     """
     # Define all options
     all_options = ["Slab pull torque",
@@ -763,16 +652,6 @@ def get_seafloor_age_grid(
     ) -> _xarray.Dataset:
     """
     Function to obtain seafloor grid from GPlately DataServer.
-    
-    :param reconstruction_name:    name of reconstruction
-    :type reconstruction_name:     string
-    :param ages:   reconstruction times
-    :type ages:    list or numpy.array
-    :param DEBUG_MODE:             whether to run in debug mode
-    :type DEBUG_MODE:              bool
-
-    :return:                       seafloor_grids
-    :rtype:                        xarray.Dataset
     """
     # Call _gplately"s DataServer from the download.py module
     gdownload = _gplately.download.DataServer(reconstruction_name)
@@ -815,16 +694,6 @@ def get_velocity_grid(
     ):
     """
     Function to obtain velocity grid from the velocity sampled at the points interpolated to the resolution of the seafloor grid.
-
-    :param reconstruction_name:    name of reconstruction
-    :type reconstruction_name:     string
-    :param _age:    reconstruction time
-    :type _age:     integer
-    :param seafloor_grid:          seafloor ages
-    :type seafloor_grid:           xarray.DataArray
-
-    :return:                       velocity_grid
-    :rtype:                        xarray.Dataset
     """
     # Make xarray velocity grid
     velocity_grid = _xarray.Dataset(
@@ -853,14 +722,6 @@ def select_ages(
     ) -> _numpy.ndarray:
     """
     Function to check and get ages.
-
-    :param ages:            ages
-    :type ages:             None, int, float, list, numpy.integer, numpy.floating, numpy.ndarray
-    :param default_ages:    settings ages
-    :type default_ages:     numpy.ndarray
-
-    :return:                ages
-    :rtype:                 numpy.ndarray
     """
     # Define ages
     if ages is None:
@@ -885,14 +746,6 @@ def select_cases(
     ) -> List[str]:
     """
     Function to check and get cases.
-
-    :param cases:           cases (can be None, a single case as a string, or a list of cases)
-    :type cases:            None, str, or list of strings
-    :param default_cases:   default cases to use if cases is not provided
-    :type default_cases:    list of strings
-
-    :return:                 a list of cases
-    :rtype:                  list of strings
     """
     # Define cases
     if cases is None:
@@ -949,12 +802,12 @@ def select_plateIDs(
         return [plateIDs]
     
 def copy_values(
-        data: Dict,
+        data: Dict[_pandas.DataFrame],
         key: str,
         entries: List[str],
         cols: Optional[Union[None, str, List[str]]] = None,
         check: bool = False
-    ):
+    ) -> Dict[_pandas.DataFrame]:
     """
     Function to copy values from one dataframe in a dictionary to another.
     """
@@ -988,7 +841,11 @@ def get_variables(
     elif isinstance(variables, str):
         return [variables]
 
-def process_cases(cases, options, target_options):
+def process_cases(
+        cases: List[str],
+        options: Dict[str, Dict[str, Optional[str]]],
+        target_options: List[str],
+    ) -> Dict[str, List[str]]:
     """
     Function to process cases and options to accelerate computation. Each case is assigned a dictionary of identical cases for a given set of target options.
     The goal here is that if these target options are identical, the computation is only peformed once and the results are copied to the other cases.
@@ -1029,7 +886,7 @@ def DataFrame_to_parquet(
         age: int,
         case: str,
         folder: str,
-    ):
+    ) -> None:
     """
     Function to save DataFrame to a Parquet file in a folder efficiently.
     """
@@ -1046,7 +903,7 @@ def DataFrame_to_csv(
         age: int,
         case: str,
         folder: str,
-    ):
+    ) -> None:
     """
     Function to save DataFrame to a folder efficiently.
     """
@@ -1063,7 +920,7 @@ def GeoDataFrame_to_geoparquet(
         age: int,
         case: str,
         folder: str,
-    ):
+    ) -> None:
     """
     Function to save GeoDataFrame to a GeoParquet file in a folder efficiently.
     """
@@ -1080,7 +937,7 @@ def GeoDataFrame_to_shapefile(
         age: int,
         case: str,
         folder: str,
-    ):
+    ) -> None:
     """
     Function to save GeoDataFrame to a folder efficiently.
     """
@@ -1097,7 +954,7 @@ def Dataset_to_netcdf(
         age: int,
         case: Optional[str] = None,
         folder: Optional[str] = None,
-    ):
+    ) -> None:
     """
     Function to save Dataset to a NetCDF file in a folder efficiently.
     """
@@ -1204,7 +1061,7 @@ def Dataset_from_netCDF(
     
 def check_dir(
         target_dir: str,
-    ):
+    ) -> None:
     """
     Function to check if a directory exists, and create it if it doesn't
     """
@@ -1219,7 +1076,7 @@ def get_file_path(
         age: int,
         case: Optional[str] = None,
         folder: Optional[str] = None,
-    ):
+    ) -> str:
     """
     Function to save a file
     """
@@ -1249,8 +1106,8 @@ def get_file_path(
     return file_path
     
 def get_variable_name(
-        var
-    ):
+        var: str,
+    ) -> str:
     """
     Function to get the name of a python variable
     """
@@ -1283,7 +1140,7 @@ def array2data_array(
         lons: Union[list, _numpy.ndarray],
         data: Union[list, _numpy.ndarray],
         var_name: str,
-    ):
+    ) -> _xarray.DataArray:
     """
     Interpolates data to the resolution seafloor grid.
     """
@@ -1315,7 +1172,7 @@ def array2data_array(
 def data_arrays2dataset(
         data_arrays: dict,
         grid_name: str,
-    ):
+    ) -> _xarray.Dataset:
     """
     Creates a grid object from a dictionary of data arrays.
     """

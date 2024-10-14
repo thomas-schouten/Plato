@@ -25,6 +25,7 @@ class Slabs:
             resolved_geometries: Optional[Dict] = None,
             PARALLEL_MODE: Optional[bool] = False,
             DEBUG_MODE: Optional[bool] = False,
+            CALCULATE_VELOCITIES: Optional[bool] = True,
         ):
         """
         Class to store and manipulate data on slabs.
@@ -99,8 +100,9 @@ class Slabs:
                         for entry in entries[1:]:
                             self.data[_age][entry] = self.data[_age][key].copy()
 
-        # Calculate velocities at points
-        self.calculate_velocities()
+        # Calculate velocities along slabs
+        if CALCULATE_VELOCITIES:
+            self.calculate_velocities()
 
         # Calculate total slab length as a function of age and case
         self.total_slab_length = _numpy.zeros((len(self.settings.ages), len(self.settings.slab_pull_cases)))

@@ -94,26 +94,16 @@ class Globe:
         ) for case in self.settings.cases}
 
         # Get the number of plates
-        self.calculate_number_of_plates(
-            self.plates,
-            self.settings.ages, 
-            self.settings.cases,
-        )
+        self.calculate_number_of_plates()
 
         # Get the subduction length
-        self.calculate_subduction_length(
-            self.slabs,
-            self.settings.ages, 
-            self.settings.cases,
-        )
+        self.calculate_subduction_length()
 
         # Get the net rotation
-        self.calculate_net_rotation(
-            self.plates,
-            self.points,
-            self.settings.ages, 
-            self.settings.cases,
-        )
+        self.calculate_net_rotation()
+
+        # Get the world uncertainty
+        self.calculate_world_uncertainty()
 
     def calculate_number_of_plates(
             self,
@@ -215,6 +205,7 @@ class Globe:
             for _case in _cases:
                 # Check if plate data is provided
                 if not isinstance(plates, Plates) or _age not in plates.data.keys() or _case not in plates.data[_age].keys():
+                    logging.info(f"Instantiating Plates object for case {_case} at age {_age} to calculate net rotation")
                     # Get a new plates object if not provided
                     plates = Plates(
                         self.settings,
@@ -224,11 +215,13 @@ class Globe:
 
                 # Check if point data is provided
                 if not isinstance(plates, Points) or _age not in points.data.keys() or _case not in points.data[_age].keys():
+                    logging.info(f"Instantiating Points object for case {_case} at age {_age} to calculate net rotation")
                     # Get a new points object if not provided
                     points = Points(
                         self.settings,
                         self.reconstruction,
                         ages = _age,
+                        CALCULATE_VELOCITIES = False,
                     )
 
                 # Check if plates and points are provided
@@ -245,7 +238,6 @@ class Globe:
                 net_rotation_pole = utils_calc.compute_net_rotation(
                     selected_plates,
                     selected_points,
-                    self.settings.constants,
                 )
 
                 # Store net rotation
