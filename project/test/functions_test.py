@@ -342,6 +342,7 @@ def test_grids(
         reconstruction_files=None,
         test_ages=[0],
         seafloor_age_grids=None,
+        sediment_grids=None,
         continental_grids=None,
         velocity_grids=None,
         point_data_var=None,
@@ -352,7 +353,7 @@ def test_grids(
 
     # Make a PlateReconstruction object if files are provided
     if reconstruction_files:
-        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1])
+        reconstruction = gplately.PlateReconstruction(reconstruction_files[0], reconstruction_files[1], reconstruction_files[2])
     else:
         reconstruction = None
 
@@ -365,6 +366,7 @@ def test_grids(
             reconstruction=reconstruction,
             reconstruction_name=reconstruction_name,
             seafloor_age_grids=seafloor_age_grids,
+            sediment_grids=sediment_grids,
             files_dir="output",
         )
         logging.info("Successfully initialised 'Grids' object.")
@@ -478,6 +480,7 @@ def test_plate_torques(
         reconstruction_files=None,
         test_ages=[0],
         seafloor_age_grids=None,
+        sediment_grids=None,
         continental_grids=None,
         velocity_grids=None,
         test_functions=False,
@@ -501,6 +504,7 @@ def test_plate_torques(
             reconstruction_name=reconstruction_name,
             files_dir="output",
             seafloor_age_grids=seafloor_age_grids,
+            sediment_grids=sediment_grids,
             continental_grids=continental_grids,
             velocity_grids=velocity_grids,
         )
@@ -558,7 +562,7 @@ def test_plate_torques(
             logging.error(f"An error occurred during calculation of the net lithospheric rotation in the 'PlateTorques' object: {e}")
             traceback.print_exc()
 
-        # Try sampling of seafloor age grid at points
+        # Test sampling of seafloor age grid at points
         try:
             plate_torques_test.sample_point_seafloor_ages()
             logging.info("Successfully sampled seafloor age grid at points.")
@@ -567,7 +571,7 @@ def test_plate_torques(
             logging.error(f"An error occurred during sampling of the seafloor age grid at points: {e}")
             traceback.print_exc()
 
-        # Try sampling of seafloor age grid at slabs
+        # Test sampling of seafloor age grid at slabs
         try:
             plate_torques_test.sample_slab_seafloor_ages()
             logging.info("Successfully sampled seafloor age grid at slabs.")
@@ -576,7 +580,16 @@ def test_plate_torques(
             logging.error(f"An error occurred during sampling of the seafloor age grid at slabs: {e}")
             traceback.print_exc()
 
-        # Try computation of GPE torque
+        # Test sampling of sediment thickness grid at slabs
+        try:
+            plate_torques_test.sample_slab_sediment_thickness()
+            logging.info("Successfully sampled sediment thickness grid at slabs.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during sampling of the sediment thickness grid at slabs: {e}")
+            traceback.print_exc()
+
+        # Test computation of GPE torque
         try:
             plate_torques_test.calculate_gpe_torque()
             logging.info("Successfully computed GPE torque.")
@@ -585,7 +598,7 @@ def test_plate_torques(
             logging.error(f"An error occurred during computation of the GPE torque: {e}")
             traceback.print_exc()
 
-        # Try computation of slab pull torque
+        # Test computation of slab pull torque
         try:
             plate_torques_test.calculate_slab_pull_torque()
             logging.info("Successfully computed slab pull torque.")
@@ -594,7 +607,7 @@ def test_plate_torques(
             logging.error(f"An error occurred during computation of the slab pull torque: {e}")
             traceback.print_exc()
 
-        # Try computation of mantle drag torque
+        # Test computation of mantle drag torque
         try:
             plate_torques_test.calculate_mantle_drag_torque()
             logging.info("Successfully computed mantle drag torque.")

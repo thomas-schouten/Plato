@@ -6,6 +6,7 @@
 import os
 import logging
 
+# Third-party imports
 import xarray as xr
 
 # Import the test functions
@@ -24,8 +25,8 @@ TEST_CONFIGS = {
     "TEST_POINTS": False,
     "TEST_SLABS": False,
     "TEST_GRIDS": False,
-    "TEST_GLOBE": True,
-    "TEST_PLATE_TORQUES": False,
+    "TEST_GLOBE": False,
+    "TEST_PLATE_TORQUES": True,
 }
 
 # Define settings file
@@ -42,10 +43,15 @@ reconstruction_files = (
 # Define test ages
 test_ages = [0, 50]
 
-# Define seafloor files
+# Load the seafloor age grids
 seafloor_age_grids = {}
 for age in test_ages:
     seafloor_age_grids[age] = xr.open_dataset(os.path.join("data", f"Muller2016_Muller_etal_2016_AREPS_v1.17_AgeGrid-{age}.nc"))
+
+# Load the sediment thickness grids
+sediment_grids = {}
+for age in test_ages:
+    sediment_grids[age] = xr.open_dataset(os.path.join("data", f"sed_thick_0.2d_{age}.nc"))
 
 def run_tests():
     """Run all specified tests based on the TEST_CONFIGS dictionary."""
@@ -87,14 +93,14 @@ def run_tests():
     # Test Grids
     if TEST_CONFIGS["TEST_GRIDS"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_grids(seafloor_age_grids=seafloor_age_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_grids(settings_file=settings_file, reconstruction_files=reconstruction_files, seafloor_age_grids=seafloor_age_grids, sediment_grids=sediment_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
             functions_test.test_grids(settings_file=settings_file, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 
     # Test Plate Torques
     if TEST_CONFIGS["TEST_PLATE_TORQUES"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_plate_torques(settings_file=settings_file, reconstruction_files=reconstruction_files, seafloor_age_grids=seafloor_age_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_plate_torques(settings_file=settings_file, reconstruction_files=reconstruction_files, seafloor_age_grids=seafloor_age_grids, sediment_grids=sediment_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
             functions_test.test_plate_torques(settings_file=settings_file, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 

@@ -64,24 +64,45 @@ class Grids():
 
         # Load seafloor grids
         for _age in _tqdm(self.settings.ages, desc="Loading grids", disable=self.settings.logger.level==logging.INFO):
-
-            if seafloor_age_grids is not None and _age in seafloor_age_grids.keys() and seafloor_age_grids[_age] is _xarray.Dataset:
+            if seafloor_age_grids is not None and _age in seafloor_age_grids.keys() and isinstance(seafloor_age_grids[_age], _xarray.Dataset):
                 # If the seafloor is present in the provided dictionary, copy
+                logging.info(f"Loading seafloor age grid for {_age} Ma.")
                 self.seafloor_age[_age] = seafloor_age_grids[_age]
 
-                # Make sure that the coordinates and variables are named correctly
-                self.seafloor_age[_age] = utils_data.rename_coordinates_and_variables(self.seafloor_age[_age], "z", "seafloor_age")
-
             else:
+                logging.info(f"Downloading seafloor age grid for {_age} Ma.")
                 self.seafloor_age[_age] = utils_data.get_seafloor_age_grid(
                     self.settings.name,
                     _age,
                 )
 
+            # Make sure that the coordinates and variables are named correctly
+            self.seafloor_age[_age] = utils_data.rename_coordinates_and_variables(self.seafloor_age[_age], "z", "seafloor_age")
+
         # Store sediment, continental and velocity grids, if provided, otherwise initialise empty dictionaries to store them at a later stage.
-        self.sediment = sediment_grids if sediment_grids else None
+        self.sediment = {_age: None for _age in self.settings.ages}
+        if isinstance(sediment_grids, Dict):
+            for _age in _tqdm(self.settings.ages, desc="Loading sediment grids", disable=self.settings.logger.level==logging.INFO):
+                if _age in sediment_grids.keys() and isinstance(sediment_grids[_age], _xarray.Dataset):
+                    # If the sediment is present in the provided dictionary, copy
+                    logging.info(f"Loading sediment grid for {_age} Ma.")
+                    self.sediment[_age] = sediment_grids[_age]
+
+                    # Make sure that the coordinates and variables are named correctly
+                    self.sediment[_age] = utils_data.rename_coordinates_and_variables(self.sediment[_age], "z", "sediment_thickness")
+
         self.continent = continental_grids if continental_grids else None
-        self.velocity = velocity_grids if velocity_grids else None
+        if continental_grids is Dict:
+            for _age in _tqdm(self.settings.ages, desc="Loading sediment grids", disable=self.settings.logger.level==logging.INFO):
+                if _age in continental_grids.keys() and isinstance(continental_grids[_age], _xarray.Dataset):
+                    # If the sediment is present in the provided dictionary, copy
+                    logging.info(f"Loading sediment grid for {_age} Ma.")
+                    self.continent[_age] = continental_grids[_age]
+
+                    # Make sure that the coordinates and variables are named correctly
+                    self.continent[_age] = utils_data.rename_coordinates_and_variables(self.sediment[_age], "z", "continental_thickness")
+
+        self.velocity = {_age: None for _age in self.settings.ages}
 
     def __str__(self):
         return f"Plato grids object with global grids."
@@ -105,10 +126,10 @@ class Grids():
         self.save_sediment(ages, cases, file_dir)
 
         # Save continental grid
-        self.save_continent(ages, file_dir)
+        self.save_continent(ages, cases, file_dir)
 
         # Save velocity grid
-        self.save_velocity(ages, file_dir)
+        self.save_velocity(ages, cases, file_dir)
 
     def save_seafloor_age(
             self,
@@ -180,23 +201,26 @@ class Grids():
         
         # Loop through ages
         for _age in _tqdm(_ages, desc=f"Saving {type} grids", disable=self.settings.logger.level==logging.INFO):
-            if cases is not None:
+            if data[_age] is Dict:
                 # Loop through cases
                 for _case in _cases:
-                    utils_data.Dataset_to_netcdf(
-                        data[_age][_case],
-                        type,
-                        self.settings.name,
-                        _age,
-                        _case,
-                        _file_dir,
-                    )
+                    if data[_age][_case] is _xarray.Dataset:
+                        utils_data.Dataset_to_netcdf(
+                            data[_age][_case],
+                            type,
+                            self.settings.name,
+                            _age,
+                            _case,
+                            _file_dir,
+                        )
+    
             else:
-                utils_data.Dataset_to_netcdf(
-                        data[_age],
-                        type,
-                        self.settings.name,
-                        _age,
-                        None,
-                        _file_dir,
-                    )
+                if data[_age] is _xarray.Dataset:
+                    utils_data.Dataset_to_netcdf(
+                            data[_age],
+                            type,
+                            self.settings.name,
+                            _age,
+                            None,
+                            _file_dir,
+                        )

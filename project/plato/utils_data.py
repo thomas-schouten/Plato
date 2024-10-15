@@ -544,58 +544,62 @@ def get_options(
     returns the default options and assigns 'ref' to the case.
     """
     # Define all options
-    all_options = ["Slab pull torque",
-                   "GPE torque",
-                   "Mantle drag torque",
-                   "Slab bend torque",
-                   "Slab bend mechanism",
-                   "Reconstructed motions",
-                   "Continental crust",
-                   "Seafloor age variable",
-                   "Seafloor age profile",
-                   "Sample sediment grid", 
-                   "Active margin sediments",
-                   "Sample erosion grid", 
-                   "Erosion to sediment ratio",
-                   "Sediment subduction",
-                   "Shear zone width",
-                   "Slab length",
-                   "Strain rate",
-                   "Slab pull constant",
-                   "Mantle viscosity",
-                   "Slab tesselation spacing",
-                   "Grid spacing",
-                   "Minimum plate area",
-                   "Anchor plateID",
-                   "Velocity time step"
-                   ]
+    all_options = [
+        "Slab pull torque",
+        "GPE torque",
+        "Mantle drag torque",
+        "Slab bend torque",
+        "Slab bend mechanism",
+        "Reconstructed motions",
+        "Continental crust",
+        "Seafloor age variable",
+        "Seafloor age profile",
+        "Sample sediment grid", 
+        "Active margin sediments",
+        "Sample erosion grid", 
+        "Erosion to sediment ratio",
+        "Sediment subduction",
+        "Shear zone width",
+        "Slab length",
+        "Strain rate",
+        "Slab pull constant",
+        "Mantle viscosity",
+        "Slab tesselation spacing",
+        "Grid spacing",
+        "Minimum plate area",
+        "Anchor plateID",
+        "Velocity time step",
+        "Grid resolution",
+    ]
     
     # Define default values
-    default_values = [True,
-                      True,
-                      True,
-                      False,
-                      "viscous",
-                      True,
-                      False,
-                      "z",
-                      "half space cooling",
-                      False,
-                      0,
-                      False,
-                      2,
-                      False,
-                      2e3,
-                      700e3,
-                      1e-12,
-                      0.0316,
-                      1.22e20,
-                      250,
-                      1,
-                      7.5e12,
-                      0,
-                      1,
-                      ]
+    default_values = [
+        True,
+        True,
+        True,
+        False,
+        "viscous",
+        True,
+        False,
+        "z",
+        "half space cooling",
+        False,
+        0,
+        False,
+        2,
+        False,
+        2e3,
+        700e3,
+        1e-12,
+        0.0316,
+        1.22e20,
+        250,
+        1,
+        7.5e12,
+        0,
+        1,
+        0.1,
+    ]
 
     # Adjust TRUE/FALSE values in excel file to boolean
     boolean_options = ["Slab pull torque",
@@ -698,9 +702,10 @@ def get_velocity_grid(
     # Make xarray velocity grid
     velocity_grid = _xarray.Dataset(
             {
-                "velocity_magnitude": (["latitude", "longitude"], points.v_mag.values.reshape(points.lat.unique().size, points.lon.unique().size)),
-                "velocity_latitude": (["latitude", "longitude"], points.v_lat.values.reshape(points.lat.unique().size, points.lon.unique().size)),
-                "velocity_longitude": (["latitude", "longitude"], points.v_lon.values.reshape(points.lat.unique().size, points.lon.unique().size)),
+                "velocity_magnitude": (["latitude", "longitude"], points.velocity_mag.values.reshape(points.lat.unique().size, points.lon.unique().size)),
+                "velocity_latitude": (["latitude", "longitude"], points.velocity_lat.values.reshape(points.lat.unique().size, points.lon.unique().size)),
+                "velocity_longitude": (["latitude", "longitude"], points.velocity_lon.values.reshape(points.lat.unique().size, points.lon.unique().size)),
+                "spin_rate_magnitude": (["latitude", "longitude"], points.spin_rate_mag.values.reshape(points.lat.unique().size, points.lon.unique().size)),
             },
             coords={
                 "latitude": points.lat.unique(),
@@ -802,12 +807,12 @@ def select_plateIDs(
         return [plateIDs]
     
 def copy_values(
-        data: Dict[_pandas.DataFrame],
+        data: Dict[str, _pandas.DataFrame],
         key: str,
         entries: List[str],
         cols: Optional[Union[None, str, List[str]]] = None,
         check: bool = False
-    ) -> Dict[_pandas.DataFrame]:
+    ) -> Dict[str, _pandas.DataFrame]:
     """
     Function to copy values from one dataframe in a dictionary to another.
     """

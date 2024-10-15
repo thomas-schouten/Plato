@@ -217,21 +217,21 @@ class Plates:
                         rms_velocity = utils_calc.compute_rms_velocity(
                             points.data[_age][key].segment_length_lat.values[mask],
                             points.data[_age][key].segment_length_lon.values[mask],
-                            points.data[_age][key].v_mag.values[mask],
-                            points.data[_age][key].v_azi.values[mask],
-                            points.data[_age][key].omega.values[mask],
+                            points.data[_age][key].velocity_mag.values[mask],
+                            points.data[_age][key].velocity_azi.values[mask],
+                            points.data[_age][key].spin_rate_mag.values[mask],
                         )
 
                         # Store RMS velocity components 
-                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_mag"] = rms_velocity[0]
-                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "v_rms_azi"] = rms_velocity[1]
-                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "omega_rms"] = rms_velocity[2]
+                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "velocity_rms_mag"] = rms_velocity[0]
+                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "velocity_rms_azi"] = rms_velocity[1]
+                        self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "spin_rate_rms_mag"] = rms_velocity[2]
 
                     self.data[_age] = utils_data.copy_values(
                         self.data[_age], 
                         key, 
                         entries, 
-                        ["v_rms_mag", "v_rms_azi", "omega_rms"], 
+                        ["velocity_rms_mag", "velocity_rms_azi", "spin_rate_rms_mag"], 
                     )
 
     def calculate_torque_on_plates(

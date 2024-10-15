@@ -107,6 +107,27 @@ def get_reconstruction(
     
     return reconstruction
 
+def check_object_data(
+        obj,
+        type,
+        age,
+        case
+    ) -> bool:
+    """
+    Check if the given object has the required data for a specific age and case.
+    """
+    # Check if the object is of the required type
+    if isinstance(obj, type):
+        try:
+            # Check if the object has the required age and case in its data attribute
+            return age in obj.data and case in obj.data[age]
+        except AttributeError:
+            # If 'data' attribute is missing, return False
+            return False
+    else:
+        # If the object is not of the required type, return False
+        return False
+
 # def get_plates(
 #         plates: Optional['Plates'] = None,
 #         settings: Optional[Union[None, Settings]]= None,

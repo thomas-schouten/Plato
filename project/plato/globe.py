@@ -30,25 +30,14 @@ class Globe:
             cases_sheet: Optional[str]= "Sheet1",
             files_dir: Optional[str]= None,
             resolved_geometries: Optional[Dict] = None,
-            plates: Optional['Plates'] = None,
-            points: Optional['Points'] = None,
-            slabs: Optional['Slabs'] = None,
+            plates: Optional[Plates] = None,
+            points: Optional[Points] = None,
+            slabs: Optional[Slabs] = None,
             DEBUG_MODE: Optional[bool] = False,
             PARALLEL_MODE: Optional[bool] = False,
         ):
         """
-        Initialize the Globe class with the required objects.
-
-        :param reconstruction: Reconstruction object (default: None)
-        :type reconstruction: Optional[Reconstruction]
-        :param settings: Settings object (default: None)
-        :type settings: Optional[Settings]
-        :param plates: Plates object (default: None)
-        :type plates: Optional[Plates]
-        :param slabs: Slabs object (default: None)
-        :type slabs: Optional[Slabs]
-        :param points: Points object (default: None)
-        :type points: Optional[Points]
+        Initialie the Globe class with the required objects.
         """
         # Store settings object
         self.settings = utils_init.get_settings(
@@ -86,8 +75,8 @@ class Globe:
         self.data = {case: _pandas.DataFrame(
             {'age': self.settings.ages,
             "number_of_plates": 0,
-            "world_uncertainty": 0.,
             "subduction_length": 0.,
+            "world_uncertainty": 0.,
             "net_rotation_pole_lat": 0.,
             "net_rotation_pole_lon": 0.,
             "net_rotation_rate": 0.}
@@ -99,25 +88,20 @@ class Globe:
         # Get the subduction length
         self.calculate_subduction_length()
 
-        # Get the net rotation
-        self.calculate_net_rotation()
-
         # Get the world uncertainty
         self.calculate_world_uncertainty()
 
+        # Get the net rotation
+        self.calculate_net_rotation()
+
     def calculate_number_of_plates(
             self,
-            plates: 'Plates' = None,
+            plates: Plates = None,
             ages = None,
             cases = None,
         ):
         """
         Calculate the number of plates for each time step.
-
-        :param ages: List of ages for which to calculate the number of plates (default: None)
-        :type ages: Optional[int, float, numpy.integer, numpy.floating, list, numpy.ndarray]
-        :param plates_data: Optional plate data for each case and age (default: None)
-        :type plates_data: Optional[dict]
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -141,7 +125,7 @@ class Globe:
 
     def calculate_subduction_length(
             self,
-            slabs: Optional[Slabs] = None,
+            slabs: 'Slabs' = None,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, list, _numpy.ndarray]] = None,
             cases: Optional[List[str]] = None,
         ):
@@ -158,12 +142,17 @@ class Globe:
         for i, _age in enumerate(_ages):
             for _case in _cases:
                 # Check if slab data is provided
-                if isinstance(slabs, Slabs) and _age in slabs.data.keys() and _case in slabs.data[_age].keys():
+                if utils_init.check_object_data(slabs, Slabs, _age, _case):
                     logging.info(f"Calculating subduction length for case {_case} at age {_age} using provided data")
                     self.data[_case].loc[i, "subduction_length"] = slabs.data[_age][_case].trench_segment_length.sum()
+                    slab_data = slabs.data[_age][_case]
+                elif utils_init.check_object_data(self.slabs, Slabs, _age, _case):
+                    logging.info(f"Calculating subduction length for case {_case} at age {_age} using stored data")
+                    slab_data = self.slabs.data[_age][_case]
+                    self.data[_case].loc[i, "subduction_length"] = self.slabs.data[_age][_case].trench_segment_length.sum()
                 else:
                     logging.info(f"Calculating subduction length for case {_case} at age {_age} by tesselating subduction zones")
-                    slabs = self.reconstruction.tessellate_subduction_zones(
+                    slab_data = self.reconstruction.tessellate_subduction_zones(
                         _age,
                         ignore_warnings=True,
                         tessellation_threshold_radians=(
@@ -171,22 +160,22 @@ class Globe:
                         )
                     )
                     # Convert to _pandas.DataFrame
-                    slabs = _pandas.DataFrame(slabs)
+                    slab_data = _pandas.DataFrame(slab_data)
 
                     # Kick unused columns and rename the rest
-                    slabs = slabs.drop(columns=[2, 3, 4, 5])
-                    slabs.columns = ["lon", "lat", "trench_segment_length", "trench_normal_azimuth", "lower_plateID", "trench_plateID"]
+                    slab_data = slab_data.drop(columns=[2, 3, 4, 5])
+                    slab_data.columns = ["lon", "lat", "trench_segment_length", "trench_normal_azimuth", "lower_plateID", "trench_plateID"]
 
                     # Convert trench segment length from degree to m
-                    slabs.trench_segment_length *= self.constants.equatorial_Earth_circumference / 360
+                    slab_data.trench_segment_length *= self.constants.equatorial_Earth_circumference / 360
 
-                    # Store subduction length
-                    self.data[_case].loc[i, "subduction_length"] = slabs.trench_segment_length.sum()
+                # Store subduction length
+                self.data[_case].loc[i, "subduction_length"] = slab_data.trench_segment_length.sum()
 
     def calculate_net_rotation(
             self,
-            plates: 'Plates' = None,
-            points: 'Points' = None,
+            plates: Plates = None,
+            points: Points = None,
             ages = None,
             cases = None,
             plateIDs = None,
@@ -204,20 +193,32 @@ class Globe:
         for i, _age in enumerate(_ages):
             for _case in _cases:
                 # Check if plate data is provided
-                if not isinstance(plates, Plates) or _age not in plates.data.keys() or _case not in plates.data[_age].keys():
+                if utils_init.check_object_data(plates, Plates, _age, _case):
+                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided Plates data")
+                    _plates = plates
+                elif utils_init.check_object_data(self.plates, Plates, _age, _case):
+                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using stored Plates data")
+                    _plates = self.plates
+                else:
                     logging.info(f"Instantiating Plates object for case {_case} at age {_age} to calculate net rotation")
                     # Get a new plates object if not provided
-                    plates = Plates(
+                    _plates = Plates(
                         self.settings,
                         self.reconstruction,
                         ages = _age,
                     )
 
-                # Check if point data is provided
-                if not isinstance(plates, Points) or _age not in points.data.keys() or _case not in points.data[_age].keys():
-                    logging.info(f"Instantiating Points object for case {_case} at age {_age} to calculate net rotation")
-                    # Get a new points object if not provided
-                    points = Points(
+                # Check if plate data is provided
+                if utils_init.check_object_data(plates, Plates, _age, _case):
+                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided Points data")
+                    _points = points
+                elif utils_init.check_object_data(self.plates, Plates, _age, _case):
+                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using stored Points data")
+                    _points = self.points
+                else:
+                    logging.info(f"Instantiating Plates object for case {_case} at age {_age} to calculate net rotation")
+                    # Get a new plates object if not provided
+                    _points = Points(
                         self.settings,
                         self.reconstruction,
                         ages = _age,
@@ -225,14 +226,14 @@ class Globe:
                     )
 
                 # Check if plates and points are provided
-                _plateIDs = utils_data.select_plateIDs(plateIDs, plates.data[_age][_case].plateID.unique())
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _plates.data[_age][_case].plateID.unique())
 
                 # Select plates and points data
-                selected_plates = plates.data[_age][_case]
-                selected_points = points.data[_age][_case]
+                selected_plates = _plates.data[_age][_case]
+                selected_points = _points.data[_age][_case]
                 if plateIDs is not None:
-                    selected_plates = plates.data[_age][_case][plates.data[_age][_case].plateID.isin(_plateIDs)]
-                    selected_points = points.data[_age][_case][points.data[_age][_case].plateID.isin(_plateIDs)]
+                    selected_plates = _plates.data[_age][_case][_plates.data[_age][_case].plateID.isin(_plateIDs)]
+                    selected_points = _points.data[_age][_case][_points.data[_age][_case].plateID.isin(_plateIDs)]
 
                 # Calculate net rotation
                 net_rotation_pole = utils_calc.compute_net_rotation(
@@ -329,7 +330,7 @@ class Globe:
         ):
         """
         Function to export 'Globe' object.
-        Data of the 'Globe' object is export to .csv files.
+        Data of the 'Globe' object is exported to .csv files.
         """
         # Define cases if not provided
         _cases = utils_data.select_cases(cases, self.settings.cases)

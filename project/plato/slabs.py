@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 import gplately as _gplately
 import numpy as _numpy
+import pandas as _pandas
 import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
@@ -143,20 +144,22 @@ class Slabs:
                                 from_time=_age + self.settings.options[_case]["Velocity time step"],
                                 anchor_plate_id = self.settings.options[_case]["Anchor plateID"]
                             ).get_lat_lon_euler_pole_and_angle_degrees()
-                        else:
-                            # Get stage rotation from the provided DataFrame in the dictionary
-                            _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
+
+                            # Organise as DataFrame
+                            _stage_rotation = _pandas.DataFrame({
+                                    "plateID": [plateID],
+                                    "pole_lat": [_stage_rotation[0]],
+                                    "pole_lon": [_stage_rotation[1]],
+                                    "pole_angle": [_stage_rotation[2]],
+                                })
                                         
                         # Make mask for plate
                         mask = self.data[_age][_case][plateID_col] == plateID
                                                 
                         # Compute velocities
                         velocities = utils_calc.compute_velocity(
-                            self.data[_age][_case].lat[mask],
-                            self.data[_age][_case].lon[mask],
-                            _stage_rotation[0],
-                            _stage_rotation[1],
-                            _stage_rotation[2],
+                            self.data[_age][_case].loc[mask],
+                            _stage_rotation,
                             self.settings.constants,
                         )
 
@@ -171,7 +174,7 @@ class Slabs:
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            seafloor_grids: Optional[Dict] = None,
+            grids: Optional[Dict] = None,
         ):
         """
         Samples seafloor age at slabs.
@@ -181,10 +184,34 @@ class Slabs:
             ages,
             cases,
             plateIDs,
-            seafloor_grids,
+            grids,
             plate = "lower",
             vars = ["seafloor_age"],
             cols = ["slab_seafloor_age"],
+        )
+
+        # Set sampling flag to true
+        self.sampled_seafloor_at_slabs = True
+
+    def sample_slab_sediment_thickness(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            grids: Optional[Dict] = None,
+        ):
+        """
+        Samples seafloor age at slabs.
+        """
+        # Sample grid
+        self.sample_grid(
+            ages,
+            cases,
+            plateIDs,
+            grids,
+            plate = "lower",
+            vars = None,
+            cols = ["sediment_thickness"],
         )
 
         # Set sampling flag to true
@@ -195,7 +222,7 @@ class Slabs:
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
             cases: Optional[Union[List[str], str]] = None,
             plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            seafloor_grids: Optional[Dict] = None,
+            grids: Optional[Dict] = None,
         ):
         """
         Samples seafloor age at slabs.
@@ -209,7 +236,7 @@ class Slabs:
             ages,
             cases,
             plateIDs,
-            seafloor_grids,
+            grids,
             plate = "upper",
             vars = ["seafloor_age"],
             cols = ["arc_age"],
@@ -237,18 +264,24 @@ class Slabs:
         # Define cases if not provided
         _iterable = utils_data.select_iterable(cases, self.settings.slab_cases)
 
-        # Define variables if not provided
-        if vars is not None and isinstance(vars, str):
-            _vars = [vars]
-        elif vars is not None and isinstance(vars, list):
-            _vars = vars
-
         # Define sampling points
         type = "arc" if plate == "upper" else "slab"
 
-        # Loop through valid times
-        for _age in _tqdm(_ages, desc="Sampling points", disable=self.settings.logger.level == logging.INFO):
-            for key, entries in _iterable.items():
+        # Loop through valid cases
+        # Order of loops is flipped to skip cases where no grid needs to be sampled
+        for key, entries in _tqdm(_iterable.items(), desc="Sampling slabs", disable=self.settings.logger.level == logging.INFO):
+             # Skip if sediment grid is not sampled
+            if cols == "sediment_thickness" and not self.settings.options[key]["Sample sediment grid"]:
+                logging.info(f"Skipping sampling of sediment thickness for case {key} at age {_age} Ma.")
+                continue
+            
+            # Skip if erosion grid is not sampled
+            if cols == "erosion_rate" and not self.settings.options[key]["Sample erosion grid"]:
+                logging.info(f"Skipping sampling of sediment thickness for case {key} at age {_age} Ma.")
+                continue   
+            
+            # Loop through ages
+            for _age in _ages:
                 # Define plateIDs if not provided
                 _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][key][f"{plate}_plateID"].unique())
 
@@ -262,34 +295,62 @@ class Slabs:
                 if _age in grids.keys():
                     if isinstance(grids[_age], _xarray.Dataset):
                         _grid = grids[_age]
-                    elif key in grids[_age] and isinstance(grids[_age][key], _xarray.Dataset):
+                    elif isinstance(grids[_age], Dict) and key in grids[_age].keys() and isinstance(grids[_age][key], _xarray.Dataset):
                         _grid = grids[_age][key]
                 
                 if _grid is None:
                     logging.warning(f"No valid grid found for age {_age} and key {key}.")
                     continue  # Skip this iteration if no valid grid is found
 
-                # Set _vars to the grid's data variables if not already defined
-                _vars = list(_grid.data_vars) if not _vars else _vars
-
-                # Set columns to _vars if not already defined or if not of the same length
-                _cols = (
-                    [f"variable type {var}" for var in _vars] 
-                    if not cols or len(cols) != len(_vars) 
-                    else cols
-                )
+                # Define variables and columns
+                if cols == "sediment_thickness":
+                    # Specific case for sampling sediment thickness, with the variable name set to the one specified in the settings
+                    _cols = [cols]
+                    _vars = self.settings.options[key]["Sample sediment grid"]
+                elif cols == "erosion_rate":
+                    # Specific case for sampling erosion rate, with the variable name set to the one specified in the settings
+                    _cols = [cols]
+                    _vars = self.settings.options[key]["Sample erosion grid"]
+                elif isinstance(cols, str) and isinstance(vars, list):
+                    # General case for sampling a single variable with multiple columns
+                    _cols = [cols]
+                    _vars = vars
+                elif isinstance(cols, str) and isinstance(vars, str):
+                    # General case for sampling a single variable with a single column
+                    _cols = [cols]
+                    _vars = [vars]
+                elif isinstance(cols, list) and isinstance(vars, list) and len(cols) == len(vars):
+                    # General case for sampling multiple variables with multiple columns
+                    _cols = cols
+                    _vars = vars
+                else:
+                    # Default case for sampling all variables in the grid and using the variable names as column names
+                    _cols = list(_grid.data_vars)
+                    _vars = list(_grid.data_vars)
 
                 # Sample grid at points for each variable
-                for _var, _col in zip(_vars, _cols):
-                    sampled_data = utils_calc.sample_grid(
-                        _data[f"{type}_sampling_lat"],
-                        _data[f"{type}_sampling_lon"],
-                        _grid[_var],
-                    )
+                for _col in _cols:
+                    # Accumulate data if multiple variables are sampled for the same column
+                    accumulated_data = []
+
+                    for _var in _vars:
+                        sampled_data = utils_calc.sample_grid(
+                            _data[f"{type}_sampling_lat"],
+                            _data[f"{type}_sampling_lon"],
+                            _grid[_var],
+                        )
+                        accumulated_data.append(sampled_data)
+
+                    # Combine accumulated data into a single array (e.g., using numpy)
+                    if len(accumulated_data) > 1:
+                        import numpy as np
+                        accumulated_data = np.vstack(accumulated_data).T  # Combine along new axis
+                    else:
+                        accumulated_data = accumulated_data[0]  # Single sampled dataset
 
                     # Enter sampled data back into the DataFrame
-                    self.data[_age][key].loc[_data.index, _col] = sampled_data
-                    
+                    self.data[_age][key].loc[_data.index, _col] = accumulated_data
+
                     # Copy to other entries
                     self.data[_age] = utils_data.copy_values(
                         self.data[_age], 

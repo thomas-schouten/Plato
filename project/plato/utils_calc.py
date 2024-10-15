@@ -659,8 +659,6 @@ def compute_velocity(
     v_mags = _numpy.zeros_like(point_data.lat); v_azis = _numpy.zeros_like(point_data.lat)
     spin_rates = _numpy.zeros_like(point_data.lat)
 
-    print(stage_rotations)
-
     # Loop through plates more efficiently
     for _, stage_rotation in stage_rotations.iterrows():
         # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere
@@ -1072,7 +1070,7 @@ def compute_torque_on_plates(
     point_data[torque_var + "_torque_x"] = torques_xyz[0]
     point_data[torque_var + "_torque_y"] = torques_xyz[1]
     point_data[torque_var + "_torque_z"] = torques_xyz[2]
-    point_data[torque_var + "_torque_mag"] = _numpy.sqrt(torques_xyz[0]**2 + torques_xyz[1]**2 + torques_xyz[2])
+    point_data[torque_var + "_torque_mag"] = _numpy.linalg.norm(_numpy.array([torques_xyz[0], torques_xyz[1], torques_xyz[2]]))
 
     # Sum components of plates based on plateID and fill NaN values with 0
     summed_data = point_data.groupby("plateID", as_index=True).sum().fillna(0)
