@@ -14,10 +14,6 @@ import pandas as _pandas
 import pygplates
 import xarray as _xarray
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# MECHANICAL PARAMETERS AND CONSTANTS
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 class set_mech_params:
     """
     Class containing mechanical parameters used in calculations.
@@ -64,27 +60,26 @@ class set_constants:
     """
     def __init__(self):
         # Constants
-        self.mean_Earth_radius_km = 6371                # mean Earth radius [km]
-        self.mean_Earth_radius_m = 6371e3               # mean Earth radius [m]
-        self.equatorial_Earth_radius_m = 6378.1e3       # Earth radius at equator
-        self.equatorial_Earth_circumference = 40075e3   # Earth circumference at equator [m]
+        self.mean_Earth_radius_km = 6371                        # mean Earth radius [km]
+        self.mean_Earth_radius_m = 6371e3                       # mean Earth radius [m]
+        self.equatorial_Earth_radius_m = 6378.1e3               # Earth radius at equator
+        self.equatorial_Earth_circumference = 40075e3           # Earth circumference at equator [m]
         
         # Conversions
-        self.ma2s = 1e6 * 365.25 * 24 * 60 * 60         # Ma to s
-        self.s2ma = 1 / self.ma2s                       # s to Ma
-        self.m_s2cm_a = 1e2 * (365.25 * 24 * 60 * 60)   # m/s to cm/a 
-        self.cm_a2m_s = 1 / self.m_s2cm_a               # cm/a to m/s
+        self.ma2s = 1e6 * 365.25 * 24 * 60 * 60                 # Ma to s
+        self.s2ma = 1 / self.ma2s                               # s to Ma
+        self.m_s2cm_a = 1e2 * (365.25 * 24 * 60 * 60)           # m/s to cm/a 
+        self.cm_a2m_s = 1 / self.m_s2cm_a                       # cm/a to m/s
         self.rad_a2m_s =  self.mean_Earth_radius_m * \
-            _numpy.pi/180 / (365.25 * 24 * 60 * 60)     # rad/a to m/s
-        self.m_s2rad_a = 1 / self.rad_a2m_s             # m/s to rad/a
+            _numpy.pi/180 / (365.25 * 24 * 60 * 60)             # rad/a to m/s
+        self.m_s2rad_a = 1 / self.rad_a2m_s                     # m/s to rad/a
+        self.m_s2deg_Ma = 1 / (self.rad_a2m_s * 1e6)            # m/s to deg/Ma
+        self.deg_Ma2cm_a = self.mean_Earth_radius_m * \
+            _numpy.pi/180 * 1e-4                                # deg/Ma to m/s
         self.cm2in = 0.3937008
 
 # Create instance of mech
 constants = set_constants()
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# SUBDUCTION ZONES
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def compute_slab_pull_force(
         slabs,
@@ -130,20 +125,12 @@ def compute_slab_pull_force(
 
     return slabs
 
-def compute_interface_term(slabs, options, DEBUG_MODE=False):
+def compute_interface_term(slabs, options):
     """
     Function to calculate the interface term that accounts for resisting forces at the subduction interface.
     These forces are i) shearing along the plate interface, ii) bending of the slab, and iii) vertical resistance to slab sinking.
-
-    :param slabs:       subduction zone data
-    :type slabs:        pandas.DataFrame
-    :param options:     options
-    :type options:      dict
-
-    :return:            slabs
-    :rtype:             pandas.DataFrame
     """
-    # Determine sediment fraction
+    # Calculate the interface term as a function of the sediment fraction, if enabled
     if options["Sediment subduction"]:
         # Determine shear zone width
         if options["Shear zone width"] == "variable":
@@ -154,7 +141,7 @@ def compute_interface_term(slabs, options, DEBUG_MODE=False):
         # Calculate sediment fraction using sediment thickness and shear zone width
         # Step 1: Calculate sediment_fraction based on conditions
         slabs["sediment_fraction"] = _numpy.where(
-            slabs["lower_plate_age"].isna(), 
+            slabs["slab_seafloor_age"].isna(), 
             0, 
             slabs["sediment_thickness"].fillna(0) / slabs["shear_zone_width"]
         )
@@ -169,26 +156,18 @@ def compute_interface_term(slabs, options, DEBUG_MODE=False):
         interface_term = 11 - 10**(1-slabs["sediment_fraction"])
         logging.info(f"Mean, min and max of interface terms: {interface_term.mean()}, {interface_term.min()}, {interface_term.max()}")
 
+    interface_term *= options["Slab pull constant"]
+
     # Apply interface term to slab pull force
-    slabs["slab_pull_force_mag"] = slabs["slab_pull_force_mag"] * interface_term
-    slabs["slab_pull_force_lat"] = slabs["slab_pull_force_lat"] * interface_term
-    slabs["slab_pull_force_lon"] = slabs["slab_pull_force_lon"] * interface_term
+    slabs["slab_pull_force_mag"] *= interface_term
+    slabs["slab_pull_force_lat"] *= interface_term
+    slabs["slab_pull_force_lon"] *= interface_term
 
     return slabs
 
-def compute_slab_bending_force(slabs, options, mech, constants):
+def compute_slab_bend_force(slabs, options, mech, constants):
     """
-    Function to calculate the slab bending force
-
-    :param slabs:       subduction zone data
-    :type slabs:        pandas.DataFrame
-    :param options:     options
-    :type options:      dict
-    :param mech:        mechanical parameters used in calculations
-    :type mech:         class
-
-    :return:            slabs
-    :rtype:             pandas.DataFrame
+    Function to calculate the slab bending force.
     """
     # Calculate slab bending torque
     if options["Bending mechanism"] == "viscous":
@@ -198,7 +177,7 @@ def compute_slab_bending_force(slabs, options, mech, constants):
             (_numpy.cos(slabs.trench_normal_vector + slabs.obliquity_convergence), _numpy.sin(slabs.trench_normal_vector + slabs.obliquity_convergence))
         )  # [n-s, e-w], [N/m]
         
-    slabs["bending_force_lat"], slabs["bending_force_lon"] = mag_azi2lat_lon(bending_force, slabs.trench_normal_vector + slabs.obliquity_convergence)
+    slabs["bend_force_lat"], slabs["bend_force_lon"] = mag_azi2lat_lon(bending_force, slabs.trench_normal_vector + slabs.obliquity_convergence)
     
     return slabs
 
@@ -400,10 +379,6 @@ def project_points(lat, lon, azimuth, distance):
 
     return new_lat, new_lon
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# GRAVITATIONAL POTENTIAL ENERGY
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 def compute_GPE_force(
         points: _pandas.DataFrame,
         seafloor_grid: _xarray.DataArray,
@@ -542,10 +517,6 @@ def sample_grid(
 
     return sampled_values
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# BASAL TRACTIONS
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 def compute_mantle_drag_force(
         points: _pandas.DataFrame,
         options: Dict, 
@@ -557,98 +528,47 @@ def compute_mantle_drag_force(
     # Get velocities at points
     if options["Reconstructed motions"]:
         # Calculate mantle drag force
-        points["mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s
-        points["mantle_drag_force_lon"] = -1 * points["velocity_lat"] * constants.cm_a2m_s
+        points["mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        points["mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
 
     return points
 
-    # else:
-    #     # Calculate residual torque
-    #     for axis in ["_x", "_y", "_z"]:
-    #         plates["mantle_drag_torque_opt" + axis] = (
-    #             _numpy.nan_to_num(plates["slab_pull_torque" + axis] * options["Slab pull constant"]) + 
-    #             _numpy.nan_to_num(plates["GPE_torque" + axis]) + 
-    #             _numpy.nan_to_num(plates["slab_bend_torque" + axis])) * -1
-    #     plates["mantle_drag_torque_opt_mag"] = xyz2mag(plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"])
-        
-    #     # Convert to centroid
-    #     centroid_position = spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants.mean_Earth_radius_m)
-    #     centroid_unit_position = centroid_position / constants.mean_Earth_radius_m
-        
-    #     # Calculate force from cross product of plates with centroid position
-    #     summed_torques_cartesian = _numpy.asarray([plates["mantle_drag_torque_opt_x"], plates["mantle_drag_torque_opt_y"], plates["mantle_drag_torque_opt_z"]])
-    #     summed_torques_cartesian_normalised = summed_torques_cartesian / (_numpy.repeat(_numpy.asarray(plates.area)[_numpy.newaxis, :], 3, axis=0) * options["Mantle viscosity"]/mech.La)
-    #     force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_unit_position, axis=0)
-    #     velocity_at_centroid = _numpy.cross(-1 * summed_torques_cartesian_normalised, centroid_unit_position, axis=0)
+def compute_synthetic_stage_rotation(
+        plates: _pandas.DataFrame,
+        options: Dict,
+    ) -> _pandas.DataFrame:
+    """
+    Function to compute stage rotations.
+    """
+    logging.info(f"Mean, min and max of reconstructed stage rotation angles: {plates.pole_angle.mean()}, {plates.pole_angle.min()}, {plates.pole_angle.max()}")
 
-    #     # Calculate force at centroid
-    #     logging.debug(f"Computing mantle drag force at centroid: {force_at_centroid}")
+    # Get driving torque vector
+    driving_torque_xyz = _numpy.column_stack((plates.driving_torque_x, plates.driving_torque_y, plates.driving_torque_z))
 
-    #     plates["mantle_drag_force_lat"], plates["mantle_drag_force_lon"], plates["mantle_drag_force_mag"], plates["mantle_drag_force_azi"] = vector_xyz2lat_lon(
-    #         plates.centroid_lat, plates.centroid_lon, force_at_centroid, DEBUG_MODE,
-    #     )
+    # Get rotation vector by dividing by flipping the sign of the driving torque and dividing by the area of the plate and the drag coefficient (mantle viscosity * asthenosphere thickness)
+    stage_rotations_xyz = -1 * driving_torque_xyz / (_numpy.repeat(_numpy.asarray(plates.area)[_numpy.newaxis, :], 3, axis=0).T * options["Mantle viscosity"]/mech.La)
+    
+    # Calculate rotation pole in spherical coordinates
+    stage_rotation_poles_lat, stage_rotation_poles_lon, _, _ = cartesian2spherical_azimuth(stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2])
 
-    #     # Calculate velocity at centroid and convert to cm/a
-    #     plates["centroid_v_lat"], plates["centroid_v_lon"], plates["centroid_v_mag"], plates["centroid_v_azi"] = vector_xyz2lat_lon(plates.centroid_lat, plates.centroid_lon, velocity_at_centroid, constants)
-    #     plates["centroid_v_lat"] *= constants.m_s2cm_a; plates["centroid_v_lon"] *= constants.m_s2cm_a; plates["centroid_v_mag"] *= constants.m_s2cm_a
+    # Calculate rotation angle as the magnitude of the rotation vector
+    stage_rotation_angles = _numpy.linalg.norm(stage_rotations_xyz, axis=1) * constants.m_s2deg_Ma
 
-    #     # Get velocity of upper and lower plates
-    #     converging_plates = ["upper", "lower"]
-    #     for converging_plate in converging_plates:
-    #         if DEBUG_MODE:
-    #             print(f"Calculating {converging_plate} plate velocities at trenches")
+    # Check values
+    logging.info(f"Mean, min and max of synthetic stage rotation angles: {stage_rotation_angles.mean()}, {stage_rotation_angles.min()}, {stage_rotation_angles.max()}")
 
-    #         slab_velocities = compute_velocities(
-    #             slabs.lat,
-    #             slabs.lon,
-    #             slabs[f"{converging_plate}_plateID"],
-    #             plates,
-    #             summed_torques_cartesian_normalised,
-    #             options,
-    #             constants,
-    #             DEBUG_MODE,
-    #         )
-
-    #         slabs[f"v_{converging_plate}_plate_lat"], slabs[f"v_{converging_plate}_plate_lon"], slabs[f"v_{converging_plate}_plate_mag"], slabs[f"v_{converging_plate}_plate_azi"] = slab_velocities
-
-    #     # Calculate convergence rates
-    #     slabs.v_convergence_lon = slabs.v_upper_plate_lon - slabs.v_lower_plate_lon
-    #     slabs.v_convergence_lat = slabs.v_upper_plate_lat - slabs.v_lower_plate_lat
-    #     slabs.v_convergence_mag = _numpy.sqrt(slabs.v_convergence_lon ** 2 + slabs.v_convergence_lat ** 2)
-
-    #     # Get velocity at points
-    #     if DEBUG_MODE:
-    #         print(f"Calculating plate velocities at points")
-
-    #     point_velocities = compute_velocities(
-    #         points.lat,
-    #         points.lon,
-    #         points.plateID,
-    #         plates,
-    #         summed_torques_cartesian_normalised,
-    #         options,
-    #         constants,
-    #         DEBUG_MODE,
-    #     )
-
-    #     points["v_lat"], points["v_lon"], points["v_mag"], points["v_azi"] = point_velocities
-
-    #     # Calculate subduction fluxes
-    #     if DEBUG_MODE:
-    #         print(f"Calculating subduction fluxes")
-        
-    #     for type in ["slab", "sediment"]:
-    #         plates = compute_subduction_flux(plates, slabs, type)
-
-    # return plates, points, slabs
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# VELOCITIES
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+    # Insert into DataFrame
+    plates["pole_lon"] = stage_rotation_poles_lon
+    plates["pole_lat"] = stage_rotation_poles_lat
+    plates["pole_angle"] = stage_rotation_angles
+    for coord in ["x", "y", "z"]:
+        plates[f"mantle_drag_torque_{coord}"] = -1 * plates[f"driving_torque_{coord}"]
+    
+    return plates
+    
 def compute_velocity(
         point_data: _pandas.DataFrame,
-        stage_rotations: _numpy.ndarray,
+        plates: _numpy.ndarray,
         constants,
     ) -> Tuple[_numpy.ndarray, _numpy.ndarray, _numpy.ndarray, _numpy.ndarray, _numpy.ndarray]:
     """
@@ -660,25 +580,28 @@ def compute_velocity(
     spin_rates = _numpy.zeros_like(point_data.lat)
 
     # Loop through plates more efficiently
-    for _, stage_rotation in stage_rotations.iterrows():
+    for _, plate in plates.iterrows():
+        # Mask points belonging to the current plate
+        mask = point_data.plateID == plate.plateID
+
         # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere
         # The shape of the position vectors is (n, 3)
         positions_x, positions_y, positions_z = spherical2cartesian(
-            point_data.lat, 
-            point_data.lon, 
-            constants.mean_Earth_radius_m,
+            point_data[mask].lat, 
+            point_data[mask].lon, 
+            1.,
         )
         positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
 
         # Calculate rotation pole in Cartesian coordinates
         # The shape of the rotation pole vector is (3,)
         rotation_pole_xyz = _numpy.array(spherical2cartesian(
-            stage_rotation.pole_lat, 
-            stage_rotation.pole_lon, 
-            stage_rotation.pole_angle,
+            plate.pole_lat, 
+            plate.pole_lon, 
+            plate.pole_angle * constants.deg_Ma2cm_a,
         ))
 
-        # Calculate the velocity as the cross product of the rotation and the position vectors
+        # Calculate the velocity in cm/a as the cross product of the rotation and the position vectors
         # The shape of the velocity vectors is (n, 3)
         velocities_xyz = _numpy.cross(rotation_pole_xyz[None, :], positions_xyz)
 
@@ -686,23 +609,14 @@ def compute_velocity(
         velocities_sph = cartesian2spherical_azimuth(velocities_xyz[:, 0], velocities_xyz[:, 1], velocities_xyz[:, 2])
 
         # Assign the velocity to the respective arrays
-        v_lats = velocities_sph[0]
-        v_lons = velocities_sph[1]
-        v_mags = velocities_sph[2]
-        v_azis = velocities_sph[3]
+        v_lats[mask] = velocities_sph[0]
+        v_lons[mask] = velocities_sph[1]
+        v_mags[mask] = velocities_sph[2]
+        v_azis[mask] = velocities_sph[3]
 
-        # Calculate the spin rate as the dot product of the velocity and the unit position vector
-        spin_rate = _numpy.dot(
-            _numpy.asarray(spherical2cartesian(point_data.lat, point_data.lon, 1)).T,
-            rotation_pole_xyz
-        )
-
-        # Assign the spin rate to the respective columns in the points DataFrame
-        spin_rates = spin_rate
+        # Calculate the spin rate in deg/a as the dot product of the velocity and the unit position vector
+        spin_rates[mask] = _numpy.dot(positions_xyz, rotation_pole_xyz[:, None]) * 1-6
         
-    # Convert to cm/a
-    v_lats *= constants.m_s2cm_a; v_lons *= constants.m_s2cm_a; v_mags *= constants.m_s2cm_a
-
     return v_lats, v_lons, v_mags, v_azis, spin_rates
 
 def compute_rms_velocity(
@@ -808,10 +722,8 @@ def sum_torque(
     # Determine torque components based on torque type
     if torque_type == "driving":
         torque_components = ["slab_pull_torque", "GPE_torque"]
-        torque_opt_components = ["slab_pull_torque_opt", "GPE_torque"]
     elif torque_type == "residual":
         torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]
-        torque_opt_components = ["slab_pull_torque_opt", "GPE_torque", "slab_bend_torque", "mantle_drag_torque_opt"]
     else:
         raise ValueError("Invalid torque_type, must be 'driving' or 'residual'!")
 
@@ -820,9 +732,6 @@ def sum_torque(
         plates[f"{torque_type}_torque{axis}"] = sum(
             _numpy.nan_to_num(plates[component + axis]) for component in torque_components
         )
-        plates[f"{torque_type}_torque_opt{axis}"] = sum(
-            _numpy.nan_to_num(plates[component + axis]) for component in torque_opt_components
-        )
     
     # Calculate torque magnitude
     plates[f"{torque_type}_torque_mag"] = xyz2mag(
@@ -830,28 +739,22 @@ def sum_torque(
         plates[f"{torque_type}_torque_y"], 
         plates[f"{torque_type}_torque_z"]
     )
-    plates[f"{torque_type}_torque_opt_mag"] = xyz2mag(
-        plates[f"{torque_type}_torque_opt_x"], 
-        plates[f"{torque_type}_torque_opt_y"], 
-        plates[f"{torque_type}_torque_opt_z"]
-    )
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
-    centroid_position = spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants)
+    centroid_position = spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants.mean_Earth_radius_m)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
-    for opt in ["", "opt_"]:
-        summed_torques_cartesian = _numpy.asarray([
-            plates[f"{torque_type}_torque_{opt}x"], 
-            plates[f"{torque_type}_torque_{opt}y"], 
-            plates[f"{torque_type}_torque_{opt}z"]
-        ])
-        force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
+    summed_torques_cartesian = _numpy.asarray([
+        plates[f"{torque_type}_torque_x"], 
+        plates[f"{torque_type}_torque_y"], 
+        plates[f"{torque_type}_torque_z"]
+    ])
+    force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
 
-        # Compute force magnitude at centroid
-        plates[f"{torque_type}_force_{opt}lat"], plates[f"{torque_type}_force_{opt}lon"], plates[f"{torque_type}_force_{opt}mag"], plates[f"{torque_type}_force_{opt}azi"] = vector_xyz2lat_lon(
-            plates.centroid_lat, plates.centroid_lon, force_at_centroid, constants
-        )
+    # Compute force magnitude at centroid
+    plates[f"{torque_type}_force_lat"], plates[f"{torque_type}_force_lon"], plates[f"{torque_type}_force_mag"], plates[f"{torque_type}_force_azi"] = cartesian2spherical_azimuth(
+        force_at_centroid[0], force_at_centroid[1], force_at_centroid[2]
+    )
 
     return plates
 

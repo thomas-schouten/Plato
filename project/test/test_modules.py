@@ -43,6 +43,9 @@ reconstruction_files = (
 # Define test ages
 test_ages = [0, 50]
 
+# Define test cases
+test_cases = ["test", "sed", "syn"]
+
 # Load the seafloor age grids
 seafloor_age_grids = {}
 for age in test_ages:

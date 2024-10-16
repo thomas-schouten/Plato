@@ -10,7 +10,7 @@ import numpy as _numpy
 import pandas as _pandas
 
 # Local libraries
-import utils_init
+import utils_data, utils_init
 from globe import Globe
 from grids import Grids
 from plates import Plates
@@ -146,15 +146,18 @@ class PlateTorques():
             self,
             ages = None,
             cases = None,
+            plateIDs = None,
         ):
         """
         Function to calculate net rotation of the entire lithosphere.
         """
         # Calculate net rotation
         self.globe.calculate_net_rotation(
-            self.plates.data,
+            self.plates,
+            self.points,
             ages,
             cases,
+            plateIDs,
         )
 
     def sample_seafloor_ages(
@@ -360,10 +363,30 @@ class PlateTorques():
         """
         Function to calculate the driving torque.
         """
-        # Calculate 
-        pass
+        # Calculate driving torque
+        self.plates.calculate_driving_torque(
+            ages,
+            cases,
+            plateIDs,
+        )
 
-    def calculate_synthetic_velocities(
+    def calculate_residual_torque(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+        ):
+        """
+        Function to calculate the driving torque.
+        """
+        # Calculate residual torque
+        self.plates.calculate_residual_torque(
+            ages,
+            cases,
+            plateIDs,
+        )
+
+    def calculate_synthetic_velocity(
             self,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
             cases: Optional[Union[str, List]] = None,
@@ -372,12 +395,46 @@ class PlateTorques():
         """
         Function to compute synthetic velocities.
         """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
         # Get driving torque
-        self.calculate_driving_torque(ages, cases, plateIDs)
+        self.calculate_driving_torque(_ages, _cases, plateIDs)
 
         # Calculate synthetic velocities using driving torques
-        self.plates.calculate_synthetic_velocities(ages, cases, plateIDs)
-        self.points.calculate_synthetic_velocities(ages, cases, plateIDs, self.plates.data)
+        self.plates.calculate_synthetic_velocity(
+            _ages,
+            _cases,
+            plateIDs,
+        )
+
+        # Calculate net rotation
+        self.calculate_net_rotation(_ages, _cases)
+
+        # Calculate velocities at points
+        self.points.calculate_velocities(
+            _ages,
+            _cases,
+            self.plates.data,
+        )
+
+        # Calculate velocities at slabs
+        self.slabs.calculate_velocities(
+            _ages,
+            _cases,
+            self.plates.data,
+        )
+
+        # Calculate RMS velocity of plates
+        self.plates.calculate_rms_velocity(
+            self.points,
+            _ages,
+            _cases,
+            plateIDs,
+        )
 
     def save_all(
             self,

@@ -322,6 +322,99 @@ class Plates:
                         cols, 
                     )
 
+    def calculate_driving_torque(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+        ):
+        """
+        Function to calculate driving torque.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Loop through ages
+        for i, _age in _tqdm(enumerate(_ages), desc="Calculating driving torque", disable=self.settings.logger.level==logging.INFO):
+            # Inform the user that the driving torques are being calculated
+            logging.info(f"Computing driving torque at {_age} Ma")
+
+            # Loop through cases
+            for _case in _cases:
+                # Select plates
+                _data = self.data[_age][_case]
+                
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
+
+                if plateIDs is not None:
+                    _data = _data.loc[_data.plateID.isin(_plateIDs)]
+
+                # Calculate driving torque
+                _data = utils_calc.sum_torque(_data, "driving", self.settings.constants)
+
+                # Enter sampled data back into the DataFrame
+                self.data[_age][_case].loc[_data.index] = _data
+        
+        # Set flag to indicate that the driving torque has been calculated
+        self.driving_torque_calculated = True
+
+    def calculate_residual_torque(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[
+                Union[
+                    int,
+                    float,
+                    _numpy.floating,
+                    _numpy.integer,
+                    List[Union[int, float, _numpy.floating, _numpy.integer]],
+                    _numpy.ndarray
+                ]
+            ] = None,
+        ):
+        """
+        Function to calculate driving torques.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Calculating residual torque", disable=self.settings.logger.level==logging.INFO):
+            # Inform the user that the driving torques are being calculated
+            logging.info(f"Computing residual torque at {_age} Ma")
+
+            # Loop through cases
+            for _case in _cases:
+                # Select plates
+                _data = self.data[_age][_case]
+                
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
+
+                if plateIDs is not None:
+                    _data = _data.loc[_data.plateID.isin(_plateIDs)]
+
+                # Calculate driving torque
+                _data = utils_calc.sum_torque(_data, "residual", self.settings.constants)
+
+                # Enter sampled data back into the DataFrame
+                self.data[_age][_case].loc[_data.index] = _data
+                
     def calculate_synthetic_velocity(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
@@ -338,142 +431,39 @@ class Plates:
             ] = None,
         ):
         """
-        Function to calculate the synthetic velocity of the plates.
+        Function to calculate synthetic velocity of plates.
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
-
         
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
 
+        # Loop through cases
+        # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
+        for _case in _tqdm(_cases, desc="Calculating synthetic velocity", disable=self.settings.logger.level==logging.INFO):
+            # Skip if reconstructed motions are enabled
+            if self.settings.options[_case]["Reconstructed motions"]:
+                continue
 
-    def optimise_torques(
-            self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plate_IDs: Optional[
-                Union[
-                    int,
-                    float,
-                    _numpy.floating,
-                    _numpy.integer,
-                    List[Union[int, float, _numpy.floating, _numpy.integer]],
-                    _numpy.ndarray
-                ]
-            ] = None,
-            PROGRESS_BAR: Optional[bool] = True,    
-        ):
-        """
-        Function to optimise torques
+            # # Inform the user that the driving torques are being calculated
+            # logging.info(f"Computing synthetic velocity a {_age} Ma")
 
-        :param ages:    reconstruction times to compute residual torque for
-        :type ages:     list
-        :param cases:                   cases to compute driving torque for
-        :type cases:                    list
-        :param plates:                  plates to optimise torques for
-        :type plates:                   list
-        :param PROGRESS_BAR:            whether or not to display a progress bar
-        :type PROGRESS_BAR:             bool
-        """
-        # Define ages if not provided
-        _ages = utils_data.select_ages(
-            ages,
-            self.settings.ages,
-        )
+            # Loop through ages
+            for _age in _ages:
+                # Select plates
+                _data = self.data[_age][_case]
+                
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
 
-        # Define iterable if cases not provided
-        _slab_iterable = utils_data.select_iterable(
-            cases,
-            self.settings.slab_cases,
-        )
-        _mantle_iterable = utils_data.select_iterable(
-            cases,
-            self.settings.mantle_drag_cases,
-        )
-        if ages is not None:
-            # Check if ages is a single value
-            if isinstance(ages, (int, float, _numpy.integer, _numpy.floating)):
-                ages = [ages]
-        else:
-            # Otherwise, use all ages from the settings
-            ages = self.settings.ages
+                if plateIDs is not None:
+                    _data = _data.loc[_data.plateID.isin(_plateIDs)]
 
-        # Make iterable
-        if cases is None:
-            slab_iterable = self.slab_pull_cases
-            mantle_iterable = self.mantle_drag_cases
-        else:
-            if isinstance(cases, str):
-                cases = [cases]
-            slab_iterable = {case: [] for case in cases}
-            mantle_iterable = {case: [] for case in cases}
+                # Calculate synthetic velocity
+                _data = utils_calc.compute_synthetic_stage_rotation(_data, self.settings.options[_case])
 
-        for i, _age in tqdm(self.settings.ages, desc="Optimising torques", disable=self.settings.logger.level==logging.INFO):
-            if self.settings.DEBUG_MODE:
-                print(f"Optimising torques at {_age} Ma")            
-            
-            # Optimise torques for slab pull cases
-            for key, entries in slab_iterable.items():
-                if self.options[key]["Slab pull torque"]:
-                    # Select plates
-                    selected_data = self.plates[_age][key].copy()
-                    if plates is not None:
-                        if isinstance(plates, (int, float, _numpy.floating, _numpy.integer)):
-                            plates = [plates]
-                        selected_data = selected_data.loc[selected_data.plateID.isin(plate_IDs)].copy()
-                    
-                    # Optimise torques
-                    selected_plates = utils_calc.optimise_torques(
-                        selected_plates,
-                        self.mech,
-                        self.options[key],
-                    )
-
-                    # Feed back into plates
-                    if plates is not None:
-                        mask = self.plates[_age][key].plateID.isin(plates)
-                        self.data[_age][key].loc[mask, :] = selected_plates
-                    else:
-                        self.data[_age][key] = selected_plates
-
-                    # Copy DataFrames, if necessary
-                    if len(entries) > 1 and cases is None:
-                        columns = ["slab_pull_torque_opt" + axis for axis in ["x", "y", "z", "mag"]]
-                        self.data[_age] = utils_data.copy_values(
-                            self.data[_age], 
-                            key, 
-                            entries, 
-                            columns, 
-                        )
-
-            # Optimise torques for mantle drag cases
-            for key, entries in mantle_iterable.items():
-                if self.options[key]["Mantle drag torque"]:
-                    # Select plates
-                    selected_data = self.data[_age][key].copy()
-                    if plates is not None:
-                        if isinstance(plate_IDs, (int, float, _numpy.floating, _numpy.integer)):
-                            plates = [plate_IDs]
-                        selected_data = selected_data[selected_data.plateID.isin(plate_IDs)].copy()
-
-                    selected_data = utils_calc.optimise_torques(
-                        selected_data,
-                        self.mech,
-                        self.options[key],
-                    )
-
-                    # Feed back into plates
-                    if plates is not None:
-                        self.data[_age][key][self.plates[_age][key].plateID.isin(plates)] = selected_data
-
-                    # Copy DataFrames, if necessary
-                    if len(entries) > 1 and cases is None:
-                        columns = ["mantle_drag_torque_opt" + axis for axis in ["x", "y", "z", "mag"]]
-                        self.data[_age] = utils_data.copy_values(
-                            self.data[_age], 
-                            key, 
-                            entries, 
-                            columns, 
-                        )
+                # Enter sampled data back into the DataFrame
+                self.data[_age][_case].loc[_data.index] = _data
 
     def compute_driving_torque(
             self,

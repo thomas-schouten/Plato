@@ -615,7 +615,53 @@ def test_plate_torques(
         except Exception as e:
             logging.error(f"An error occurred during computation of the mantle drag torque: {e}")
             traceback.print_exc()
+
+        # Test computation of the driving torque
+        try:
+            plate_torques_test.calculate_driving_torque()
+            logging.info("Successfully computed driving torque.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during computation of the driving torque: {e}")
+            traceback.print_exc()
         
+        # Test computation of the residual torque
+        try:
+            plate_torques_test.calculate_residual_torque()
+            logging.info("Successfully computed residual torque.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during computation of the residual torque: {e}")
+            traceback.print_exc()
+
+        # Test computation of synthetic velocity
+        try:
+            plate_torques_test.calculate_synthetic_velocity()
+            logging.info("Successfully computed synthetic velocity.")
+
+            # print(plate_torques_test.points.data[0]["test"].velocity_mag.median())
+            plt.scatter(
+                plate_torques_test.points.data[0]["test"].lon,
+                plate_torques_test.points.data[0]["test"].lat,
+                c=plate_torques_test.points.data[0]["test"].velocity_mag,
+                marker = "o",
+            )
+            plt.colorbar()
+            plt.show()
+
+            plt.scatter(
+                plate_torques_test.points.data[0]["syn"].lon,
+                plate_torques_test.points.data[0]["syn"].lat,
+                c=plate_torques_test.points.data[0]["syn"].velocity_mag,
+                marker = "o",
+            )
+            plt.colorbar()
+            plt.show()
+
+        except Exception as e:
+            logging.error(f"An error occurred during computation of synthetic velocity: {e}")
+            traceback.print_exc()
+
     logging.info("Testing of the 'plate_torques' module complete.")
 
 def plot_test(plate_torques=None, print_results=False):

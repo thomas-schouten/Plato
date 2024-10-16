@@ -141,8 +141,18 @@ class Points:
             for _case in _cases:
                 for plateID in self.data[_age][_case].plateID.unique():
                     # Get stage rotation, if not provided
-                    if stage_rotation is None:
-                        _stage_rotation = self.reconstruction.rotation_model.get_rotation(
+                    if (
+                        isinstance(stage_rotation, Dict)
+                        and _age in stage_rotation.keys()
+                        and _case in stage_rotation[_age].keys()
+                        and isinstance(stage_rotation[_age][_case], _pandas.DataFrame)
+                    ):
+                        # Get stage rotation from the provided DataFrame in the dictionary
+                        _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
+                
+                    # Get stage rotation, if not provided
+                    else:
+                        stage_rotation = self.reconstruction.rotation_model.get_rotation(
                             to_time =_age,
                             moving_plate_id = int(plateID),
                             from_time=_age + self.settings.options[_case]["Velocity time step"],
@@ -152,15 +162,11 @@ class Points:
                         # Organise as DataFrame
                         _stage_rotation = _pandas.DataFrame({
                                 "plateID": [plateID],
-                                "pole_lat": [_stage_rotation[0]],
-                                "pole_lon": [_stage_rotation[1]],
-                                "pole_angle": [_stage_rotation[2]],
+                                "pole_lat": [stage_rotation[0]],
+                                "pole_lon": [stage_rotation[1]],
+                                "pole_angle": [stage_rotation[2]],
                             })
-    
-                    else:
-                        # Get stage rotation from the provided DataFrame in the dictionary
-                        _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
-
+                        
                     # Make mask for plate
                     mask = self.data[_age][_case].plateID == plateID
                                             

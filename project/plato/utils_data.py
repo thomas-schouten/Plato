@@ -115,16 +115,8 @@ def get_plate_data(
     coords = ["lat", "lon", "mag", "azi"]
     
     merged_plates[[torque + "_torque_" + axis for torque in torques for axis in axes]] = [[0.] * len(torques) * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["mantle_drag_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["driving_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["residual_torque_opt_" + axis for axis in axes]] = [[0.] * len(axes) for _ in range(len(merged_plates.plateID))]
     merged_plates[[torque + "_force_" + coord for torque in torques for coord in coords]] = [[0.] * len(torques) * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["slab_pull_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["mantle_drag_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["driving_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-    merged_plates[["residual_force_opt_" + coord for coord in coords]] = [[0.] * len(coords) for _ in range(len(merged_plates.plateID))]
-
+    
     return merged_plates
 
 def get_slab_data(
@@ -198,6 +190,7 @@ def get_slab_data(
     # Lower plate
     slabs["slab_seafloor_age"] = 0.
     slabs["slab_thickness"] = 0.
+    slabs["shear_zone_width"] = 0.
     slabs["sediment_thickness"] = 0.
     slabs["sediment_fraction"] = 0.
     slabs["slab_length"] = 0.

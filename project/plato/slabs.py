@@ -136,9 +136,18 @@ class Slabs:
                 plateID_col = f"{plate}ID" if plate != "trench" else "trench_plateID"
                 for _case in _cases:
                     for plateID in self.data[_age][_case][plateID_col].unique():
+                        if (
+                            isinstance(stage_rotation, Dict)
+                            and _age in stage_rotation.keys()
+                            and _case in stage_rotation[_age].keys()
+                            and isinstance(stage_rotation[_age][_case], _pandas.DataFrame)
+                        ):
+                            # Get stage rotation from the provided DataFrame in the dictionary
+                            _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
+                    
                         # Get stage rotation, if not provided
-                        if stage_rotation is None:
-                            _stage_rotation = self.reconstruction.rotation_model.get_rotation(
+                        else:
+                            stage_rotation = self.reconstruction.rotation_model.get_rotation(
                                 to_time =_age,
                                 moving_plate_id = int(plateID),
                                 from_time=_age + self.settings.options[_case]["Velocity time step"],
@@ -148,11 +157,11 @@ class Slabs:
                             # Organise as DataFrame
                             _stage_rotation = _pandas.DataFrame({
                                     "plateID": [plateID],
-                                    "pole_lat": [_stage_rotation[0]],
-                                    "pole_lon": [_stage_rotation[1]],
-                                    "pole_angle": [_stage_rotation[2]],
+                                    "pole_lat": [stage_rotation[0]],
+                                    "pole_lon": [stage_rotation[1]],
+                                    "pole_angle": [stage_rotation[2]],
                                 })
-                                        
+                        
                         # Make mask for plate
                         mask = self.data[_age][_case][plateID_col] == plateID
                                                 
@@ -374,119 +383,123 @@ class Slabs:
         # Define cases if not provided
         _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
-        # Loop through reconstruction times
-        for _age in _tqdm(_ages, desc="Computing slab pull forces", disable=(self.settings.logger.level==logging.INFO)):
-            # Loop through gpe cases
-            for key, entries in _iterable.items():
-                if self.settings.options[key]["Slab pull torque"]:
-                    # Select points
-                    _data = self.data[_age][key]
+        # Loop through valid cases
+        # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
+        for key, entries in _tqdm(_iterable.items(), desc="Computing slab pull forces", disable=(self.settings.logger.level==logging.INFO)):
+            # Skip if slab pull torque is not sampled
+            if not self.settings.options[key]["Slab pull torque"]:
+                continue
 
-                    # Define plateIDs if not provided
-                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
+            # Loop through ages
+            for _age in _ages:
+                # Select points
+                _data = self.data[_age][key]
 
-                    # Select points
-                    if plateIDs is not None:
-                        _data = _data[_data.lower_plateID.isin(_plateIDs)]
-                        
-                    # Calculate slab pull force
-                    _data = utils_calc.compute_slab_pull_force(
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
+
+                # Select points
+                if plateIDs is not None:
+                    _data = _data[_data.lower_plateID.isin(_plateIDs)]
+                    
+                # Calculate slab pull force
+                _data = utils_calc.compute_slab_pull_force(
+                    _data,
+                    self.settings.options[key],
+                    self.settings.mech,
+                )
+
+                # Compute interface term for sediment subduction
+                if self.settings.options[key]["Sediment subduction"]:
+                    _data = utils_calc.compute_interface_term(
                         _data,
                         self.settings.options[key],
-                        self.settings.mech,
                     )
 
-                    # Enter sampled data back into the DataFrame
-                    self.data[_age][key].loc[_data.index] = _data
-                    
-                    # Copy to other entries
-                    cols = [
-                        "slab_lithospheric_thickness",
-                        "slab_crustal_thickness",
-                        "slab_water_depth",
-                        "slab_pull_force_lat",
-                        "slab_pull_force_lon",
-                    ]
-                    self.data[_age] = utils_data.copy_values(
-                        self.data[_age], 
-                        key, 
-                        entries,
-                        cols,
-                    )
+                # Enter sampled data back into the DataFrame
+                self.data[_age][key].loc[_data.index] = _data
+                
+                # Copy to other entries
+                cols = [
+                    "slab_lithospheric_thickness",
+                    "slab_crustal_thickness",
+                    "slab_water_depth",
+                    "shear_zone_width",
+                    "sediment_fraction",
+                    "slab_pull_force_lat",
+                    "slab_pull_force_lon",
+                ]
+                self.data[_age] = utils_data.copy_values(
+                    self.data[_age], 
+                    key, 
+                    entries,
+                    cols,
+                )
 
-    def compute_slab_bend_force(
+            # Inform the user that the slab pull forces have been calculated
+            logging.info(f"Calculated slab pull forces for case {key} Ma.")
+
+    def calculate_slab_bend_force(
             self,
-            _ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            _cases: Optional[Union[List[str], str]] = None,
-            PROGRESS_BAR: Optional[bool] = True,    
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
         ):
         """
-        Compute slab bend torque.
-
-        :param _ages:    reconstruction times to compute slab bend torque for
-        :type _ages:     list
-        :param cases:                   cases to compute slab bend torque for (defaults to slab bend cases if not specified).
-        :type cases:                    list
-        :param PROGRESS_BAR:            whether or not to display a progress bar
-        :type PROGRESS_BAR:             bool
+        Function to compute slab bend force along trenches.
         """
-        # Define reconstruction times if not provided
-        if _ages is None:
-            _ages = self.settings.ages
-        else:
-            # Check if reconstruction times is a single value
-            if isinstance(_ages, (int, float, _numpy.integer, _numpy.floating)):
-                _ages = [_ages]
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
-        # Check if slabs have been sampled already
-        if self.sampled_slabs == False:
-            self.sample_slabs(_ages, _cases)
+        # Loop through valid cases
+        # Order of loops is flipped to skip cases where no slab bend torque needs to be sampled
+        for key, entries in _tqdm(_iterable.items(), desc="Computing slab bend forces", disable=(self.settings.logger.level==logging.INFO)):
+            # Skip if slab pull torque is not sampled
+            if not self.settings.options[key]["Slab bend torque"]:
+                continue
 
-        # Make iterable
-        if _cases is None:
-            iterable = self.settings.slab_bend_cases
-        else:
-            if isinstance(_cases, str):
-                cases = [cases]
-            iterable = {_case: [] for _case in _cases}
+            # Loop through ages
+            for _age in _ages:
+                # Select points
+                _data = self.data[_age][key]
 
-        # Loop through reconstruction times
-        for i, _age in tqdm(enumerate(_ages), desc="Computing slab bend torques", disable=(self.DEBUG_MODE or not PROGRESS_BAR)):
-            if self.DEBUG_MODE:
-                print(f"Computing slab bend torques at {_age} Ma")
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
 
-            # Loop through slab bend cases
-            for key, entries in iterable.items():
-                if self.DEBUG_MODE:
-                    print(f"Computing slab bend torques for cases {entries}")
+                # Select points
+                if plateIDs is not None:
+                    _data = _data[_data.lower_plateID.isin(_plateIDs)]
+                    
+                # Calculate slab pull force
+                _data = utils_calc.compute_slab_bend_force(
+                    _data,
+                    self.settings.options[key],
+                    self.settings.mech,
+                )
 
-                # Calculate slab bending torque
-                if self.options[key]["Slab bend torque"]:
-                    self.data[_age][key] = utils_calc.compute_slab_bend_force(self.data[_age][key], self.options[key], self.mech, self.constants)
-                    self.plates[_age][key] = utils_calc.compute_torque_on_plates(
-                        self.plates[_age][key], 
-                        self.data[_age][key].lat, 
-                        self.data[_age][key].lon, 
-                        self.data[_age][key].lower_plateID, 
-                        self.data[_age][key].slab_bend_force_lat, 
-                        self.data[_age][key].slab_bend_force_lon,
-                        self.data[_age][key].trench_segment_length,
-                        1,
-                        self.constants,
-                        torque_variable="slab_bend_torque"
-                    )
-
-                    # Copy DataFrames
-                    if len(entries) > 1 and cases is None:
-                        [self.data[_age][entry].update(
-                            {"slab_bend_force_" + coord: self.data[_age][key]["slab_bend_force_" + coord]}
-                        ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                        [self.plates[_age][entry].update(
-                            {"slab_bend_force_" + coord: self.plates[_age][key]["slab_bend_force_" + coord]}
-                        ) for coord in ["lat", "lon", "mag"] for entry in entries[1:]]
-                        [self.plates[_age][entry].update(
-                            {"slab_bend_torque_" + axis: self.plates[_age][key]["slab_bend_torque_" + axis]}
-                        ) for axis in ["x", "y", "z", "mag"] for entry in entries[1:]]
+                # Enter sampled data back into the DataFrame
+                self.data[_age][key].loc[_data.index] = _data
+                
+                # Copy to other entries
+                cols = [
+                    "slab_lithospheric_thickness",
+                    "slab_crustal_thickness",
+                    "slab_water_depth",
+                    "slab_bend_force_lat",
+                    "slab_bend_force_lon",
+                ]
+                self.data[_age] = utils_data.copy_values(
+                    self.data[_age], 
+                    key, 
+                    entries,
+                    cols,
+                )
+            
+            # Inform the user that the slab bend forces have been calculated
+            logging.info(f"Calculated slab bend forces for case {key} Ma.")
 
     def save(
             self,
