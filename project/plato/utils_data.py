@@ -253,7 +253,7 @@ def get_point_data(
                         )
 
     # Add additional columns to store velocities
-    components = ["velocity_lat", "velocity_lon", "velocity_mag", "velocity_azi", "spin_rate"]
+    components = ["velocity_lat", "velocity_lon", "velocity_mag", "velocity_azi", "spin_rate_mag"]
     points[[component for component in components]] = [[0.] * len(components) for _ in range(len(points))]
 
     # Add additional columns to store seafloor properties
@@ -584,8 +584,8 @@ def get_options(
         2e3,
         700e3,
         1e-12,
-        0.0316,
-        1.22e20,
+        0.2746,
+        1.71e20,
         250,
         1,
         7.5e12,
@@ -813,11 +813,6 @@ def copy_values(
     for entry in entries[1:]:
         # Loop through columns
         for col in cols:
-            # Check if mean column value is zero (a proxy for a column with no data)
-            if check is True:
-                if data[entry][col].mean() != 0:
-                    continue
-            
             # Copy column
             data[entry][col] = data[key][col]
 

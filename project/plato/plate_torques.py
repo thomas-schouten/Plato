@@ -240,6 +240,9 @@ class PlateTorques():
         # Calculate slab bend torque
         self.calculate_slab_bend_torque(ages, cases, plateIDs)
 
+        # Calculate synthetic velocity
+        self.calculate_synthetic_velocity(ages, cases, plateIDs)
+
         # Calculate driving torque
         self.calculate_driving_torque(ages, cases, plateIDs)
 
@@ -400,9 +403,6 @@ class PlateTorques():
 
         # Define cases if not provided
         _cases = utils_data.select_cases(cases, self.settings.cases)
-
-        # Get driving torque
-        self.calculate_driving_torque(_ages, _cases, plateIDs)
 
         # Calculate synthetic velocities using driving torques
         self.plates.calculate_synthetic_velocity(

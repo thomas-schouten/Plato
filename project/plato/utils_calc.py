@@ -60,22 +60,26 @@ class set_constants:
     """
     def __init__(self):
         # Constants
-        self.mean_Earth_radius_km = 6371                        # mean Earth radius [km]
-        self.mean_Earth_radius_m = 6371e3                       # mean Earth radius [m]
-        self.equatorial_Earth_radius_m = 6378.1e3               # Earth radius at equator
-        self.equatorial_Earth_circumference = 40075e3           # Earth circumference at equator [m]
+        self.mean_Earth_radius_km = 6371                            # mean Earth radius [km]
+        self.mean_Earth_radius_m = 6371e3                           # mean Earth radius [m]
+        self.equatorial_Earth_radius_m = 6378.1e3                   # Earth radius at equator
+        self.equatorial_Earth_circumference = 40075e3               # Earth circumference at equator [m]
         
         # Conversions
-        self.ma2s = 1e6 * 365.25 * 24 * 60 * 60                 # Ma to s
-        self.s2ma = 1 / self.ma2s                               # s to Ma
-        self.m_s2cm_a = 1e2 * (365.25 * 24 * 60 * 60)           # m/s to cm/a 
-        self.cm_a2m_s = 1 / self.m_s2cm_a                       # cm/a to m/s
-        self.rad_a2m_s =  self.mean_Earth_radius_m * \
-            _numpy.pi/180 / (365.25 * 24 * 60 * 60)             # rad/a to m/s
-        self.m_s2rad_a = 1 / self.rad_a2m_s                     # m/s to rad/a
-        self.m_s2deg_Ma = 1 / (self.rad_a2m_s * 1e6)            # m/s to deg/Ma
-        self.deg_Ma2cm_a = self.mean_Earth_radius_m * \
-            _numpy.pi/180 * 1e-4                                # deg/Ma to m/s
+        self.a2s = 365.25 * 24 * 60 * 60                           # a to s
+        self.s2a = 1 / self.a2s                                     # s to a
+
+        self.m_s2cm_a = 1e2 * self.s2a  # m/s to cm/a
+        self.cm_a2m_s = 1 / self.m_s2cm_a  # cm/a to m/s
+
+        self.rad_a2m_s = self.mean_Earth_radius_m * self.a2s  # rad/a to m/s
+        self.m_s2rad_a = 1 / self.rad_a2m_s  # m/s to rad/a
+
+        self.m_s2deg_Ma = _numpy.rad2deg(self.m_s2rad_a) * 1e6  # m/s to deg/Ma
+        self.rad_a2cm_a = self.mean_Earth_radius_m * 1e2  # rad/a to cm/a
+
+        self.deg_a2cm_a = _numpy.deg2rad(self.rad_a2cm_a) # deg/a to m/s
+
         self.cm2in = 0.3937008
 
 # Create instance of mech
@@ -542,17 +546,20 @@ def compute_synthetic_stage_rotation(
     """
     logging.info(f"Mean, min and max of reconstructed stage rotation angles: {plates.pole_angle.mean()}, {plates.pole_angle.min()}, {plates.pole_angle.max()}")
 
-    # Get driving torque vector
-    driving_torque_xyz = _numpy.column_stack((plates.driving_torque_x, plates.driving_torque_y, plates.driving_torque_z))
+    # Sum the torque vectors (in Cartesian coordinates and in Newton metres)
+    mantle_drag_torque_xyz = _numpy.column_stack((plates.mantle_drag_torque_x, plates.mantle_drag_torque_y, plates.mantle_drag_torque_z))
 
-    # Get rotation vector by dividing by flipping the sign of the driving torque and dividing by the area of the plate and the drag coefficient (mantle viscosity * asthenosphere thickness)
-    stage_rotations_xyz = -1 * driving_torque_xyz / (_numpy.repeat(_numpy.asarray(plates.area)[_numpy.newaxis, :], 3, axis=0).T * options["Mantle viscosity"]/mech.La)
+    # Get rotation vector in metres per second by dividing by flipping the sign of the mantle drag torque and dividing by the area of the plate and the drag coefficient (i.e. mantle viscosity / asthenosphere thickness)
+    stage_rotations_xyz = -1 * mantle_drag_torque_xyz / (_numpy.repeat(_numpy.asarray(plates.area)[:, _numpy.newaxis], 3, axis=1) * options["Mantle viscosity"] / mech.La)
     
-    # Calculate rotation pole in spherical coordinates
+    # Calculate rotation pole in spherical coordinates (note that the function 'cartesian2spherical_azimuth' converts radians to degrees (see below))
     stage_rotation_poles_lat, stage_rotation_poles_lon, _, _ = cartesian2spherical_azimuth(stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2])
 
-    # Calculate rotation angle as the magnitude of the rotation vector
-    stage_rotation_angles = _numpy.linalg.norm(stage_rotations_xyz, axis=1) * constants.m_s2deg_Ma
+    # Convert rotation vector in Cartesian coordinates from metres per second to radians per second
+    # stage_rotations_xyz /= constants.mean_Earth_radius_m
+
+    # Calculate rotation angle as the magnitude of the rotation vector and convert to degrees per million years
+    stage_rotation_angles = _numpy.rad2deg(_numpy.linalg.norm(stage_rotations_xyz, axis=1)) * constants.s2a * 1e6
 
     # Check values
     logging.info(f"Mean, min and max of synthetic stage rotation angles: {stage_rotation_angles.mean()}, {stage_rotation_angles.min()}, {stage_rotation_angles.max()}")
@@ -561,15 +568,14 @@ def compute_synthetic_stage_rotation(
     plates["pole_lon"] = stage_rotation_poles_lon
     plates["pole_lat"] = stage_rotation_poles_lat
     plates["pole_angle"] = stage_rotation_angles
-    for coord in ["x", "y", "z"]:
-        plates[f"mantle_drag_torque_{coord}"] = -1 * plates[f"driving_torque_{coord}"]
     
     return plates
     
 def compute_velocity(
         point_data: _pandas.DataFrame,
-        plates: _numpy.ndarray,
+        plate_data: _pandas.DataFrame,
         constants,
+        plateID_col: str = "plateID",
     ) -> Tuple[_numpy.ndarray, _numpy.ndarray, _numpy.ndarray, _numpy.ndarray, _numpy.ndarray]:
     """
     Function to compute lat, lon, magnitude and azimuth of velocity at a set of locations from a Cartesian torque vector.
@@ -580,11 +586,11 @@ def compute_velocity(
     spin_rates = _numpy.zeros_like(point_data.lat)
 
     # Loop through plates more efficiently
-    for _, plate in plates.iterrows():
+    for _, plate in plate_data.iterrows():
         # Mask points belonging to the current plate
-        mask = point_data.plateID == plate.plateID
+        mask = point_data[plateID_col] == plate.plateID
 
-        # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere
+        # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere (i.e. in radians)
         # The shape of the position vectors is (n, 3)
         positions_x, positions_y, positions_z = spherical2cartesian(
             point_data[mask].lat, 
@@ -593,29 +599,29 @@ def compute_velocity(
         )
         positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
 
-        # Calculate rotation pole in Cartesian coordinates
-        # The shape of the rotation pole vector is (3,)
+        # Calculate rotation pole in radians per year in Cartesian coordinates
+        # The shape of the rotation pole vector is (3,) and the rotation pole is stored in the DataFrame in degrees per million years
         rotation_pole_xyz = _numpy.array(spherical2cartesian(
             plate.pole_lat, 
             plate.pole_lon, 
-            plate.pole_angle * constants.deg_Ma2cm_a,
+            _numpy.deg2rad(plate.pole_angle) * 1e-6,
         ))
 
-        # Calculate the velocity in cm/a as the cross product of the rotation and the position vectors
+        # Calculate the velocity in radians per year as the cross product of the rotation and the position vectors
         # The shape of the velocity vectors is (n, 3)
         velocities_xyz = _numpy.cross(rotation_pole_xyz[None, :], positions_xyz)
 
-        # Convert to spherical coordinates
+        # Convert to spherical coordinates (note that the function 'cartesian2spherical_azimuth' converts radians to degrees (see below))
         velocities_sph = cartesian2spherical_azimuth(velocities_xyz[:, 0], velocities_xyz[:, 1], velocities_xyz[:, 2])
 
-        # Assign the velocity to the respective arrays
-        v_lats[mask] = velocities_sph[0]
-        v_lons[mask] = velocities_sph[1]
-        v_mags[mask] = velocities_sph[2]
-        v_azis[mask] = velocities_sph[3]
+        # Assign the velocity to the respective arrays and convert from degrees per year to centimetres per year
+        v_lats[mask] = velocities_sph[0] * constants.deg_a2cm_a
+        v_lons[mask] = velocities_sph[1] * constants.deg_a2cm_a
+        v_mags[mask] = velocities_sph[2] * constants.deg_a2cm_a
+        v_azis[mask] = velocities_sph[3] * constants.deg_a2cm_a
 
-        # Calculate the spin rate in deg/a as the dot product of the velocity and the unit position vector
-        spin_rates[mask] = _numpy.dot(positions_xyz, rotation_pole_xyz[:, None]) * 1-6
+        # Calculate the spin rate in degrees per year as the dot product of the velocity and the unit position vector
+        spin_rates[mask] = _numpy.rad2deg(positions_xyz[:,0] * rotation_pole_xyz[0] + positions_xyz[:,1] * rotation_pole_xyz[1] + positions_xyz[:,2] * rotation_pole_xyz[2])
         
     return v_lats, v_lons, v_mags, v_azis, spin_rates
 
@@ -707,10 +713,6 @@ def compute_net_rotation(
 
     return net_rotation_pole_lat, net_rotation_pole_lon, net_rotation_rate
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# DRIVING AND RESIDUAL TORQUES
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 def sum_torque(
         plates: _pandas.DataFrame,
         torque_type: str,
@@ -722,10 +724,12 @@ def sum_torque(
     # Determine torque components based on torque type
     if torque_type == "driving":
         torque_components = ["slab_pull_torque", "GPE_torque"]
+    elif torque_type == "mantle_drag":
+        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque"]
     elif torque_type == "residual":
         torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]
     else:
-        raise ValueError("Invalid torque_type, must be 'driving' or 'residual'!")
+        raise ValueError("Invalid torque_type, must be 'driving' or 'residual' or 'mantle_drag'!")
 
     # Calculate torque in Cartesian coordinates
     for axis in ["_x", "_y", "_z"]:
@@ -733,22 +737,24 @@ def sum_torque(
             _numpy.nan_to_num(plates[component + axis]) for component in torque_components
         )
     
-    # Calculate torque magnitude
-    plates[f"{torque_type}_torque_mag"] = xyz2mag(
-        plates[f"{torque_type}_torque_x"], 
-        plates[f"{torque_type}_torque_y"], 
-        plates[f"{torque_type}_torque_z"]
-    )
-
-    # Calculate the position vector of the centroid of the plate in Cartesian coordinates
-    centroid_position = spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants.mean_Earth_radius_m)
-
-    # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
+    if torque_type == "mantle_drag":
+        for axis in ["_x", "_y", "_z"]:
+            plates[f"{torque_type}_torque{axis}"] *= -1
+    
+    # Organise torque in an array
     summed_torques_cartesian = _numpy.asarray([
         plates[f"{torque_type}_torque_x"], 
         plates[f"{torque_type}_torque_y"], 
         plates[f"{torque_type}_torque_z"]
     ])
+
+    # Calculate torque magnitude
+    plates[f"{torque_type}_torque_mag"] = _numpy.linalg.norm(summed_torques_cartesian, axis=0)
+
+    # Calculate the position vector of the centroid of the plate in Cartesian coordinates
+    centroid_position = spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants.mean_Earth_radius_m)
+
+    # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
     force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
 
     # Compute force magnitude at centroid
@@ -882,7 +888,7 @@ def compute_thicknesses(ages, options, crust=True, water=True):
     if options["Seafloor age profile"] == "half space cooling":
         lithospheric_mantle_thickness = _numpy.where(_numpy.isnan(ages), 
                                                 mech.cont_lith_thick, 
-                                                2.32 * _numpy.sqrt(mech.kappa * ages * constants.ma2s))
+                                                2.32 * _numpy.sqrt(mech.kappa * ages * constants.a2s * 1e6))
         
         if crust:
             crustal_thickness = _numpy.where(_numpy.isnan(ages), 
@@ -978,6 +984,9 @@ def compute_torque_on_plates(
     # Sum components of plates based on plateID and fill NaN values with 0
     summed_data = point_data.groupby("plateID", as_index=True).sum().fillna(0)
 
+    # Sort by plateID
+    summed_data.sort_values("plateID", inplace=True)
+
     # Set indices of plateId for both dataframes
     plate_data.set_index("plateID", inplace=True)
 
@@ -997,7 +1006,7 @@ def compute_torque_on_plates(
     centroid_force_xyz = _numpy.cross(summed_torques_xyz, centroid_position_xyz, axis=0)
 
     # Compute force magnitude at centroid
-    centroid_force_sph = cartesian2spherical_azimuth(centroid_force_xyz)
+    centroid_force_sph = cartesian2spherical_azimuth(centroid_force_xyz[0], centroid_force_xyz[1], centroid_force_xyz[2])
 
     # Store values in the torques DataFrame
     plate_data[f"{torque_var}_force_lat"] = centroid_force_sph[0]

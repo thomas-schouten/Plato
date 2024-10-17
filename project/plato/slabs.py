@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List, Optional, Union
 
+import geopandas as _geopandas
 import gplately as _gplately
 import numpy as _numpy
 import pandas as _pandas
@@ -83,7 +84,7 @@ class Slabs:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
                     # Initialise missing data
-                    if not resolved_geometries or key not in resolved_geometries.keys():
+                    if not isinstance(resolved_geometries, Dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
                         resolved_geometries = utils_data.get_topology_geometries(
                             self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
                         )
@@ -170,13 +171,14 @@ class Slabs:
                             self.data[_age][_case].loc[mask],
                             _stage_rotation,
                             self.settings.constants,
+                            plateID_col,
                         )
 
                         # Store velocities
-                        self.data[_age][_case].loc[mask, f"{plate}_v_lat"] = velocities[0]
-                        self.data[_age][_case].loc[mask, f"{plate}_v_lon"] = velocities[1]
-                        self.data[_age][_case].loc[mask, f"{plate}_v_mag"] = velocities[2]
-                        self.data[_age][_case].loc[mask, f"{plate}_omega"] = velocities[3]
+                        self.data[_age][_case].loc[mask, f"{plate}_velocity_lat"] = velocities[0]
+                        self.data[_age][_case].loc[mask, f"{plate}_velocity_lon"] = velocities[1]
+                        self.data[_age][_case].loc[mask, f"{plate}_velocity_mag"] = velocities[2]
+                        self.data[_age][_case].loc[mask, f"{plate}_spin_rate_mag"] = velocities[4]
 
     def sample_slab_seafloor_ages(
             self,
@@ -428,6 +430,7 @@ class Slabs:
                     "sediment_fraction",
                     "slab_pull_force_lat",
                     "slab_pull_force_lon",
+                    "slab_pull_force_mag",
                 ]
                 self.data[_age] = utils_data.copy_values(
                     self.data[_age], 

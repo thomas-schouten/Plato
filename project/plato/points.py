@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List, Optional, Union
 
+import geopandas as _geopandas
 import gplately as _gplately
 import numpy as _numpy
 import pandas as _pandas
@@ -92,7 +93,7 @@ class Points:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
                     # Initialise missing data
-                    if not resolved_geometries or key not in resolved_geometries.keys():
+                    if not isinstance(resolved_geometries, Dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
                         resolved_geometries = utils_data.get_resolved_geometries(
                             self.reconstruction,
                             _age,
@@ -178,10 +179,10 @@ class Points:
                     )
 
                     # Store velocities
-                    self.data[_age][_case].loc[mask, "velocity_lat"] = velocities[0]
-                    self.data[_age][_case].loc[mask, "velocity_lon"] = velocities[1]
-                    self.data[_age][_case].loc[mask, "velocity_mag"] = velocities[2]
-                    self.data[_age][_case].loc[mask, "spin_rate_mag"] = velocities[3]
+                    self.data[_age][_case]["velocity_lat"].values[mask] = velocities[0]
+                    self.data[_age][_case]["velocity_lon"].values[mask] = velocities[1]
+                    self.data[_age][_case]["velocity_mag"].values[mask] = velocities[2]
+                    self.data[_age][_case]["spin_rate_mag"].values[mask] = velocities[4]
 
     def sample_seafloor_ages(
             self,
@@ -330,6 +331,7 @@ class Points:
                         "U",
                         "GPE_force_lat",
                         "GPE_force_lon",
+                        "GPE_force_mag",
                     ]
                     self.data[_age] = utils_data.copy_values(
                         self.data[_age], 

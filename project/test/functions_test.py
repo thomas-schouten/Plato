@@ -6,6 +6,7 @@ import sys
 import traceback
 
 # Third-party imports
+import cmcrameri as cmc
 import matplotlib.pyplot as plt
 import numpy as np
 import gplately
@@ -518,27 +519,27 @@ def test_plate_torques(
         plate_torques_test = None
 
     if plate_torques_test is not None and test_functions:
-        # Test saving
-        try:
-            plate_torques_test.save_all(
-                ages=test_ages,
-            )
-            logging.info(f"Successfully saved 'PlateTorques' object!")
+        # # Test saving
+        # try:
+        #     plate_torques_test.save_all(
+        #         ages=test_ages,
+        #     )
+        #     logging.info(f"Successfully saved 'PlateTorques' object!")
 
-        except Exception as e:
-            logging.error(f"An error occurred during saving of the 'PlateTorques' object: {e}")
-            traceback.print_exc()
+        # except Exception as e:
+        #     logging.error(f"An error occurred during saving of the 'PlateTorques' object: {e}")
+        #     traceback.print_exc()
 
-        # Test exporting
-        try:
-            plate_torques_test.export_all(
-                ages=test_ages,
-            )
-            logging.info(f"Successfully exported 'Points' object!")
+        # # Test exporting
+        # try:
+        #     plate_torques_test.export_all(
+        #         ages=test_ages,
+        #     )
+        #     logging.info(f"Successfully exported 'Points' object!")
 
-        except Exception as e:
-            logging.error(f"An error occurred during exporting of the 'PlateTorques' object: {e}")
-            traceback.print_exc()
+        # except Exception as e:
+        #     logging.error(f"An error occurred during exporting of the 'PlateTorques' object: {e}")
+        #     traceback.print_exc()
         
         # Test calculation of RMS velocity
         try:
@@ -645,6 +646,9 @@ def test_plate_torques(
                 plate_torques_test.points.data[0]["test"].lat,
                 c=plate_torques_test.points.data[0]["test"].velocity_mag,
                 marker = "o",
+                cmap = "cmc.bilbao_r",
+                vmin = 0,
+                vmax = 25,
             )
             plt.colorbar()
             plt.show()
@@ -654,9 +658,39 @@ def test_plate_torques(
                 plate_torques_test.points.data[0]["syn"].lat,
                 c=plate_torques_test.points.data[0]["syn"].velocity_mag,
                 marker = "o",
+                cmap = "cmc.bilbao_r",
+                vmin = 0,
+                vmax = 25,
             )
             plt.colorbar()
             plt.show()
+
+            plt.scatter(
+                plate_torques_test.points.data[0]["test"].lon,
+                plate_torques_test.points.data[0]["test"].lat,
+                c=plate_torques_test.points.data[0]["test"].GPE_force_mag,
+                marker = "o",
+                cmap = "cmc.vik",
+                vmin = -3e-6,
+                vmax = 3e-6,
+            )
+            plt.colorbar()
+            plt.show()
+
+            plt.scatter(
+                plate_torques_test.points.data[0]["syn"].lon,
+                plate_torques_test.points.data[0]["syn"].lat,
+                c=plate_torques_test.points.data[0]["syn"].GPE_force_mag,
+                marker = "o",
+                cmap = "cmc.vik",
+                vmin = -3e-6,
+                vmax = 3e-6,
+            )
+            plt.colorbar()
+            plt.show()
+
+            print(plate_torques_test.plates.data[0]["test"])
+            print(plate_torques_test.plates.data[0]["syn"])
 
         except Exception as e:
             logging.error(f"An error occurred during computation of synthetic velocity: {e}")

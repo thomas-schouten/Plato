@@ -96,14 +96,14 @@ def run_tests():
     # Test Grids
     if TEST_CONFIGS["TEST_GRIDS"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_grids(settings_file=settings_file, reconstruction_files=reconstruction_files, seafloor_age_grids=seafloor_age_grids, sediment_grids=sediment_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_grids(settings_file=settings_file, reconstruction_files=reconstruction_files, test_ages=test_ages, seafloor_age_grids=seafloor_age_grids, sediment_grids=sediment_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
             functions_test.test_grids(settings_file=settings_file, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 
     # Test Plate Torques
     if TEST_CONFIGS["TEST_PLATE_TORQUES"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_plate_torques(settings_file=settings_file, reconstruction_files=reconstruction_files, seafloor_age_grids=seafloor_age_grids, sediment_grids=sediment_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_plate_torques(settings_file=settings_file, reconstruction_files=reconstruction_files, test_ages=test_ages, seafloor_age_grids=seafloor_age_grids, sediment_grids=sediment_grids, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
             functions_test.test_plate_torques(settings_file=settings_file, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 
