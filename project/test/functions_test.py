@@ -668,11 +668,11 @@ def test_plate_torques(
             plt.scatter(
                 plate_torques_test.points.data[0]["test"].lon,
                 plate_torques_test.points.data[0]["test"].lat,
-                c=plate_torques_test.points.data[0]["test"].GPE_force_mag,
+                c=plate_torques_test.points.data[0]["test"].mantle_drag_force_mag,
                 marker = "o",
                 cmap = "cmc.vik",
-                vmin = -3e-6,
-                vmax = 3e-6,
+                # vmin = -3e-6,
+                # vmax = 3e-6,
             )
             plt.colorbar()
             plt.show()
@@ -680,17 +680,19 @@ def test_plate_torques(
             plt.scatter(
                 plate_torques_test.points.data[0]["syn"].lon,
                 plate_torques_test.points.data[0]["syn"].lat,
-                c=plate_torques_test.points.data[0]["syn"].GPE_force_mag,
+                c=plate_torques_test.points.data[0]["syn"].mantle_drag_force_mag,
                 marker = "o",
                 cmap = "cmc.vik",
-                vmin = -3e-6,
-                vmax = 3e-6,
+                # vmin = -3e-6,
+                # vmax = 3e-6,
             )
             plt.colorbar()
             plt.show()
 
-            print(plate_torques_test.plates.data[0]["test"])
-            print(plate_torques_test.plates.data[0]["syn"])
+            print(plate_torques_test.plates.data[0]["syn"].slab_pull_torque_x)
+            print(plate_torques_test.plates.data[0]["syn"].GPE_torque_x)
+            print(plate_torques_test.plates.data[0]["syn"].slab_bend_torque_x)
+            print(plate_torques_test.plates.data[0]["syn"].mantle_drag_torque_x)
 
         except Exception as e:
             logging.error(f"An error occurred during computation of synthetic velocity: {e}")

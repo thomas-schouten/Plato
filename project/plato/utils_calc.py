@@ -66,8 +66,8 @@ class set_constants:
         self.equatorial_Earth_circumference = 40075e3               # Earth circumference at equator [m]
         
         # Conversions
-        self.a2s = 365.25 * 24 * 60 * 60                           # a to s
-        self.s2a = 1 / self.a2s                                     # s to a
+        self.s2a = 365.25 * 24 * 60 * 60                           # a to s
+        self.a2s = 1 / self.s2a                                     # s to a
 
         self.m_s2cm_a = 1e2 * self.s2a  # m/s to cm/a
         self.cm_a2m_s = 1 / self.m_s2cm_a  # cm/a to m/s
@@ -506,7 +506,7 @@ def sample_grid(
     """
     Function to sample a grid
     """
-    # Load seafloor into memory to decrease computation time
+    # Load grid into memory to decrease computation time
     grid = grid.load()
 
     # Extract latitude and longitude values from points and convert to xarray DataArrays
@@ -516,7 +516,7 @@ def sample_grid(
     # Interpolate age value at point
     sampled_values = _numpy.asarray(grid.interp({coords[0]: lat_da, coords[1]: lon_da}, method="nearest").values.tolist())
 
-    # Close the seafloor to free memory space
+    # Close the grid to free memory space
     grid.close()
 
     return sampled_values
@@ -534,6 +534,7 @@ def compute_mantle_drag_force(
         # Calculate mantle drag force
         points["mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
         points["mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        points["mantle_drag_force_mag"] = _numpy.linalg.norm(_numpy.column_stack((points["mantle_drag_force_lat"], points["mantle_drag_force_lon"])), axis=1)
 
     return points
 
@@ -559,7 +560,7 @@ def compute_synthetic_stage_rotation(
     # stage_rotations_xyz /= constants.mean_Earth_radius_m
 
     # Calculate rotation angle as the magnitude of the rotation vector and convert to degrees per million years
-    stage_rotation_angles = _numpy.rad2deg(_numpy.linalg.norm(stage_rotations_xyz, axis=1)) * constants.s2a * 1e6
+    stage_rotation_angles = _numpy.rad2deg(_numpy.linalg.norm(stage_rotations_xyz, axis=1)) / constants.s2a * 1e6
 
     # Check values
     logging.info(f"Mean, min and max of synthetic stage rotation angles: {stage_rotation_angles.mean()}, {stage_rotation_angles.min()}, {stage_rotation_angles.max()}")
