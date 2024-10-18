@@ -12,6 +12,7 @@ import multiprocessing
 import warnings
 from typing import List, Optional, Union
 from copy import deepcopy
+import concurrent.futures
 
 # Third-party libraries
 import numpy as _numpy
@@ -1749,6 +1750,140 @@ class PlateForces():
             opt_sp_const = sp_consts[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
 
         return opt_sp_const, driving_mag_min, residual_mag_min
+
+    def find_slab_pull_coefficient_v2(
+            self,
+            opt_time, 
+            opt_case, 
+            plates_of_interest=None, 
+            grid_size=500, 
+            viscosity=1e19, 
+            plot=False, 
+        ):
+        """
+        Function to find optimised slab pull coefficient for a given (set of) plates using a grid search.
+
+        :param opt_time:                reconstruction time to optimise
+        :type opt_time:                 int
+        :param opt_case:                case to optimise
+        :type opt_case:                 str
+        :param plates_of_interest:      plate IDs to include in optimisation
+        :type plates_of_interest:       list of integers or None
+        :param grid_size:               size of the grid to find optimal slab pull coefficient
+        :type grid_size:                int
+        :param plot:                    whether or not to plot the grid
+        :type plot:                     boolean
+        :param weight_by_area:          whether or not to weight the residual torque by plate area
+        :type weight_by_area:           boolean
+        
+        :return:                        The optimal slab pull coefficient
+        :rtype:                         float
+        """
+        # Filter plates
+        selected_plates = self.plates[opt_time][opt_case].copy()
+        selected_slabs = self.slabs[opt_time][opt_case].copy()
+        if plates_of_interest:
+            selected_plates = selected_plates[selected_plates["plateID"].isin(plates_of_interest)]
+            if selected_plates.empty:
+                return _numpy.nan, _numpy.nan, _numpy.nan
+            
+            selected_slabs = selected_slabs[selected_slabs["lower_plateID"].isin(plates_of_interest)]
+            
+            selected_plates = selected_plates.reset_index(drop=True)
+        else:
+            plates_of_interest = selected_plates["plateID"]
+
+        # Generate range of possible slab pull coefficients
+        sp_consts = _numpy.linspace(1e-5,1,grid_size)
+
+        # Initialise dictionary to store optimal slab pull coefficient per plate
+        opt_sp_consts = {None for _ in plates_of_interest}
+        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            # Loop through plates
+            for k, plateID in enumerate(plates_of_interest):
+                plate = selected_plates[selected_plates.plateID == plateID].copy()
+                plate_slabs = selected_slabs[selected_slabs.lower_plateID == plateID].copy()
+                ones = _numpy.ones(len(selected_slabs))
+
+                # Make a meshgrid
+                sp_const_grid, ones_grid = _numpy.meshgrid(sp_consts, _numpy.ones(len(plate_slabs.lat)))
+
+                residual_x = _numpy.zeros_like(sp_const_grid)
+                residual_y = _numpy.zeros_like(sp_const_grid)
+                residual_z = _numpy.zeros_like(sp_const_grid)
+
+                if self.options[opt_case]["Slab pull torque"] and "slab_pull_torque_x" in selected_plates.columns:
+                    # Loop through the slabs and compute torque for each combination
+                    # for j in range(len(plate_slabs.lat)):
+                    # Use ProcessPoolExecutor for parallel processing
+                    with concurrent.futures.ProcessPoolExecutor() as executor:
+                        # Prepare arguments for all combinations of (i, j)
+                        futures = [
+                            executor.submit(
+                                compute_torque_for_combination, i, j, plate, plate_slabs, 
+                                selected_slabs, sp_consts, self.constants
+                            )
+                            for i in range(grid_size)
+                            for j in range(len(plate_slabs.lat))
+                        ]
+
+                        # Collect results as they complete
+                        for future in concurrent.futures.as_completed(futures):
+                            j, i, torque_x, torque_y, torque_z = future.result()
+                            residual_x[j, i] -= torque_x
+                            residual_y[j, i] -= torque_y
+                            residual_z[j, i] -= torque_z
+
+                # Add GPE torque
+                if self.options[opt_case]["GPE torque"] and "GPE_torque_x" in selected_plates.columns:
+                    residual_x -= selected_plates.GPE_torque_x.iloc[k] * ones_grid
+                    residual_y -= selected_plates.GPE_torque_y.iloc[k] * ones_grid
+                    residual_z -= selected_plates.GPE_torque_z.iloc[k] * ones_grid
+
+                # Compute magnitude of driving torque
+                driving_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
+                
+                # Add slab bend torque
+                if self.options[opt_case]["Slab bend torque"] and "slab_bend_torque_x" in selected_plates.columns:
+                    residual_x -= selected_plates.slab_bend_torque_x.iloc[k] * ones_grid
+                    residual_y -= selected_plates.slab_bend_torque_y.iloc[k] * ones_grid
+                    residual_z -= selected_plates.slab_bend_torque_z.iloc[k] * ones_grid
+
+                # Add mantle drag torque
+                if self.options[opt_case]["Mantle drag torque"] and "mantle_drag_torque_x" in selected_plates.columns:
+                    residual_x -= selected_plates.mantle_drag_torque_x.iloc[k] * viscosity / self.mech.La
+                    residual_y -= selected_plates.mantle_drag_torque_y.iloc[k] * viscosity / self.mech.La
+                    residual_z -= selected_plates.mantle_drag_torque_z.iloc[k] * viscosity / self.mech.La
+
+                # Compute magnitude of residual
+                residual_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
+
+            # Find minimum residual torque
+            indices = _numpy.argmin(_numpy.log10(residual_mag/driving_mag))
+
+            if plot:
+                fig, ax = plt.subplots(figsize=(15*self.constants.cm2in, 12*self.constants.cm2in))
+                im = ax.imshow(_numpy.log10(residual_mag/driving_mag), vmin=-1.5, vmax=1.5, cmap="cmc.lapaz_r", aspect="auto")
+                # ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
+                ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
+                # ax.set_xticklabels(["{:.2e}".format(visc) for visc in _numpy.linspace(visc_range[0], visc_range[1], 5)])
+                ax.set_xticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
+                ax.set_ylabel("Trench segment")
+                ax.set_xlabel("Slab pull reduction factor")
+                # ax.set_aspect('equal', adjustable='box')
+                ax.scatter(_numpy.log10(residual_mag/driving_mag)[indices[0]], _numpy.log10(residual_mag/driving_mag)[indices[1]], marker="*", facecolor="none", edgecolor="k", s=30)  # Adjust the marker style and size as needed
+                fig.colorbar(im, label = "Log(residual torque/driving torque)")
+                plt.show()
+
+            # Find optimal driving torque
+            # driving_mag_min = driving_mag[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
+
+            # Find optimal slab pull coefficient
+            # opt_sp_const = sp_consts[_numpy.argmin(_numpy.log10(residual_mag/driving_mag))]
+
+        # return opt_sp_const, driving_mag_min, residual_mag_min
     
     def minimise_residual_velocity(self, opt_time, opt_case, plates_of_interest=None, grid_size=10, visc_range=[1e19, 5e20], plot=True, weight_by_area=True, ref_case=None):
         """
@@ -3391,3 +3526,30 @@ class PlateForces():
 
         pool.close()
         pool.join()
+
+def compute_torque_for_combination(i, j, plate, plate_slabs, selected_slabs, sp_consts, constants):
+    # Calculate slab pull forces
+    force_lat = plate_slabs.slab_pull_force_lat.iloc[j] * sp_consts[i]
+    force_lon = plate_slabs.slab_pull_force_lon.iloc[j] * sp_consts[i]
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # Compute torque
+        computed_plates = functions_main.compute_torque_on_plates(
+            plate, 
+            selected_slabs.lat, 
+            selected_slabs.lon, 
+            selected_slabs.lower_plateID, 
+            force_lat, 
+            force_lon, 
+            selected_slabs.trench_segment_length,
+            1,
+            constants,
+            torque_variable="slab_pull_torque"
+        )
+
+        # Return results to accumulate them later
+        return (j, i, 
+                computed_plates.slab_pull_torque_x, 
+                computed_plates.slab_pull_torque_y, 
+                computed_plates.slab_pull_torque_z)
