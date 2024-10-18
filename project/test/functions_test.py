@@ -519,28 +519,6 @@ def test_plate_torques(
         plate_torques_test = None
 
     if plate_torques_test is not None and test_functions:
-        # # Test saving
-        # try:
-        #     plate_torques_test.save_all(
-        #         ages=test_ages,
-        #     )
-        #     logging.info(f"Successfully saved 'PlateTorques' object!")
-
-        # except Exception as e:
-        #     logging.error(f"An error occurred during saving of the 'PlateTorques' object: {e}")
-        #     traceback.print_exc()
-
-        # # Test exporting
-        # try:
-        #     plate_torques_test.export_all(
-        #         ages=test_ages,
-        #     )
-        #     logging.info(f"Successfully exported 'Points' object!")
-
-        # except Exception as e:
-        #     logging.error(f"An error occurred during exporting of the 'PlateTorques' object: {e}")
-        #     traceback.print_exc()
-        
         # Test calculation of RMS velocity
         try:
             plate_torques_test.calculate_rms_velocity(
@@ -733,6 +711,28 @@ def test_plate_torques(
             logging.error(f"An error occurred during computation of synthetic velocity: {e}")
             traceback.print_exc()
 
+        # Test saving
+        try:
+            plate_torques_test.save_all(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully saved 'PlateTorques' object!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during saving of the 'PlateTorques' object: {e}")
+            traceback.print_exc()
+
+        # Test exporting
+        try:
+            plate_torques_test.export_all(
+                ages=test_ages,
+            )
+            logging.info(f"Successfully exported 'Points' object!")
+
+        except Exception as e:
+            logging.error(f"An error occurred during exporting of the 'PlateTorques' object: {e}")
+            traceback.print_exc()
+            
     logging.info("Testing of the 'plate_torques' module complete.")
 
 def plot_test(plate_torques=None, print_results=False):
