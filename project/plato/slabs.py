@@ -389,55 +389,52 @@ class Slabs:
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
         for key, entries in _tqdm(_iterable.items(), desc="Computing slab pull forces", disable=(self.settings.logger.level==logging.INFO)):
             # Skip if slab pull torque is not sampled
-            if not self.settings.options[key]["Slab pull torque"]:
-                continue
+            if self.settings.options[key]["Slab pull torque"]:                
+                # Loop through ages
+                for _age in _ages:
+                    # Select points
+                    _data = self.data[_age][key]
 
-            # Loop through ages
-            for _age in _ages:
-                # Select points
-                _data = self.data[_age][key]
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
 
-                # Define plateIDs if not provided
-                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
+                    # Select points
+                    if plateIDs is not None:
+                        _data = _data[_data.lower_plateID.isin(_plateIDs)]
+                        
+                    # Calculate slab pull force
+                    _data = utils_calc.compute_slab_pull_force(
+                        _data,
+                        self.settings.options[key],
+                        self.settings.mech,
+                    )
 
-                # Select points
-                if plateIDs is not None:
-                    _data = _data[_data.lower_plateID.isin(_plateIDs)]
-                    
-                # Calculate slab pull force
-                _data = utils_calc.compute_slab_pull_force(
-                    _data,
-                    self.settings.options[key],
-                    self.settings.mech,
-                )
-
-                # Compute interface term for sediment subduction
-                if self.settings.options[key]["Sediment subduction"]:
+                    # Compute interface term
                     _data = utils_calc.compute_interface_term(
                         _data,
                         self.settings.options[key],
                     )
 
-                # Enter sampled data back into the DataFrame
-                self.data[_age][key].loc[_data.index] = _data
-                
-                # Copy to other entries
-                cols = [
-                    "slab_lithospheric_thickness",
-                    "slab_crustal_thickness",
-                    "slab_water_depth",
-                    "shear_zone_width",
-                    "sediment_fraction",
-                    "slab_pull_force_lat",
-                    "slab_pull_force_lon",
-                    "slab_pull_force_mag",
-                ]
-                self.data[_age] = utils_data.copy_values(
-                    self.data[_age], 
-                    key, 
-                    entries,
-                    cols,
-                )
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index] = _data
+                    
+                    # Copy to other entries
+                    cols = [
+                        "slab_lithospheric_thickness",
+                        "slab_crustal_thickness",
+                        "slab_water_depth",
+                        "shear_zone_width",
+                        "sediment_fraction",
+                        "slab_pull_force_lat",
+                        "slab_pull_force_lon",
+                        "slab_pull_force_mag",
+                    ]
+                    self.data[_age] = utils_data.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries,
+                        cols,
+                    )
 
             # Inform the user that the slab pull forces have been calculated
             logging.info(f"Calculated slab pull forces for case {key} Ma.")

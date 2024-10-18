@@ -303,7 +303,7 @@ class Points:
             for key, entries in _iterable.items():
                 if self.settings.options[key]["GPE torque"]:
                     # Select points
-                    _data = self.data[_age][key]
+                    _data = self.data[_age][key].copy()
 
                     # Define plateIDs if not provided
                     _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID.unique())
@@ -313,7 +313,7 @@ class Points:
                         _data = _data[_data.plateID.isin(_plateIDs)]
                         
                     # Calculate GPE force
-                    _data = utils_calc.compute_GPE_force(
+                    computed_data = utils_calc.compute_GPE_force(
                         _data,
                         seafloor_grid[_age].seafloor_age,
                         self.settings.options[key],
@@ -321,7 +321,7 @@ class Points:
                     )
 
                     # Enter sampled data back into the DataFrame
-                    self.data[_age][key].loc[_data.index] = _data
+                    self.data[_age][key].loc[_data.index] = computed_data.copy()
                     
                     # Copy to other entries
                     cols = [
@@ -359,6 +359,7 @@ class Points:
         for _age in _tqdm(_ages, desc="Computing mantle drag forces", disable=(self.settings.logger.level==logging.INFO)):
             # Loop through gpe cases
             for key, entries in _iterable.items():
+                print("Mantle drag force:", key, entries)
                 if self.settings.options[key]["Mantle drag torque"] and self.settings.options[key]["Reconstructed motions"]:
                     # Select points
                     _data = self.data[_age][key]

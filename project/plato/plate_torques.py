@@ -258,7 +258,7 @@ class PlateTorques():
             plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
         ):
         """
-        Function to calculate the GPE torque
+        Function to calculate the GPE torque.
         """
         # Calculate GPE force at points
         self.points.calculate_gpe_force(
@@ -286,7 +286,7 @@ class PlateTorques():
             plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
         ):
         """
-        Function to calculate the slab pull torque
+        Function to calculate the slab pull torque.
         """
         # Calculate slab pull force along the trenches
         self.slabs.calculate_slab_pull_force(

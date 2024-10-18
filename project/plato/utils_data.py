@@ -86,7 +86,7 @@ def get_plate_data(
     plates = _pandas.DataFrame(plates)
 
     # Initialise columns
-    plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_v_lon", "centroid_v_lat", "centroid_v_mag"]
+    plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_velocity_lon", "centroid_velocity_lat", "centroid_velocity_mag"]
 
     # Merge topological networks with main plate; this is necessary because the topological networks have the same PlateID as their host plate and this leads to computational issues down the road
     main_plates_indices = plates.groupby("plateID")["area"].idxmax()
@@ -258,7 +258,7 @@ def get_point_data(
 
     # Add additional columns to store seafloor properties
     points["seafloor_age"] = 0.
-    points["lithospheric_thickness"] = 0.
+    points["lithospheric_mantle_thickness"] = 0.
     points["crustal_thickness"] = 0.
     points["water_depth"] = 0.
     points["U"] = 0.
@@ -584,8 +584,8 @@ def get_options(
         2e3,
         700e3,
         1e-12,
-        0.25,
-        1.25e20,
+        0.2766,
+        1.72e20,
         250,
         1,
         7.5e12,
@@ -809,12 +809,11 @@ def copy_values(
     """
     Function to copy values from one dataframe in a dictionary to another.
     """
-    # Loop through entries
     for entry in entries[1:]:
         # Loop through columns
         for col in cols:
             # Copy column
-            data[entry][col] = data[key][col]
+            data[entry][col] = data[key][col].copy()
 
     return data
 

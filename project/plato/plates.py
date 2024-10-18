@@ -282,36 +282,45 @@ class Plates:
         for _age in _tqdm(_ages, desc="Calculating torque on plates", disable=(self.settings.logger.level==logging.INFO)):
             logging.info(f"Calculating torque on plates at {_age} Ma")
             for key, entries in _iterable.items():
-                # Define plateIDs if not provided
-                _plateIDs = utils_data.select_plateIDs(
-                    plateIDs,
-                    self.data[_age][key]["plateID"],
-                )
+                # Select data
+                _plate_data = self.data[_age][key].copy()
+                _point_data = point_data[_age][key].copy()
 
-                # Define masks
-                plates_mask = self.data[_age][key].loc[:, "plateID"].isin(_plateIDs)
-                points_mask = point_data[_age][key].loc[:, point_data_plateID_col].isin(_plateIDs)
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _plate_data.plateID.unique())
+
+                # Select points
+                if plateIDs is not None:
+                    _plate_data = _plate_data[_plate_data.plateID.isin(_plateIDs)]
+                    _point_data = _point_data[_point_data[point_data_plateID_col].isin(_plateIDs)]
 
                 if torque_var == "slab_pull" or torque_var == "slab_bend":
-                    selected_points_plateID = point_data[_age][key].lower_plateID.values[points_mask]
-                    selected_points_area = point_data[_age][key].trench_segment_length.values[points_mask]
+                    selected_points_plateID = _point_data.lower_plateID.values
+                    selected_points_area = _point_data.trench_segment_length.values
                 else:
-                    selected_points_plateID = point_data[_age][key].plateID.values[points_mask]
-                    selected_points_area = point_data[_age][key].segment_length_lat.values[points_mask] * \
-                        point_data[_age][key].segment_length_lon.values[points_mask]
+                    selected_points_plateID = _point_data.plateID.values
+                    selected_points_area = _point_data.segment_length_lat.values * _point_data.segment_length_lon.values
+
+                if torque_var == "GPE":
+                    print("Force lon:", _point_data[f"{torque_var}_force_lon"].values)
 
                 # Calculate torques
-                self.data[_age][key] = utils_calc.compute_torque_on_plates(
-                    self.data[_age][key].loc[plates_mask], 
-                    point_data[_age][key].lat.values[points_mask],
-                    point_data[_age][key].lon.values[points_mask],
+                computed_data = utils_calc.compute_torque_on_plates(
+                    _plate_data,
+                    _point_data.lat.values,
+                    _point_data.lon.values,
                     selected_points_plateID,
-                    point_data[_age][key][f"{torque_var}_force_lat"].values[points_mask], 
-                    point_data[_age][key][f"{torque_var}_force_lon"].values[points_mask],
+                    _point_data[f"{torque_var}_force_lat"].values, 
+                    _point_data[f"{torque_var}_force_lon"].values,
                     selected_points_area,
                     self.settings.constants,
                     torque_var = torque_var,
                 )
+                if torque_var == "GPE":
+                    print("Torque mag: ", computed_data[f"{torque_var}_torque_mag"].values)
+
+                # Enter sampled data back into the DataFrame
+                self.data[_age][key].loc[_plate_data.index] = computed_data.copy()
 
                 # Copy DataFrames, if necessary
                 if len(entries) > 1:
@@ -354,18 +363,17 @@ class Plates:
             # Loop through cases
             for _case in _cases:
                 # Select plates
-                _data = self.data[_age][_case]
+                _data = self.data[_age][_case].copy()
                 
+                # Select plateIDs and mask
                 _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
-
-                if plateIDs is not None:
-                    _data = _data.loc[_data.plateID.isin(_plateIDs)]
+                mask = _data.plateID.isin(_plateIDs)
 
                 # Calculate driving torque
-                _data = utils_calc.sum_torque(_data, "driving", self.settings.constants)
+                computed_data = utils_calc.sum_torque(_data[mask], "driving", self.settings.constants)
 
                 # Enter sampled data back into the DataFrame
-                self.data[_age][_case].loc[_data.index] = _data
+                self.data[_age][_case].loc[mask] = computed_data
         
         # Set flag to indicate that the driving torque has been calculated
         self.driving_torque_calculated = True
@@ -407,18 +415,17 @@ class Plates:
             # Loop through ages
             for _age in _ages:
                 # Select plates
-                _data = self.data[_age][_case]
+                _data = self.data[_age][_case].copy()
                 
+                # Select plateIDs and mask
                 _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
-
-                if plateIDs is not None:
-                    _data = _data.loc[_data.plateID.isin(_plateIDs)]
+                mask = _data.plateID.isin(_plateIDs)
 
                 # Calculate driving torque
-                _data = utils_calc.sum_torque(_data, "residual", self.settings.constants)
+                computed_data = utils_calc.sum_torque(_data[mask], "residual", self.settings.constants)
 
                 # Enter sampled data back into the DataFrame
-                self.data[_age][_case].loc[_data.index] = _data
+                self.data[_age][_case].loc[mask] = computed_data.copy()
                 
     def calculate_synthetic_velocity(
             self,
@@ -448,30 +455,30 @@ class Plates:
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
         for _case in _tqdm(_cases, desc="Calculating synthetic velocity", disable=self.settings.logger.level==logging.INFO):
             # Skip if reconstructed motions are enabled
-            if self.settings.options[_case]["Reconstructed motions"]:
-                continue
+            if not self.settings.options[_case]["Reconstructed motions"]:
 
-            # # Inform the user that the driving torques are being calculated
-            logging.info(f"Computing synthetic velocity for case {_case}")
+                # Inform the user that the driving torques are being calculated
+                logging.info(f"Computing synthetic velocity for case {_case}")
 
-            # Loop through ages
-            for _age in _ages:
-                # Select plates
-                _data = self.data[_age][_case]
-                
-                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
+                # Loop through ages
+                for _age in _ages:
+                    # Select plates
+                    _data = self.data[_age][_case].copy()
+                    
+                    # Select plateIDs and mask
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
+                    
+                    if plateIDs is not None:
+                        _data = _data[_data.plateID.isin(_plateIDs)]
 
-                if plateIDs is not None:
-                    _data = _data.loc[_data.plateID.isin(_plateIDs)]
+                    # Calculate synthetic mantle drag torque
+                    computed_data1 = utils_calc.sum_torque(_data, "mantle_drag", self.settings.constants)
 
-                # Calculate synthetic mantle drag torque
-                _data = utils_calc.sum_torque(_data, "mantle_drag", self.settings.constants)
+                    # Calculate synthetic velocity
+                    computed_data2 = utils_calc.compute_synthetic_stage_rotation(computed_data1, self.settings.options[_case])
 
-                # Calculate synthetic velocity
-                _data = utils_calc.compute_synthetic_stage_rotation(_data, self.settings.options[_case])
-
-                # Enter sampled data back into the DataFrame
-                self.data[_age][_case].loc[_data.index] = _data
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][_case].loc[_data.index] = computed_data2.copy()
 
     def save(
             self,

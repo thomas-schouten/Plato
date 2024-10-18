@@ -27,7 +27,6 @@ class set_mech_params:
         self.rho_sw = 1020                                  # water density for plate model
         self.rho_s = 2650                                   # density of sediments (quartz sand)
         self.rho_c = 2868                                   # density of continental crust
-        self.rho_e = 3300                                   # density of eclogite
         self.rho_l = 3412                                   # lithosphere density
         self.rho_a = 3350                                   # asthenosphere density 
         self.alpha = 3e-5                                   # thermal expansivity [K-1]
@@ -48,7 +47,6 @@ class set_mech_params:
 
         # Derived parameters
         self.drho_slab = self.rho0 * self.alpha * self.dT   # Density contrast between slab and surrounding mantle [kg/m3]
-        self.drho_e = self.rho_e - self.rho0                # Density contrast between eclogite and surrounding mantle [kg/m3]
         self.drho_sed = self.rho_s - self.rho0              # Density contrast between sediments (quartz sand) and surrounding mantle [kg/m3]
 
 # Create instance of mech
@@ -109,19 +107,16 @@ def compute_slab_pull_force(
     # Calculate length of slab
     slabs["slab_length"] = options["Slab length"]
 
-    # Calculate slab pull force acting on point along subduction zone
+    # Calculate slab pull force acting on point along subduction zone where there is a seafloor age, and set to 0 where there is no seafloor age
     mask = slabs["slab_seafloor_age"].isna()
     slabs.loc[mask, "slab_pull_force_mag"] = 0
     slabs.loc[~mask, "slab_pull_force_mag"] = (
-        slabs.loc[~mask, "slab_lithospheric_thickness"] * slabs.loc[~mask, "slab_length"] * mech.drho_slab * mech.g * 1/_numpy.sqrt(_numpy.pi) +
-        slabs.loc[~mask, "slab_crustal_thickness"] * slabs.loc[~mask, "slab_length"] * mech.drho_e * mech.g * 1/_numpy.sqrt(_numpy.pi)
+        slabs.loc[~mask, "slab_lithospheric_thickness"] * slabs.loc[~mask, "slab_length"] * mech.drho_slab * mech.g * 1/_numpy.sqrt(_numpy.pi)
     )
 
     if options["Sediment subduction"]:
-        # Add positive buoyancy of sediments
-        mask = ~slabs["slab_seafloor_age"].isna()
-        slabs.loc[mask, "slab_pull_force_mag"] += (
-            slabs.loc[mask, "sediment_thickness"] * slabs.loc[mask, "slab_length"] * mech.drho_sed * mech.g * 1/_numpy.sqrt(_numpy.pi)
+        slabs.loc[~mask, "slab_pull_force_mag"] += (
+            slabs.loc[~mask, "sediment_thickness"] * slabs.loc[~mask, "slab_length"] * mech.drho_sed * mech.g * 1/_numpy.sqrt(_numpy.pi)
         )
 
     # Decompose into latitudinal and longitudinal components
@@ -159,6 +154,8 @@ def compute_interface_term(slabs, options):
         # Calculate interface term
         interface_term = 11 - 10**(1-slabs["sediment_fraction"])
         logging.info(f"Mean, min and max of interface terms: {interface_term.mean()}, {interface_term.min()}, {interface_term.max()}")
+    else:
+        interface_term = 1
 
     interface_term *= options["Slab pull constant"]
 
@@ -550,25 +547,47 @@ def compute_synthetic_stage_rotation(
     # Sum the torque vectors (in Cartesian coordinates and in Newton metres)
     mantle_drag_torque_xyz = _numpy.column_stack((plates.mantle_drag_torque_x, plates.mantle_drag_torque_y, plates.mantle_drag_torque_z))
 
-    # Get rotation vector in metres per second by dividing by flipping the sign of the mantle drag torque and dividing by the area of the plate and the drag coefficient (i.e. mantle viscosity / asthenosphere thickness)
-    stage_rotations_xyz = -1 * mantle_drag_torque_xyz / (_numpy.repeat(_numpy.asarray(plates.area)[:, _numpy.newaxis], 3, axis=1) * options["Mantle viscosity"] / mech.La)
+    # Get rotation vector in radians per year by dividing by flipping the sign of the mantle drag torque and dividing by the area of the plate and the drag coefficient (i.e. mantle viscosity / asthenosphere thickness)
+    stage_rotations_xyz = -1 * mantle_drag_torque_xyz / (_numpy.repeat(_numpy.asarray(plates.area)[:, _numpy.newaxis], 3, axis=1) * options["Mantle viscosity"] / mech.La) * constants.s2a
+
+    # Get the velocity at the centroid of the plate in degrees per year
+    centroid_velocities_sph = cartesian2spherical(stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2])
+
+    # Get the position of the centroid on the unit sphere before and after 1 million years of rotation in Cartesian coordinates
+    centroid_positions_before_xyz = _numpy.column_stack(spherical2cartesian(
+        plates.centroid_lat, 
+        plates.centroid_lon, 
+    ))
+    centroid_positions_after_xyz = _numpy.column_stack(spherical2cartesian(
+        plates.centroid_lat + centroid_velocities_sph[0] * 1e6,
+        plates.centroid_lon + centroid_velocities_sph[1] * 1e6,
+    ))
+
+    # Get the axis of rotation as the cross product of the position vectors and normalise to unit length
+    stage_rotation_axes_xyz = _numpy.cross(centroid_positions_before_xyz, centroid_positions_after_xyz)
+    stage_rotation_axes_xyz /= _numpy.linalg.norm(stage_rotation_axes_xyz, axis=0)[_numpy.newaxis, :]
     
-    # Calculate rotation pole in spherical coordinates (note that the function 'cartesian2spherical_azimuth' converts radians to degrees (see below))
-    stage_rotation_poles_lat, stage_rotation_poles_lon, _, _ = cartesian2spherical_azimuth(stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2])
+    # Get the angle of rotation as the angle between the position vectors in degrees
+    stage_rotation_angles = _numpy.rad2deg(_numpy.arccos(
+        centroid_positions_before_xyz[:, 0] * centroid_positions_after_xyz[:, 0] + 
+        centroid_positions_before_xyz[:, 1] * centroid_positions_after_xyz[:, 1] +
+        centroid_positions_before_xyz[:, 2] * centroid_positions_after_xyz[:, 2]
+    ))
 
-    # Convert rotation vector in Cartesian coordinates from metres per second to radians per second
-    # stage_rotations_xyz /= constants.mean_Earth_radius_m
+    # Get the rotation pole in spherical coordinates
+    stage_rotation_poles_lat, stage_rotation_poles_lon, _, _ = cartesian2spherical(stage_rotation_axes_xyz[:, 0], stage_rotation_axes_xyz[:, 1], stage_rotation_axes_xyz[:, 2])
 
-    # Calculate rotation angle as the magnitude of the rotation vector and convert to degrees per million years
-    stage_rotation_angles = _numpy.rad2deg(_numpy.linalg.norm(stage_rotations_xyz, axis=1)) / constants.s2a * 1e6
+    # Assign to DataFrame
+    plates["pole_lat"] = stage_rotation_poles_lat
+    plates["pole_lon"] = stage_rotation_poles_lon 
+    plates["pole_angle"] = stage_rotation_angles
+    plates["centroid_velocity_lat"] = centroid_velocities_sph[0] * constants.deg_a2cm_a
+    plates["centroid_velocity_lon"] = centroid_velocities_sph[1] * constants.deg_a2cm_a
+    plates["centroid_velocity_mag"] = centroid_velocities_sph[2] * constants.deg_a2cm_a
+    plates["centroid_velocity_azi"] = centroid_velocities_sph[3] * constants.deg_a2cm_a
 
     # Check values
     logging.info(f"Mean, min and max of synthetic stage rotation angles: {stage_rotation_angles.mean()}, {stage_rotation_angles.min()}, {stage_rotation_angles.max()}")
-
-    # Insert into DataFrame
-    plates["pole_lon"] = stage_rotation_poles_lon
-    plates["pole_lat"] = stage_rotation_poles_lat
-    plates["pole_angle"] = stage_rotation_angles
     
     return plates
     
@@ -595,8 +614,7 @@ def compute_velocity(
         # The shape of the position vectors is (n, 3)
         positions_x, positions_y, positions_z = spherical2cartesian(
             point_data[mask].lat, 
-            point_data[mask].lon, 
-            1.,
+            point_data[mask].lon,
         )
         positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
 
@@ -605,15 +623,15 @@ def compute_velocity(
         rotation_pole_xyz = _numpy.array(spherical2cartesian(
             plate.pole_lat, 
             plate.pole_lon, 
-            _numpy.deg2rad(plate.pole_angle) * 1e-6,
+            plate.pole_angle * 1e-6,
         ))
 
         # Calculate the velocity in radians per year as the cross product of the rotation and the position vectors
         # The shape of the velocity vectors is (n, 3)
         velocities_xyz = _numpy.cross(rotation_pole_xyz[None, :], positions_xyz)
 
-        # Convert to spherical coordinates (note that the function 'cartesian2spherical_azimuth' converts radians to degrees (see below))
-        velocities_sph = cartesian2spherical_azimuth(velocities_xyz[:, 0], velocities_xyz[:, 1], velocities_xyz[:, 2])
+        # Convert to spherical coordinates (note that the function 'cartesian2spherical' converts radians to degrees (see below))
+        velocities_sph = cartesian2spherical(velocities_xyz[:, 0], velocities_xyz[:, 1], velocities_xyz[:, 2])
 
         # Assign the velocity to the respective arrays and convert from degrees per year to centimetres per year
         v_lats[mask] = velocities_sph[0] * constants.deg_a2cm_a
@@ -678,7 +696,6 @@ def compute_net_rotation(
         positions_x, positions_y, positions_z = spherical2cartesian(
             selected_points.lat, 
             selected_points.lon, 
-            1.,
         )
         positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
 
@@ -705,7 +722,7 @@ def compute_net_rotation(
     net_rotation_xyz /= plate_data.area.sum()
 
     # Convert the net rotation vector to spherical coordinates
-    net_rotation_pole_lat, net_rotation_pole_lon, _, _ = cartesian2spherical_azimuth(
+    net_rotation_pole_lat, net_rotation_pole_lon, _, _ = cartesian2spherical(
         net_rotation_xyz[0], net_rotation_xyz[1], net_rotation_xyz[2],
     )
 
@@ -723,10 +740,10 @@ def sum_torque(
     Function to calculate driving and residual torque on plates.
     """
     # Determine torque components based on torque type
-    if torque_type == "driving":
+    if torque_type == "driving" or torque_type == "mantle_drag":
         torque_components = ["slab_pull_torque", "GPE_torque"]
-    elif torque_type == "mantle_drag":
-        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque"]
+    # elif torque_type == "mantle_drag":
+    #     torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque"]
     elif torque_type == "residual":
         torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]
     else:
@@ -734,13 +751,17 @@ def sum_torque(
 
     # Calculate torque in Cartesian coordinates
     for axis in ["_x", "_y", "_z"]:
-        plates[f"{torque_type}_torque{axis}"] = sum(
-            _numpy.nan_to_num(plates[component + axis]) for component in torque_components
+        plates[f"{torque_type}_torque{axis}"] = _numpy.sum(
+            [_numpy.nan_to_num(plates[component + axis]) for component in torque_components], axis=0
         )
+
+    print(len(plates[f"{torque_type}_torque_x"].values))
     
     if torque_type == "mantle_drag":
         for axis in ["_x", "_y", "_z"]:
-            plates[f"{torque_type}_torque{axis}"] *= -1
+            torque_values = plates[f"{torque_type}_torque{axis}"].values
+            if not _numpy.allclose(torque_values, 0):  # Only flip if non-zero
+                plates[f"{torque_type}_torque{axis}"] *= -1
     
     # Organise torque in an array
     summed_torques_cartesian = _numpy.asarray([
@@ -759,7 +780,7 @@ def sum_torque(
     force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
 
     # Compute force magnitude at centroid
-    plates[f"{torque_type}_force_lat"], plates[f"{torque_type}_force_lon"], plates[f"{torque_type}_force_mag"], plates[f"{torque_type}_force_azi"] = cartesian2spherical_azimuth(
+    plates[f"{torque_type}_force_lat"], plates[f"{torque_type}_force_lon"], plates[f"{torque_type}_force_mag"], plates[f"{torque_type}_force_azi"] = cartesian2spherical(
         force_at_centroid[0], force_at_centroid[1], force_at_centroid[2]
     )
 
@@ -983,19 +1004,23 @@ def compute_torque_on_plates(
     point_data[torque_var + "_torque_mag"] = _numpy.linalg.norm(_numpy.array([torques_xyz[0], torques_xyz[1], torques_xyz[2]]))
 
     # Sum components of plates based on plateID and fill NaN values with 0
-    summed_data = point_data.groupby("plateID", as_index=True).sum().fillna(0)
+    summed_data = point_data.groupby("plateID", as_index=False).sum().fillna(0)
 
     # Sort by plateID
     summed_data.sort_values("plateID", inplace=True)
 
-    # Set indices of plateId for both dataframes
+    # Set indices of plateId for both dataframes but keep a copy of the old index
+    old_index = plate_data.index
     plate_data.set_index("plateID", inplace=True)
 
     # Update the plate data with the summed torque components
-    plate_data.update(summed_data)
+    plate_data.update(summed_data.set_index("plateID"))
 
-    # Reset the index of the plate data
-    plate_data.reset_index(inplace=True)
+    # Reset the index of the plate data while keeping the old index
+    plate_data.reset_index(drop=False, inplace=True)
+
+    # Restore the old index
+    plate_data.index = old_index
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
     centroid_position_xyz = spherical2cartesian(plate_data.centroid_lat, plate_data.centroid_lon, constants.mean_Earth_radius_m)
@@ -1007,7 +1032,7 @@ def compute_torque_on_plates(
     centroid_force_xyz = _numpy.cross(summed_torques_xyz, centroid_position_xyz, axis=0)
 
     # Compute force magnitude at centroid
-    centroid_force_sph = cartesian2spherical_azimuth(centroid_force_xyz[0], centroid_force_xyz[1], centroid_force_xyz[2])
+    centroid_force_sph = cartesian2spherical(centroid_force_xyz[0], centroid_force_xyz[1], centroid_force_xyz[2])
 
     # Store values in the torques DataFrame
     plate_data[f"{torque_var}_force_lat"] = centroid_force_sph[0]
@@ -1050,11 +1075,11 @@ def compute_subduction_flux(
 # CONVERSIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def cartesian2spherical_azimuth(
-        x: _numpy.ndarray,
-        y: Optional[_numpy.ndarray] = None,
-        z: Optional[_numpy.ndarray] = None,
-    ):
+def cartesian2spherical(
+    x: _numpy.ndarray,
+    y: Optional[_numpy.ndarray] = None,
+    z: Optional[_numpy.ndarray] = None,
+):
     """
     Convert Cartesian coordinates to latitude, longitude, magnitude, and azimuth.
 
@@ -1066,34 +1091,54 @@ def cartesian2spherical_azimuth(
     :type z:            float, int, list, numpy.array, pandas.Series
 
     :return:            Latitude (degrees), Longitude (degrees), Magnitude, Azimuth (degrees).
-    :rtype:             tuple (float, float, float, float)
+    :rtype:             tuple (numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray)
     """
-    # Check if y and z are None
+    # If only x is provided as a 1D array, unpack it into x, y, z
     if y is None and z is None:
         x, y, z = x[0], x[1], x[2]
 
-    # Calculate magnitude
-    mag = _numpy.linalg.norm([x, y, z])
-    
-    # Check if magnitude is zero or NaN and return 0 values
-    if mag == 0 or mag == _numpy.nan:
-        return 0, 0, 0, _numpy.nan
+    # Convert integers and floats to lists
+    if isinstance(x, (int, float, _numpy.integer, _numpy.floating)):
+        x = [x]
+    if isinstance(y, (int, float, _numpy.integer, _numpy.floating)):
+        y = [y]
+    if isinstance(z, (int, float, _numpy.integer, _numpy.floating)):
+        z = [z]
 
-    # Calculate latitude
-    lat_rads = _numpy.arcsin(z / mag)
-    lat = _numpy.rad2deg(lat_rads)
-    
-    # Calculate longitude
-    lon_rads = _numpy.arctan2(y, x)
-    lon = _numpy.rad2deg(lon_rads)
-    
-    # Calculate azimuth
-    azi_rads = _numpy.arctan2(x, y)
-    azi = _numpy.rad2deg(azi_rads)
+    # Make sure x, y, z are numpy arrays
+    x = _numpy.asarray(x)
+    y = _numpy.asarray(y)
+    z = _numpy.asarray(z)
 
-    return lat, lon, mag, azi
+    # Stack coordinates to handle multiple points
+    coords = _numpy.column_stack((x, y, z))
 
-def spherical2cartesian(lat, lon, mag):
+    # Calculate magnitude (norm)
+    mags = _numpy.linalg.norm(coords, axis=1)
+
+    # Mask for zero or NaN magnitudes
+    valid_mask = (mags > 0) & (~_numpy.isnan(mags))
+
+    # Initialise result arrays
+    lats = _numpy.zeros_like(mags)
+    lons = _numpy.zeros_like(mags)
+    azis = _numpy.zeros_like(mags)
+
+    # Calculate latitude (in degrees)
+    lats[valid_mask] = _numpy.rad2deg(_numpy.arcsin(z[valid_mask] / mags[valid_mask]))
+
+    # Calculate longitude (in degrees)
+    lons[valid_mask] = _numpy.rad2deg(_numpy.arctan2(y[valid_mask], x[valid_mask]))
+
+    # Calculate azimuth (in degrees, measured from North in XY plane)
+    azis[valid_mask] = _numpy.rad2deg(_numpy.arctan2(x[valid_mask], y[valid_mask]))
+
+    return lats, lons, mags, azis
+
+def spherical2cartesian(
+        lat,
+        lon,
+        mag = 1):
     """
     Convert latitude and longitude to Cartesian coordinates.
 
@@ -1107,14 +1152,19 @@ def spherical2cartesian(lat, lon, mag):
     :return:            Position vector in Cartesian coordinates.
     :rtype:             numpy.array
     """
+    # Ensure inputs are NumPy arrays for vectorized operations
+    lats = _numpy.asarray(lat)
+    lons = _numpy.asarray(lon)
+    mags = _numpy.asarray(mag)
+
     # Convert to radians
-    lat_rads = _numpy.deg2rad(lat)
-    lon_rads = _numpy.deg2rad(lon)
+    lats_rad = _numpy.deg2rad(lat)
+    lons_rad = _numpy.deg2rad(lon)
 
     # Calculate x, y, z
-    x = mag * _numpy.cos(lat_rads) * _numpy.cos(lon_rads)
-    y = mag * _numpy.cos(lat_rads) * _numpy.sin(lon_rads)
-    z = mag * _numpy.sin(lat_rads)
+    x = mag * _numpy.cos(lats_rad) * _numpy.cos(lons_rad)
+    y = mag * _numpy.cos(lats_rad) * _numpy.sin(lons_rad)
+    z = mag * _numpy.sin(lats_rad)
 
     return x, y, z
 

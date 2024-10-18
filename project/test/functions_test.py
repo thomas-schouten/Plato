@@ -640,6 +640,17 @@ def test_plate_torques(
             plate_torques_test.calculate_synthetic_velocity()
             logging.info("Successfully computed synthetic velocity.")
 
+            print(plate_torques_test.settings.options["syn"]["Slab pull constant"], plate_torques_test.settings.options["syn"]["Mantle viscosity"])
+            print("plateID", "slab_pull_torque", "slab_bend_torque", "GPE_torque", "mantle_drag_torque", "driving_torque")
+            for i in range(len(plate_torques_test.plates.data[0]["test"].plateID.values)):
+                print(
+                    plate_torques_test.plates.data[0]["test"].plateID.values[i],
+                    plate_torques_test.plates.data[0]["syn"].slab_pull_torque_x.values[i]/plate_torques_test.plates.data[0]["test"].slab_pull_torque_x.values[i],
+                    plate_torques_test.plates.data[0]["syn"].slab_bend_torque_x.values[i]/plate_torques_test.plates.data[0]["test"].slab_bend_torque_x.values[i],
+                    plate_torques_test.plates.data[0]["syn"].GPE_torque_x.values[i]/plate_torques_test.plates.data[0]["test"].GPE_torque_x.values[i],
+                    plate_torques_test.plates.data[0]["syn"].mantle_drag_torque_x.values[i]/plate_torques_test.plates.data[0]["test"].mantle_drag_torque_x.values[i],
+                    plate_torques_test.plates.data[0]["syn"].driving_torque_x.values[i]/plate_torques_test.plates.data[0]["test"].driving_torque_x.values[i],
+                )
             # print(plate_torques_test.points.data[0]["test"].velocity_mag.median())
             plt.scatter(
                 plate_torques_test.points.data[0]["test"].lon,
@@ -660,39 +671,63 @@ def test_plate_torques(
                 marker = "o",
                 cmap = "cmc.bilbao_r",
                 vmin = 0,
-                vmax = 25,
+                # vmax = 25,
             )
             plt.colorbar()
             plt.show()
 
-            plt.scatter(
-                plate_torques_test.points.data[0]["test"].lon,
-                plate_torques_test.points.data[0]["test"].lat,
-                c=plate_torques_test.points.data[0]["test"].mantle_drag_force_mag,
-                marker = "o",
-                cmap = "cmc.vik",
-                # vmin = -3e-6,
-                # vmax = 3e-6,
-            )
-            plt.colorbar()
-            plt.show()
+            # plt.scatter(
+            #     plate_torques_test.points.data[0]["test"].lon,
+            #     plate_torques_test.points.data[0]["test"].lat,
+            #     c=plate_torques_test.points.data[0]["test"].spin_rate_mag,
+            #     marker = "o",
+            #     cmap = "cmc.vik",
+            #     # vmin = -3e-6,
+            #     # vmax = 3e-6,
+            # )
+            # plt.colorbar()
+            # plt.show()
 
-            plt.scatter(
-                plate_torques_test.points.data[0]["syn"].lon,
-                plate_torques_test.points.data[0]["syn"].lat,
-                c=plate_torques_test.points.data[0]["syn"].mantle_drag_force_mag,
-                marker = "o",
-                cmap = "cmc.vik",
-                # vmin = -3e-6,
-                # vmax = 3e-6,
-            )
-            plt.colorbar()
-            plt.show()
+            # plt.scatter(
+            #     plate_torques_test.points.data[0]["syn"].lon,
+            #     plate_torques_test.points.data[0]["syn"].lat,
+            #     c=plate_torques_test.points.data[0]["syn"].spin_rate_mag,
+            #     marker = "o",
+            #     cmap = "cmc.vik",
+            #     # vmin = -3e-6,
+            #     # vmax = 3e-6,
+            # )
+            # plt.colorbar()
+            # plt.show()
 
-            print(plate_torques_test.plates.data[0]["syn"].slab_pull_torque_x)
-            print(plate_torques_test.plates.data[0]["syn"].GPE_torque_x)
-            print(plate_torques_test.plates.data[0]["syn"].slab_bend_torque_x)
-            print(plate_torques_test.plates.data[0]["syn"].mantle_drag_torque_x)
+            # for i in range(len(plate_torques_test.plates.data[0]["syn"].plateID.values)):
+            #     print(
+            #         plate_torques_test.plates.data[0]["syn"].plateID.values[i], 
+            #         plate_torques_test.plates.data[0]["syn"].centroid_velocity_mag.values[i]/plate_torques_test.plates.data[0]["test"].centroid_velocity_mag.values[i], 
+            #     )
+
+            # plt.scatter(
+            #     plate_torques_test.plates.data[0]["syn"].area.values,
+            #     plate_torques_test.plates.data[0]["syn"].centroid_velocity_mag.values/plate_torques_test.plates.data[0]["test"].centroid_velocity_mag.values, 
+            # )
+            # plt.xlabel("Area")
+            # plt.ylabel("Centroid velocity magnitude ratio")
+            # plt.show()
+
+            # plt.scatter(
+            #     plate_torques_test.plates.data[0]["test"].pole_lon.values,
+            #     plate_torques_test.plates.data[0]["test"].pole_lat.values,
+            #     c=plate_torques_test.plates.data[0]["test"].pole_angle,
+            #     marker = "o",
+            # )
+            # plt.scatter(
+            #     plate_torques_test.plates.data[0]["syn"].pole_lon.values,
+            #     plate_torques_test.plates.data[0]["syn"].pole_lat.values,
+            #     c=plate_torques_test.plates.data[0]["syn"].pole_angle,
+            #     marker = "d",
+            # )
+            # plt.colorbar()
+            # plt.show()
 
         except Exception as e:
             logging.error(f"An error occurred during computation of synthetic velocity: {e}")
