@@ -555,13 +555,16 @@ def compute_synthetic_stage_rotation(
         stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2]
     )
 
-    # Convert the rotation angle from degrees per year to degrees per million years
+    # Normalise the rotation poles by the drag coefficient and the square of the Earth's radius
     stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * constants.mean_Earth_radius_m**2
 
+    # Convert to degrees because the 'cartesian2spherical' does not convert the magnitude to degrees
+    stage_rotation_poles_mag = _numpy.rad2deg(stage_rotation_poles_mag)
+    
     # Assign to DataFrame
     plates["pole_lat"] = stage_rotation_poles_lat
     plates["pole_lon"] = stage_rotation_poles_lon 
-    plates["pole_angle"] = _numpy.rad2deg(stage_rotation_poles_mag)
+    plates["pole_angle"] = stage_rotation_poles_mag
 
     return plates
     
