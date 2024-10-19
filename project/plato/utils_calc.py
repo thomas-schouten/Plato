@@ -64,10 +64,10 @@ class set_constants:
         self.equatorial_Earth_circumference = 40075e3               # Earth circumference at equator [m]
         
         # Conversions
-        self.s2a = 365.25 * 24 * 60 * 60                           # a to s
-        self.a2s = 1 / self.s2a                                     # s to a
+        self.a2s = 365.25 * 24 * 60 * 60                           # a to s
+        self.s2a = 1 / self.a2s                                     # s to a
 
-        self.m_s2cm_a = 1e2 * self.s2a  # m/s to cm/a
+        self.m_s2cm_a = 1e2 / self.s2a  # m/s to cm/a
         self.cm_a2m_s = 1 / self.m_s2cm_a  # cm/a to m/s
 
         self.rad_a2m_s = self.mean_Earth_radius_m * self.a2s  # rad/a to m/s
@@ -542,68 +542,27 @@ def compute_synthetic_stage_rotation(
     """
     Function to compute stage rotations.
     """
-    logging.info(f"Mean, min and max of reconstructed stage rotation angles: {plates.pole_angle.mean()}, {plates.pole_angle.min()}, {plates.pole_angle.max()}")
+    # logging.info(f"Mean, min and max of reconstructed stage rotation angles: {plates.pole_angle.mean()}, {plates.pole_angle.min()}, {plates.pole_angle.max()}")
 
     # Sum the torque vectors (in Cartesian coordinates and in Newton metres)
     mantle_drag_torque_xyz = _numpy.column_stack((plates.mantle_drag_torque_x, plates.mantle_drag_torque_y, plates.mantle_drag_torque_z))
 
     # Get rotation vector in radians per year by dividing by flipping the sign of the mantle drag torque and dividing by the area of the plate and the drag coefficient (i.e. mantle viscosity / asthenosphere thickness)
-    stage_rotations_xyz = -1 * mantle_drag_torque_xyz / (_numpy.repeat(_numpy.asarray(plates.area)[:, _numpy.newaxis], 3, axis=1) * options["Mantle viscosity"] / mech.La) * constants.s2a
+    stage_rotations_xyz = -1 * mantle_drag_torque_xyz 
 
-    # Get the velocity at the centroid of the plate in degrees per year
-    centroid_velocities_sph = cartesian2spherical(stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2])
+    # Get the rotation poles in spherical coordinates
+    stage_rotation_poles_lat, stage_rotation_poles_lon, stage_rotation_poles_mag, _ = cartesian2spherical(
+        stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2]
+    )
 
-    # Get the position of the centroid on the unit sphere before and after 1 million years of rotation in Cartesian coordinates
-    centroid_positions_before_xyz = _numpy.column_stack(spherical2cartesian(
-        plates.centroid_lat, 
-        plates.centroid_lon, 
-    ))
-    # 1. Normalize the centroid positions to ensure they are on the unit sphere
-    centroid_positions_before_xyz /= _numpy.linalg.norm(centroid_positions_before_xyz, axis=1)[:, _numpy.newaxis]
+    # Convert the rotation angle from degrees per year to degrees per million years
+    stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * constants.mean_Earth_radius_m**2
 
-    # 2. Calculate the angular velocities (in radians per year) from torque
-    # Convert the mantle drag torque to radians per year for each plate
-    stage_rotations_rad = -1 * mantle_drag_torque_xyz / (
-        _numpy.repeat(_numpy.asarray(plates.area)[:, _numpy.newaxis], 3, axis=1) * 
-        options["Mantle viscosity"] / mech.La * constants.mean_Earth_radius_m
-    ) * constants.s2a
-
-    # 3. Use the cross product to calculate the velocity vector in Cartesian coordinates
-    centroid_velocities_xyz = _numpy.cross(stage_rotations_rad, centroid_positions_before_xyz)
-
-    # 4. Use the velocity vector to compute the rotation vector for 1 million years
-    rotation_vectors = centroid_velocities_xyz * 1e6  # Assuming velocity is in radians per year
-
-    # 5. Create rotation objects using scipy's Rotation.from_rotvec
-    rotation = R.from_rotvec(rotation_vectors)
-
-    # 6. Apply the rotation to the initial centroid positions
-    centroid_positions_after_xyz = rotation.apply(centroid_positions_before_xyz)
-
-    # 7. Re-normalize the final positions to ensure they remain on the unit sphere
-    centroid_positions_after_xyz /= _numpy.linalg.norm(centroid_positions_after_xyz, axis=1)[:, _numpy.newaxis]
-
-    # 8. Calculate the dot product between the initial and final positions
-    dot_products = _numpy.einsum('ij,ij->i', centroid_positions_before_xyz, centroid_positions_after_xyz)
-
-    # 9. Clamp the dot product to the valid range [-1, 1] to avoid NaN issues
-    dot_products = _numpy.clip(dot_products, -1.0, 1.0)
-
-    # 10. Compute the rotation angles in degrees using arccos
-    stage_rotation_angles = _numpy.rad2deg(_numpy.arccos(dot_products))
-    
     # Assign to DataFrame
     plates["pole_lat"] = stage_rotation_poles_lat
     plates["pole_lon"] = stage_rotation_poles_lon 
-    plates["pole_angle"] = stage_rotation_angles
-    plates["centroid_velocity_lat"] = centroid_velocities_sph[0] * constants.deg_a2cm_a
-    plates["centroid_velocity_lon"] = centroid_velocities_sph[1] * constants.deg_a2cm_a
-    plates["centroid_velocity_mag"] = centroid_velocities_sph[2] * constants.deg_a2cm_a
-    plates["centroid_velocity_azi"] = centroid_velocities_sph[3] * constants.deg_a2cm_a
+    plates["pole_angle"] = _numpy.rad2deg(stage_rotation_poles_mag)
 
-    # Check values
-    logging.info(f"Mean, min and max of synthetic stage rotation angles: {stage_rotation_angles.mean()}, {stage_rotation_angles.min()}, {stage_rotation_angles.max()}")
-    
     return plates
     
 def compute_velocity(

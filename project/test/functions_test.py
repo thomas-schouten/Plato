@@ -649,34 +649,34 @@ def test_plate_torques(
                 marker = "o",
                 cmap = "cmc.bilbao_r",
                 vmin = 0,
-                # vmax = 25,
+                vmax = 25,
             )
             plt.colorbar()
             plt.show()
 
-            # plt.scatter(
-            #     plate_torques_test.points.data[0]["test"].lon,
-            #     plate_torques_test.points.data[0]["test"].lat,
-            #     c=plate_torques_test.points.data[0]["test"].spin_rate_mag,
-            #     marker = "o",
-            #     cmap = "cmc.vik",
-            #     # vmin = -3e-6,
-            #     # vmax = 3e-6,
-            # )
-            # plt.colorbar()
-            # plt.show()
+            plt.scatter(
+                plate_torques_test.points.data[0]["test"].lon,
+                plate_torques_test.points.data[0]["test"].lat,
+                c=plate_torques_test.points.data[0]["test"].spin_rate_mag,
+                marker = "o",
+                cmap = "cmc.vik",
+                vmin = -1e-4,
+                vmax = 1e-4,
+            )
+            plt.colorbar()
+            plt.show()
 
-            # plt.scatter(
-            #     plate_torques_test.points.data[0]["syn"].lon,
-            #     plate_torques_test.points.data[0]["syn"].lat,
-            #     c=plate_torques_test.points.data[0]["syn"].spin_rate_mag,
-            #     marker = "o",
-            #     cmap = "cmc.vik",
-            #     # vmin = -3e-6,
-            #     # vmax = 3e-6,
-            # )
-            # plt.colorbar()
-            # plt.show()
+            plt.scatter(
+                plate_torques_test.points.data[0]["syn"].lon,
+                plate_torques_test.points.data[0]["syn"].lat,
+                c=plate_torques_test.points.data[0]["syn"].spin_rate_mag,
+                marker = "o",
+                cmap = "cmc.vik",
+                vmin = -1e-4,
+                vmax = 1e-4,
+            )
+            plt.colorbar()
+            plt.show()
 
             # for i in range(len(plate_torques_test.plates.data[0]["syn"].plateID.values)):
             #     print(

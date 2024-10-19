@@ -241,61 +241,94 @@ def compute_synthetic_stage_rotation(
 
     # logging.info(f"Mean, min and max of reconstructed stage rotation angles: {plates.pole_angle.mean()}, {plates.pole_angle.min()}, {plates.pole_angle.max()}")
     # 1. Normalize the centroid positions to ensure they are on the unit sphere
-    centroid_positions_before_xyz /= _numpy.linalg.norm(centroid_positions_before_xyz, axis=1)[:, _numpy.newaxis]
+    # centroid_positions_before_xyz /= _numpy.linalg.norm(centroid_positions_before_xyz, axis=1)[:, _numpy.newaxis]
 
     # 2. Calculate the angular velocities (in radians per year) from torque
     # Convert the mantle drag torque to radians per year for each plate
-    stage_rotations_rad = -1 * mantle_drag_torque_xyz / (
-        _numpy.repeat(_numpy.asarray(plates.area)[:, _numpy.newaxis], 3, axis=1) * 
-        options["Mantle viscosity"] / mech.La * constants.mean_Earth_radius_m
-    ) * constants.s2a
+    # stage_rotations_rad = -1 * mantle_drag_torque_xyz / (
+    #     _numpy.repeat(_numpy.asarray(plates.area)[:, _numpy.newaxis], 3, axis=1) )
+    # #     options["Mantle viscosity"] / mech.La
+    # # )
 
-    # 3. Use the cross product to calculate the velocity vector in Cartesian coordinates
-    centroid_velocities_xyz = _numpy.cross(stage_rotations_rad, centroid_positions_before_xyz)
+    # Invert the torque to get the rotation
+    stage_rotations_xyz = -1 * mantle_drag_torque_xyz / (options["Mantle viscosity"] / mech.La)
 
-    # Step 3: Create rotation vectors by scaling velocities for 1 million years
-    rotation_vectors = centroid_velocities_xyz * 1e6  # Radians for 1 million years
+    # Convert to spherical coordinates
+    stage_rotations_lat, stage_rotations_lon, stage_rotations_mag, _ = cartesian2spherical(
+        stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2]
+    )
 
-    # Step 4: Use scipy's Rotation.from_rotvec to apply the rotations
-    rotation = R.from_rotvec(rotation_vectors)
+    # Normalise magnitudes
+    # stage_rotations_mag /= _numpy.linalg.norm(plates.area)
 
-    # Step 5: Rotate the initial positions
-    centroid_positions_after_xyz = rotation.apply(centroid_positions_before_xyz)
+    # Assign the stage rotation angles to the plates DataFrame
+    plates["pole_lat"] = stage_rotations_lat
+    plates["pole_lon"] = stage_rotations_lon
+    plates["pole_angle"] = _numpy.rad2deg(stage_rotations_mag) / plates.area * 1e6
 
-    # Step 6: Normalize to ensure the points remain on the unit sphere
-    centroid_positions_after_xyz /= _numpy.linalg.norm(centroid_positions_after_xyz, axis=1)[:, _numpy.newaxis]
+    # Get the cross product of the rotation vector and the centroid position
+    centroid_velocities_xyz = _numpy.cross(stage_rotations_xyz, centroid_positions_before_xyz)
 
-    # Step 7: Compute the dot product of the initial and final positions
-    dot_products = _numpy.einsum('ij,ij->i', centroid_positions_before_xyz, centroid_positions_after_xyz)
+    # Convert to spherical coordinates
+    centroid_velocities_lat, centroid_velocities_lon, centroid_velocities_mag, _ = cartesian2spherical(
+        centroid_velocities_xyz[:, 0], centroid_velocities_xyz[:, 1], centroid_velocities_xyz[:, 2]
+    )
 
-    # Step 8: Clamp the dot product values to the range [-1, 1] to avoid NaNs
-    dot_products = _numpy.clip(dot_products, -1.0, 1.0)
-
-    # Step 9: Compute the rotation angles in degrees
-    stage_rotation_angles = _numpy.rad2deg(_numpy.arccos(dot_products))
-
-    plates["pole_angle"] = stage_rotation_angles
+    # Assign the stage rotation angles to the plates DataFrame
+    plates["centroid_velocity_mag"] = centroid_velocities_mag * constants.deg_a2cm_a
 
     return plates
+
+    # # 3. Use the cross product to calculate the velocity vector in Cartesian coordinates
+    # centroid_velocities_xyz = _numpy.cross(stage_rotations_rad, centroid_positions_before_xyz)
+
+    # # Step 3: Create rotation vectors by scaling velocities for 1 million years
+    # rotation_vectors = centroid_velocities_xyz * 1e6  # Radians for 1 million years
+
+    # # Step 4: Use scipy's Rotation.from_rotvec to apply the rotations
+    # rotation = R.from_rotvec(rotation_vectors)
+
+    # # Step 5: Rotate the initial positions
+    # centroid_positions_after_xyz = rotation.apply(centroid_positions_before_xyz)
+
+    # # Step 6: Normalize to ensure the points remain on the unit sphere
+    # centroid_positions_after_xyz /= _numpy.linalg.norm(centroid_positions_after_xyz, axis=1)[:, _numpy.newaxis]
+
+    # # Step 7: Compute the dot product of the initial and final positions
+    # dot_products = _numpy.einsum('ij,ij->i', centroid_positions_before_xyz, centroid_positions_after_xyz)
+
+    # # Step 8: Clamp the dot product values to the range [-1, 1] to avoid NaNs
+    # dot_products = _numpy.clip(dot_products, -1.0, 1.0)
+
+    # # Step 9: Compute the rotation angles in degrees
+    # stage_rotation_angles = _numpy.rad2deg(_numpy.arccos(dot_products))
+
+    # plates["pole_angle"] = stage_rotation_angles
+
+    # return plates
 
 # %%
 # Load data
 plate_data_ref = _pandas.read_parquet("/Users/thomas/Documents/_Plato/Reconstruction_analysis/Output/M2016/Lr-Hb/Plates/Plates_Muller2016_ref_0Ma.parquet")
-
+plate_data_syn = _pandas.read_parquet("/Users/thomas/Documents/_Plato/Reconstruction_analysis/Output/M2016/Lr-Hb/Plates/Plates_Muller2016_syn_0Ma.parquet")
 plate_data = _pandas.read_parquet("/Users/thomas/Documents/_Plato/Plato/project/test/output/Plates/Plates_Muller2016_test_0Ma.parquet")
 options = {"Mantle viscosity": 1.72e20}
+plate_data_syn.sort_values("plateID", inplace=True, ignore_index=True)
 plate_data_after = compute_synthetic_stage_rotation(plate_data.copy(), options)
 
-plate_data.sort_values("pole_angle", inplace=True, ignore_index=True)
-plate_data_ref.sort_values("pole_angle", inplace=True, ignore_index=True)
-plt.scatter(plate_data_after["pole_angle"], plate_data_ref["pole_angle"])
+plate_data_after.sort_values("plateID", inplace=True, ignore_index=True)
+plt.scatter(plate_data_after["centroid_velocity_mag"], plate_data["centroid_velocity_mag"])
+# plt.show()
+# plt.scatter(plate_data_after["centroid_velocity_mag"], plate_data_syn["centroid_v_mag"])
+
 plt.show()
+# plt.scatter(plate_data_ref["plateID"].index, plate_data_after["pole_lat"]-plate_data_ref["pole_lat"])
+# plt.scatter(plate_data_after["pole_lat"], antipode_pole_lat)
+# plt.show()
+# plt.scatter(
+#     plate_data["mantle_drag_torque_x"]*(options["Mantle viscosity"]/200e3)/plate_data_ref["mantle_drag_torque_x"],
+#     plate_data["area"]
+#     )
 
-
-plt.scatter(
-    plate_data["mantle_drag_torque_x"]*(options["Mantle viscosity"]/200e3)/plate_data_ref["mantle_drag_torque_x"],
-    plate_data["area"]
-    )
-
-print(plate_data_after["pole_lon"]/plate_data_ref["pole_lon"])
+# print(plate_data_after["pole_angle"]/plate_data_ref["pole_angle"])
 # %%
