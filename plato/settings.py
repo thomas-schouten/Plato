@@ -10,7 +10,7 @@ from typing import List, Optional
 
 import numpy as _numpy
 
-import utils_data, utils_calc
+from . import utils_data, utils_calc
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SETTINGS OBJECT

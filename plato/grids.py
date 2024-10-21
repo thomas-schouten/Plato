@@ -6,8 +6,8 @@ import gplately as _gplately
 import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
-import utils_data, utils_init
-from settings import Settings
+from . import utils_data, utils_init
+from .settings import Settings
 
 class Grids():
     def __init__(

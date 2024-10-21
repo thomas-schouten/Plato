@@ -8,8 +8,8 @@ import pandas as _pandas
 import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
-import utils_data, utils_calc, utils_init
-from settings import Settings
+from . import utils_data, utils_calc, utils_init
+from .settings import Settings
 
 class Slabs:
     def __init__(

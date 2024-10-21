@@ -6,7 +6,7 @@ import gplately as _gplately
 from gplately import pygplates as _pygplates
 from tqdm import tqdm
 
-from settings import Settings
+from .settings import Settings
 # from plates import Plates
 # from points import Points
 # from slabs import Slabs
