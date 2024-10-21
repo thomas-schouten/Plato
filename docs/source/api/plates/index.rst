@@ -2,7 +2,7 @@
 Plates
 #############
 
-.. automodule:: hmclab.Distributions
+.. automodule:: plato.plates
    :no-members:
    :show-inheritance:
 

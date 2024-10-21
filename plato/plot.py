@@ -1,60 +1,136 @@
+# Standard libraries
+import logging
+import warnings
+from typing import Optional, Union
+
+# Third-party libraries
+import numpy as _numpy
+import cartopy.crs as ccrs
+
+# Plato libraries
+from .settings import Settings
+from .plates import Plates
+from .slabs import Slabs
+from .points import Points
+from .grids import Grids
+from .globe import Globe
+from .plate_torques import PlateTorques
+
 class Plot():
     """
     A class to make standardised plots of reconstructions.
     """
     def __init__(
             self,
-            settings = None,
-            plates = None,
-            slabs = None,
-            points = None,
-            grids = None,
+            settings: Optional[Settings] = None,
+            plates: Optional[Plates] = None,
+            slabs: Optional[Slabs] = None,
+            points: Optional[Points] = None,
+            grids: Optional[Grids] = None,
+            globe: Optional[Globe] = None,
+            plate_torques: Optional[PlateTorques] = None,
         ):
         """
-        
+        Constructor for the Plot class.
+
+        :param settings:        settings object
+        :type settings:         Settings
+        :param plates:          plates object
+        :type plates:           Plates
+        :param slabs:           slabs object
+        :type slabs:            Slabs
+        :param points:          points object
+        :type points:           Points
+        :param grids:           grids object
+        :type grids:            Grids
+        :param globe:           globe object
+        :type globe:            Globe
+        :param plate_torques:   plate torques object
         """
-        # Store the input data
-        self.settings = settings
-        self.plates = plates
-        self.slabs = slabs
-        self.points = points
-        self.grids = grids
+        # Store the input data, if provided
+        if isinstance(settings, Settings):
+            self.settings = settings
+        else:
+            self.settings = None
+
+        if isinstance(plates, Plates):
+            self.plates = plates
+            if self.settings is None:
+                self.settings = self.plates.settings
+        else:
+            self.plates = None
+
+        if isinstance(slabs, Slabs):
+            self.slabs = slabs
+            if self.settings is None:
+                self.settings = self.slabs.settings
+        else:
+            self.slabs = None
+
+        if isinstance(points, Points):
+            self.points = points
+            if self.settings is None:
+                self.settings = self.points.settings
+        else:
+            self.points = None
+
+        if isinstance(grids, Grids):
+            self.grids = grids
+            if self.settings is None:
+                self.settings = self.grids.settings
+        else:
+            self.grids = None
+
+        if isinstance(globe, Globe):
+            self.globe = globe
+            if self.settings is None:
+                self.settings = self.globe.settings
+        else:
+            self.globe = None
+
+        if isinstance(plate_torques, PlateTorques):
+            self.plates = plate_torques.plates
+            self.slabs = plate_torques.slabs
+            self.points = plate_torques.points
+            self.grids = plate_torques.grids
+            self.globe = plate_torques.globe
 
     def plot_seafloor_age_map(
             self,
-            ax,
+            ax: object,
             age: int,
             cmap = "cmc.lajolla_r",
-            vmin = 0,
-            vmax = 250,
-            log_scale = False,
-            coastlines_facecolour = "lightgrey",
-            coastlines_edgecolour = "lightgrey",
-            coastlines_linewidth = 0,
-            plate_boundaries_linewidth = 0.5,
-        ):
+            vmin: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0,
+            vmax: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 250,
+            log_scale: bool = False,
+            coastlines_facecolour: Optional[str] = "lightgrey",
+            coastlines_edgecolour: Optional[str] = "lightgrey",
+            coastlines_linewidth: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0,
+            plate_boundaries_linewidth: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0.5,
+        ) -> object:
         """
         Function to create subplot with global seafloor age.
 
         :param ax:                      axes object
         :type ax:                       matplotlib.axes.Axes
-        :param _age:     the time for which to display the map
-        :type _age:      int
-        :param cmap:                    colormap to use for plotting
+        :param age:                     the time for which to display the map
+        :type age:                      int
+        :param cmap:                    colormap to use
         :type cmap:                     str
-        :param vmin:                    minimum value for the colormap
-        :type vmin:                     float
-        :param vmax:                    maximum value for the colormap
-        :type vmax:                     float
-        :param log_scale:               whether or not to use a log scale for the colormap
-        :type log_scale:                boolean
-        :param facecolor_coastlines:    facecolor for coastlines
-        :type facecolor_coastlines:     str
-        :param edgecolor_coastlines:    edgecolor for coastlines
-        :type edgecolor_coastlines:     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param log_scale:               whether or not to use log scale
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
+        :type coastlines_edgecolour:    str
+        :param coastlines_linewidth:    linewidth for coastlines
 
-        :return:                    axes object and image object
-        :rtype:                     matplotlib.axes.Axes, matplotlib.image.AxesImage
+        :return:                        image object
+        :rtype:                         matplotlib.image.AxesImage
         """
         # Check if age is in valid reconstruction ages
         if age not in self.settings.ages:
@@ -67,20 +143,21 @@ class Plot():
         gl.top_labels = False
         gl.right_labels = False
 
-        # Plot seafloor age grid
-        im = self.plot_grid(
-            ax,
-            self.seafloor[_age].seafloor_age.values,
-            cmap = cmap,
-            vmin = vmin,
-            vmax = vmax,
-            log_scale = log_scale
-        )
+        if self.grids is not None:
+            # Plot seafloor age grid
+            im = self.plot_grid(
+                ax,
+                self.grids.seafloor_age[age].seafloor_age.values,
+                cmap = cmap,
+                vmin = vmin,
+                vmax = vmax,
+                log_scale = log_scale
+            )
 
         # Plot plates and coastlines
         ax = self.plot_reconstruction(
             ax,
-            _age,
+            age,
             coastlines_facecolour = coastlines_facecolour,
             coastlines_edgecolour = coastlines_edgecolour,
             coastlines_linewidth = coastlines_linewidth,
@@ -106,21 +183,6 @@ class Plot():
         ):
         """
         Function to create subplot with global sediment thicknesses.
-        
-        :param ax:                  axes object
-        :type ax:                   matplotlib.axes.Axes
-        :param _age: the time for which to display the map
-        :type _age:  int
-        :param case:                case for which to plot the sediments
-        :type case:                 str
-        :param plotting_options:    dictionary with options for plotting
-        :type plotting_options:     dict
-        :param vmin:                minimum value for the colormap
-        :type vmin:                 float
-        :param vmax:                maximum value for the colormap
-        :type vmax:                 float
-        :param cmap:                colormap to use for plotting
-        :type cmap:                 str
         """
         # Check if reconstruction time is in valid times
         if _age not in self.times:
@@ -129,23 +191,28 @@ class Plot():
         # Set basemap
         gl = self.plot_basemap(ax)
 
-        # Get sediment thickness grid
-        if self.options[case]["Sample sediment grid"] !=0:
-            grid = self.seafloor[_age][self.options[case]["Sample sediment grid"]].values
-        else:
-            grid = _numpy.where(_numpy.isnan(self.seafloor[_age].seafloor_age.values), _numpy.nan, vmin)
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
 
-        # Plot sediment thickness grid
-        im = self.plot_grid(
-            ax,
-            grid,
-            cmap = cmap,
-            vmin = vmin,
-            vmax = vmax,
-            log_scale = log_scale
-            )
+        if self.grid is not None:
+            # Get sediment thickness grid
+            if self.options[case]["Sample sediment grid"] !=0:
+                grid = self.seafloor[_age][self.options[case]["Sample sediment grid"]].values
+            else:
+                grid = _numpy.where(_numpy.isnan(self.seafloor[_age].seafloor_age.values), _numpy.nan, vmin)
 
-        if self.options[case]["Active margin sediments"] != 0 or self.options[case]["Sample erosion grid"]:
+            # Plot sediment thickness grid
+            im = self.plot_grid(
+                ax,
+                grid,
+                cmap = cmap,
+                vmin = vmin,
+                vmax = vmax,
+                log_scale = log_scale
+                )
+
+        if self.settings.options[case]["Active margin sediments"] != 0 or self.settings.options[case]["Sample erosion grid"]:
             lat = self.slabs[_age][case].lat.values
             lon = self.slabs[_age][case].lon.values
             data = self.slabs[_age][case].sediment_thickness.values
@@ -193,7 +260,7 @@ class Plot():
     def plot_erosion_rate_map(
             self,
             ax,
-            _age: int,
+            age: int,
             case,
             cmap = "cmc.davos_r",
             vmin = 1e0,
@@ -211,32 +278,40 @@ class Plot():
             plotting_options:   dictionary with options for plotting
         """
         # Check if reconstruction time is in valid times
-        if _age not in self.times:
+        if age not in self.settings.ages:
             return print("Invalid reconstruction time")
         
         # Set basemap
         gl = self.plot_basemap(ax)
 
-        # Get erosion rate grid
-        if self.options[case]["Sample erosion grid"] !=0:
-            grid = self.seafloor[_age].erosion_rate.values
-        else:
-            grid = _numpy.zeros_like(self.seafloor[_age].seafloor_age.values)
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
 
         # Get erosion rate grid
-        im = self.plot_grid(
-            ax,
-            grid,
-            cmap = cmap,
-            vmin = vmin,
-            vmax = vmax,
-            log_scale = log_scale
-        )
+        if self.grids is not None:
+            if self.settings.options[case]["Sample erosion grid"] !=0:
+                grid = self.seafloor[_age].erosion_rate.values
+            else:
+                grid = _numpy.zeros_like(self.seafloor[_age].seafloor_age.values)
+
+            # Get erosion rate grid
+            im = self.plot_grid(
+                ax,
+                grid,
+                cmap = cmap,
+                vmin = vmin,
+                vmax = vmax,
+                log_scale = log_scale
+            )
+        else:
+            raise Warning("No erosion rate grid available, only plotting the reconstruction")
+            im = None
         
         # Plot plates and coastlines
         ax = self.plot_reconstruction(
             ax,
-            _age,
+            age,
             coastlines_facecolour = coastlines_facecolour,
             coastlines_edgecolour = coastlines_edgecolour,
             coastlines_linewidth = coastlines_linewidth,

@@ -2,7 +2,7 @@
 Globe
 #############
 
-.. automodule:: hmclab.Distributions
+.. automodule:: plato.globe
    :no-members:
    :show-inheritance:
 
@@ -14,3 +14,5 @@ Available classes within `Globe`:
    :template: custom-class-template.rst
    :nosignatures:
    :recursive:
+
+   Globe

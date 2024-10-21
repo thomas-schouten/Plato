@@ -73,13 +73,16 @@ def get_reconstruction(
 
     # Establish a connection to gplately DataServer if any file is missing
     gdownload = None
+    if not rotation_file:
+        logging.info(f"Missing rotation file for {name} plate reconstruction from GPlately DataServer.")
+    if not topology_file:
+        logging.info(f"Missing topology file for {name} plate reconstruction from GPlately DataServer.")
+    if not polygon_file:
+        logging.info(f"Missing polygon file for {name} plate reconstruction from GPlately DataServer.")
+
     if not rotation_file or not topology_file or not polygon_file:
         gdownload = _gplately.DataServer(name)
-        # Inform the user
-        logging.info(f"Downloading files for {name} plate reconstruction from GPlately DataServer.")
 
-    # Download reconstruction files if any are missing
-    if not rotation_file or not topology_file or not polygon_file:
         valid_reconstructions = [
             "Muller2019", "Muller2016", "Merdith2021", "Cao2020", "Clennett2020", 
             "Seton2012", "Matthews2016", "Merdith2017", "Li2008", "Pehrsson2015", 
@@ -105,7 +108,7 @@ def get_reconstruction(
     # Inform user that the setup is complete
     logging.info("Plate reconstruction ready!")  
     
-    return reconstruction
+    return reconstruction, coastlines
 
 def check_object_data(
         obj,

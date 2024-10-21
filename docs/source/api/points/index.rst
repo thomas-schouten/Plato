@@ -2,7 +2,7 @@
 Points
 #############
 
-.. automodule:: hmclab.Distributions
+.. automodule:: plato.points
    :no-members:
    :show-inheritance:
 

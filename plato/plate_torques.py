@@ -10,13 +10,13 @@ import numpy as _numpy
 import pandas as _pandas
 
 # Local libraries
-import utils_data, utils_init
-from globe import Globe
-from grids import Grids
-from plates import Plates
-from points import Points
-from slabs import Slabs
-from settings import Settings
+from . import utils_data, utils_init
+from .globe import Globe
+from .grids import Grids
+from .plates import Plates
+from .points import Points
+from .slabs import Slabs
+from .settings import Settings
 
 class PlateTorques():
     """

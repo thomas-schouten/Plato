@@ -1,8 +1,20 @@
+# Standard libraries
+import logging
+import warnings
+from typing import Optional, Union
+
+# Third-party libraries
 import numpy as _numpy
 import matplotlib.pyplot as plt
 
-# Import plato functions
-import utils_calc
+# Plato libraries
+from .settings import Settings
+from .plates import Plates
+from .slabs import Slabs
+from .points import Points
+from .grids import Grids
+from .globe import Globe
+from .plate_torques import PlateTorques
 
 class Optimisation():
     """
@@ -10,18 +22,79 @@ class Optimisation():
     """    
     def __init__(
             self,
-            plates,
-            slabs,
-            points,
-            options,
-            constants,
-            mech
+            settings: Optional[Settings] = None,
+            plates: Optional[Plates] = None,
+            slabs: Optional[Slabs] = None,
+            points: Optional[Points] = None,
+            grids: Optional[Grids] = None,
+            globe: Optional[Globe] = None,
+            plate_torques: Optional[PlateTorques] = None,
         ):
         """
-        Function to initialise the Optimise class.
-        """
-        pass
+        Constructor for the Plot class.
 
+        :param settings:        settings object
+        :type settings:         Settings
+        :param plates:          plates object
+        :type plates:           Plates
+        :param slabs:           slabs object
+        :type slabs:            Slabs
+        :param points:          points object
+        :type points:           Points
+        :param grids:           grids object
+        :type grids:            Grids
+        :param globe:           globe object
+        :type globe:            Globe
+        :param plate_torques:   plate torques object
+        """
+        # Store the input data, if provided
+        if isinstance(settings, Settings):
+            self.settings = settings
+        else:
+            self.settings = None
+
+        if isinstance(plates, Plates):
+            self.plates = plates
+            if self.settings is None:
+                self.settings = self.plates.settings
+        else:
+            self.plates = None
+
+        if isinstance(slabs, Slabs):
+            self.slabs = slabs
+            if self.settings is None:
+                self.settings = self.slabs.settings
+        else:
+            self.slabs = None
+
+        if isinstance(points, Points):
+            self.points = points
+            if self.settings is None:
+                self.settings = self.points.settings
+        else:
+            self.points = None
+
+        if isinstance(grids, Grids):
+            self.grids = grids
+            if self.settings is None:
+                self.settings = self.grids.settings
+        else:
+            self.grids = None
+
+        if isinstance(globe, Globe):
+            self.globe = globe
+            if self.settings is None:
+                self.settings = self.globe.settings
+        else:
+            self.globe = None
+
+        if isinstance(plate_torques, PlateTorques):
+            self.plates = plate_torques.plates
+            self.slabs = plate_torques.slabs
+            self.points = plate_torques.points
+            self.grids = plate_torques.grids
+            self.globe = plate_torques.globe
+        
     def minimise_residual_torque(
             self,
             opt_time,
