@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 import gplately as _gplately
 import numpy as _numpy
+import pandas as _pandas
 from tqdm import tqdm as _tqdm
 
 from . import utils_data, utils_calc, utils_init
@@ -182,7 +183,7 @@ class Plates:
             )
         
         # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
-        _iterable = utils_data.select_iterable(cases, self.settings.point_cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.cases)
 
         # Loop through ages
         for _age in _tqdm(_ages, desc="Calculating RMS velocities", disable=self.settings.logger.level==logging.INFO):
@@ -301,9 +302,6 @@ class Plates:
                     selected_points_plateID = _point_data.plateID.values
                     selected_points_area = _point_data.segment_length_lat.values * _point_data.segment_length_lon.values
 
-                if torque_var == "GPE":
-                    print("Force lon:", _point_data[f"{torque_var}_force_lon"].values)
-
                 # Calculate torques
                 computed_data = utils_calc.compute_torque_on_plates(
                     _plate_data,
@@ -316,9 +314,7 @@ class Plates:
                     self.settings.constants,
                     torque_var = torque_var,
                 )
-                if torque_var == "GPE":
-                    print("Torque mag: ", computed_data[f"{torque_var}_torque_mag"].values)
-
+    
                 # Enter sampled data back into the DataFrame
                 self.data[_age][key].loc[_plate_data.index] = computed_data.copy()
 
@@ -355,10 +351,11 @@ class Plates:
         # Define cases if not provided
         _cases = utils_data.select_cases(cases, self.settings.cases)
 
+        # Inform the user that the driving torques are being calculated
+        logging.info("Computing driving torques...")
+
         # Loop through ages
         for i, _age in _tqdm(enumerate(_ages), desc="Calculating driving torque", disable=self.settings.logger.level==logging.INFO):
-            # Inform the user that the driving torques are being calculated
-            logging.info(f"Computing driving torque at {_age} Ma")
 
             # Loop through cases
             for _case in _cases:
@@ -375,8 +372,8 @@ class Plates:
                 # Enter sampled data back into the DataFrame
                 self.data[_age][_case].loc[mask] = computed_data
         
-        # Set flag to indicate that the driving torque has been calculated
-        self.driving_torque_calculated = True
+        # Inform the user that the driving torques have been calculated
+        logging.info("Driving torques calculated!")
 
     def calculate_residual_torque(
             self,
@@ -402,15 +399,15 @@ class Plates:
         # Define cases if not provided
         _cases = utils_data.select_cases(cases, self.settings.cases)
 
+        # Inform the user that the driving torques are being calculated
+        logging.info(f"Computing residual torques...")
+        
         # Loop through cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
         for _case in _tqdm(_cases, desc="Calculating residual torque", disable=self.settings.logger.level==logging.INFO):
             # Skip if reconstructed motions are enabled
             if self.settings.options[_case]["Reconstructed motions"]:
                 continue
-
-            # Inform the user that the driving torques are being calculated
-            logging.info(f"Computing residual torque at {_case} Ma")
 
             # Loop through ages
             for _age in _ages:
@@ -426,6 +423,9 @@ class Plates:
 
                 # Enter sampled data back into the DataFrame
                 self.data[_age][_case].loc[mask] = computed_data.copy()
+
+        # Inform the user that the driving torques have been calculated
+        logging.info(f"Residual torques for case calculated!")
                 
     def calculate_synthetic_velocity(
             self,
@@ -474,11 +474,79 @@ class Plates:
                     # Calculate synthetic mantle drag torque
                     computed_data1 = utils_calc.sum_torque(_data, "mantle_drag", self.settings.constants)
 
-                    # Calculate synthetic velocity
+                    # Calculate synthetic stage rotation
                     computed_data2 = utils_calc.compute_synthetic_stage_rotation(computed_data1, self.settings.options[_case])
 
                     # Enter sampled data back into the DataFrame
                     self.data[_age][_case].loc[_data.index] = computed_data2.copy()
+
+    def extract_data_through_time(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            var: Optional[Union[List[str], str]] = "velocity_rms_mag",
+        ):
+        """
+        Function to extract data on slabs through time as a pandas.DataFrame.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Define plateIDs if not provided
+        # Default is to select all major plates in the Müller et al. (2016) reconstruction
+        _plateIDs = utils_data.select_plateIDs(
+            plateIDs, 
+            [101,   # North America
+            201,    # South America
+            301,    # Eurasia
+            501,    # India
+            801,    # Australia
+            802,    # Antarctica
+            901,    # Pacific
+            902,    # Farallon
+            911,    # Nazca
+            919,    # Phoenix
+            926,    # Izanagi
+            ]
+        )
+
+        # Initialise dictionary to store results
+        extracted_data = {case: None for case in _cases}
+
+        # Loop through valid cases
+        for _case in _cases:
+            # Initialise DataFrame
+            extracted_data[_case] = _pandas.DataFrame({
+                "Age": _ages,
+            })
+            for _plateID in _plateIDs:
+                # Initialise column for each plate
+                extracted_data[_case][_plateID] = _numpy.nan
+
+            for i, _age in enumerate(_ages):
+                # Select data for the given age and case
+                _data = self.data[_age][_case]
+
+                # Loop through plateIDs
+                for _plateID in enumerate(_plateIDs):
+                    if _data.plateID.isin([_plateID]).any():
+                        # Hard-coded exception for the Indo-Australian plate for 20-43 Ma (which is defined as 801 in the Müller et al. (2016) reconstruction)
+                        _plateID = 801 if _plateID == 501 and _age >= 20 and _age <= 43 else _plateID
+
+                        # Extract data
+                        extracted_data[_case].loc[i, _plateID] = _data[_data.plateID == _plateID][var].values[0]
+
+        # Return extracted data
+        if len(_cases) == 1:
+            # If only one case is selected, return the DataFrame
+            return extracted_data[_cases[0]]
+        else:
+            # If multiple cases are selected, return the dictionary
+            return extracted_data
 
     def save(
             self,

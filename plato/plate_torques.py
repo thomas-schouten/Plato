@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Union
 import gplately as _gplately
 import numpy as _numpy
 import pandas as _pandas
+import xarray as _xarray
 
 # Local libraries
 from . import utils_data, utils_init
@@ -127,6 +128,28 @@ class PlateTorques():
 
         logging.info("PlateTorques object successfully instantiated!")
 
+    def add_grid(
+            self,
+            input_grids: Union[Dict[Union[int, float, _numpy.integer, _numpy.floating], _xarray.Dataset], _xarray.Dataset],
+            variable_name: str = "new_grid",
+            grid_type: str = "seafloor_age",
+            target_variable: str = "z",
+            mask_continents: Optional[bool] = False,
+            prefactor: Optional[float] = 1.,
+        ):
+        """
+        Function to add a grid to the grids object.
+        """
+        # Add grid
+        self.grids.add_grid(
+            input_grids,
+            variable_name,
+            grid_type,
+            target_variable,
+            mask_continents,
+            prefactor,
+        )
+
     def calculate_rms_velocity(
             self,
             ages = None,
@@ -197,7 +220,7 @@ class PlateTorques():
         """
         self.slabs.sample_slab_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
 
-    def sample_slab_sediment_thickness(
+    def sample_slab_sediment_thicknesses(
             self,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
@@ -208,22 +231,22 @@ class PlateTorques():
         """
         self.slabs.sample_slab_sediment_thickness(ages, cases, plateIDs, self.grids.sediment)
 
-    # def sample_seafloor_age_at_upper_plates(
-    #         self,
-    #         ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-    #         cases: Optional[Union[str, List]],
-    #         plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-    #     ):
-    #     """
-    #     Function to sample the seafloor ages and other variables (if available)
-    #     """
-    #     self.slabs.sample_upper_plates(ages, cases, plateIDs, self.grids.seafloor_age)
+    def sample_arc_seafloor_ages(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+        ):
+        """
+        Function to sample the seafloor ages and other variables (if available)
+        """
+        self.slabs.sample_arc_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
 
     def calculate_all_torques(
             self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
-            cases: Optional[Union[str, List]],
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]],
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
         ):
         """
         Function to calculate all torques
@@ -347,11 +370,10 @@ class PlateTorques():
 
         # Calculate the torque on 
         self.plates.calculate_torque_on_plates(
+            self.slabs.data,
             ages,
             cases,
             plateIDs,
-            self.plates.data,
-            self.slabs.data,
             torque_var = "slab_bend",
         )
 
@@ -435,6 +457,29 @@ class PlateTorques():
             _cases,
             plateIDs,
         )
+
+    def extract_data_through_time(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            type: Optional[str] = "plates",
+            var: Optional[List[str]] = "residual_torque_mag",
+        ):
+        """
+        Function to extract data through time.
+        """
+        if type == "plates":
+            self.plates.extract_data_through_time(ages, cases, plateIDs, var)
+
+        elif type == "points":  
+            self.points.extract_data_through_time(ages, cases, plateIDs, var)
+
+        elif type == "slabs":
+            self.slabs.extract_data_through_time(ages, cases, plateIDs, var)
+
+        else:
+            logging.error("Invalid type provided! Please choose from 'plates', 'points', or 'slabs'.")
 
     def save_all(
             self,

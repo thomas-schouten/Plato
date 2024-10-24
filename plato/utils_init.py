@@ -108,7 +108,7 @@ def get_reconstruction(
     # Inform user that the setup is complete
     logging.info("Plate reconstruction ready!")  
     
-    return reconstruction, coastlines
+    return reconstruction
 
 def check_object_data(
         obj,

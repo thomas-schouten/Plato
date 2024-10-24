@@ -30,7 +30,7 @@ import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
 # Local libraries
-from .utils_calc import set_constants, project_points
+from .utils_calc import set_constants, mag_azi2lat_lon, project_points
 
 def get_plate_data(
         rotations: _pygplates.RotationModel,
@@ -768,7 +768,11 @@ def select_iterable(
     # Define iterable
     if cases is None:
         # If no iterable is provided, use the default iterable
-        return default_iterable
+        if isinstance(default_iterable, list):
+            # If the default iterable is a list, return a dictionary with the default iterable
+            return {case: [case] for case in default_iterable}
+        else:
+            return default_iterable
 
     elif isinstance(cases, str):
         # If cases is a single value, put it in a list

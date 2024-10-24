@@ -18,7 +18,7 @@ from ._version import get_versions
 __version__ = get_versions()["version"]
 del get_versions
 
-name = "hmclab"
+name = "plato"
 __all__ = [
     "globe",
     "plates",

@@ -490,7 +490,7 @@ def compute_GPE_force(
             points["GPE_force_lat"] = _numpy.where(_numpy.isnan(ages[i]), 0, points["GPE_force_lat"])
             points["GPE_force_lon"] = _numpy.where(_numpy.isnan(ages[i]), 0, points["GPE_force_lon"])
 
-    points["GPE_force_mag"] = _numpy.sqrt(points["GPE_force_lat"]**2 + points["GPE_force_lon"]**2)
+    points["GPE_force_mag"] = _numpy.linalg.norm([points["GPE_force_lat"].values, points["GPE_force_lon"].values], axis=0)
 
     return points
 
@@ -531,7 +531,7 @@ def compute_mantle_drag_force(
         # Calculate mantle drag force
         points["mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
         points["mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
-        points["mantle_drag_force_mag"] = _numpy.linalg.norm(_numpy.column_stack((points["mantle_drag_force_lat"], points["mantle_drag_force_lon"])), axis=1)
+        points["mantle_drag_force_mag"] = _numpy.linalg.norm([points["mantle_drag_force_lat"], points["mantle_drag_force_lon"]], axis=0)
 
     return points
 
@@ -554,6 +554,9 @@ def compute_synthetic_stage_rotation(
     stage_rotation_poles_lat, stage_rotation_poles_lon, stage_rotation_poles_mag, _ = cartesian2spherical(
         stage_rotations_xyz[:, 0], stage_rotations_xyz[:, 1], stage_rotations_xyz[:, 2]
     )
+
+    # Convert any NaN values to 0
+    stage_rotation_poles_mag = _numpy.nan_to_num(stage_rotation_poles_mag)
 
     # Normalise the rotation poles by the drag coefficient and the square of the Earth's radius
     stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * constants.mean_Earth_radius_m**2
@@ -635,10 +638,13 @@ def compute_rms_velocity(
     segment_areas = segment_length_lat * segment_length_lon
     total_area = _numpy.sum(segment_areas)
 
+    # Convert azimuth to radians
+    v_azi = _numpy.deg2rad(v_azi)
+
     # Calculate RMS velocity magnitude
     v_rms_mag = _numpy.sum(v_mag * segment_areas) / total_area
 
-    # Calculate RMS velocity azimuth (in degrees)
+    # Calculate RMS velocity azimuth (in radians)
     sin_azi = _numpy.sum(_numpy.sin(v_azi) * segment_areas) / total_area
     cos_azi = _numpy.sum(_numpy.cos(v_azi) * segment_areas) / total_area
 
@@ -719,8 +725,8 @@ def sum_torque(
     # Determine torque components based on torque type
     if torque_type == "driving" or torque_type == "mantle_drag":
         torque_components = ["slab_pull_torque", "GPE_torque"]
-    # elif torque_type == "mantle_drag":
-    #     torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque"]
+    elif torque_type == "mantle_drag":
+        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque"]
     elif torque_type == "residual":
         torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]
     else:
@@ -850,7 +856,7 @@ def optimise_torques(
 # GENERAL FUNCTIONS
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_thicknesses(ages, options, crust=True, water=True):
+def compute_thicknesses(seafloor_ages, options, crust=True, water=True):
     """
     Calculate lithospheric mantle thickness, crustal thickness, and water depth based on seafloor age profiles.
 
@@ -883,19 +889,19 @@ def compute_thicknesses(ages, options, crust=True, water=True):
 
     # Thickness of oceanic lithosphere from half space cooling and water depth from isostasy
     if options["Seafloor age profile"] == "half space cooling":
-        lithospheric_mantle_thickness = _numpy.where(_numpy.isnan(ages), 
+        lithospheric_mantle_thickness = _numpy.where(_numpy.isnan(seafloor_ages), 
                                                 mech.cont_lith_thick, 
-                                                2.32 * _numpy.sqrt(mech.kappa * ages * constants.a2s * 1e6))
+                                                2.32 * _numpy.sqrt(mech.kappa * seafloor_ages * constants.a2s * 1e6))
         
         if crust:
-            crustal_thickness = _numpy.where(_numpy.isnan(ages), 
+            crustal_thickness = _numpy.where(_numpy.isnan(seafloor_ages), 
                                         mech.cont_crust_thick, 
                                         mech.ocean_crust_thick)
         else:
             crustal_thickness = _numpy.nan
             
         if water:
-            water_depth = _numpy.where(_numpy.isnan(ages), 
+            water_depth = _numpy.where(_numpy.isnan(seafloor_ages), 
                                 0.,
                                 (lithospheric_mantle_thickness * ((mech.rho_a - mech.rho_l) / (mech.rho_sw - mech.rho_a))) + 2600)
         else:
@@ -903,12 +909,12 @@ def compute_thicknesses(ages, options, crust=True, water=True):
         
     # Water depth from half space cooling and lithospheric thickness from isostasy
     elif options["Seafloor age profile"] == "plate model":
-        hw = _numpy.where(ages > 81, 6586 - 3200 * _numpy.exp((-ages / 62.8)), ages)
+        hw = _numpy.where(seafloor_ages > 81, 6586 - 3200 * _numpy.exp((-seafloor_ages / 62.8)), seafloor_ages)
         hw = _numpy.where(hw <= 81, 2600 + 345 * _numpy.sqrt(hw), hw)
         lithospheric_mantle_thickness = (hw - 2600) * ((mech.rho_sw - mech.rho_a) / (mech.rho_a - mech.rho_l))
 
         if crust:
-            crustal_thickness = _numpy.where(_numpy.isnan(ages), 
+            crustal_thickness = _numpy.where(_numpy.isnan(seafloor_ages), 
                                         mech.cont_crust_thick, 
                                         mech.ocean_crust_thick)
         else:
@@ -1177,7 +1183,7 @@ def forces2torques(
     lats_rad = _numpy.deg2rad(lats)
 
     # Calculate force_magnitude
-    forces_mag = _numpy.sqrt((forces_lat*areas)**2 + (forces_lon*areas)**2)
+    forces_mag = _numpy.linalg.norm([forces_lat*areas, forces_lon*areas], axis=0)
 
     # Calculate theta
     theta = _numpy.empty_like(forces_lon)
@@ -1235,7 +1241,7 @@ def lat_lon2mag_azi(component_lat, component_lon):
     :rtype:                 float or numpy.array, float or numpy.array
     """
     # Calculate magnitude
-    magnitude = _numpy.sqrt(component_lat**2 + component_lon**2)
+    magnitude = _numpy.linalg.norm([component_lat, component_lon**2], axis=0)
 
     # Calculate azimuth in radians
     azimuth_rad = _numpy.arctan2(component_lon, component_lat)
@@ -1244,22 +1250,6 @@ def lat_lon2mag_azi(component_lat, component_lon):
     azimuth_deg = _numpy.rad2deg(azimuth_rad)
 
     return magnitude, azimuth_deg
-
-def xyz2mag(x, y, z):
-    """
-    Calculate the magnitude of a vector from its Cartesian components.
-
-    :param x:   X-coordinate of the vector.
-    :type x:    float or numpy.array
-    :param y:   Y-coordinate of the vector.
-    :type y:    float or numpy.array
-    :param z:   Z-coordinate of the vector.
-    :type z:    float or numpy.array
-
-    :return:    Magnitude of the vector.
-    :rtype:     float or numpy.array
-    """
-    return _numpy.sqrt(x**2 + y**2 + z**2)
 
 def rotate_torque(plateID, torque, rotations_a, rotations_b, reconstruction_time, constants):
     """

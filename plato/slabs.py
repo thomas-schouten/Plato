@@ -238,10 +238,6 @@ class Slabs:
         """
         Samples seafloor age at slabs.
         """
-        # Ensure variables is a list
-        if isinstance(vars, str):
-            vars = [vars]
-        
         # Sample grid
         self.sample_grid(
             ages,
@@ -250,7 +246,7 @@ class Slabs:
             grids,
             plate = "upper",
             vars = ["seafloor_age"],
-            cols = ["arc_age"],
+            cols = ["arc_seafloor_age"],
         )
 
         # Set sampling flag to true
@@ -273,7 +269,7 @@ class Slabs:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.slab_cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.cases)
 
         # Define sampling points
         type = "arc" if plate == "upper" else "slab"
@@ -281,16 +277,16 @@ class Slabs:
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no grid needs to be sampled
         for key, entries in _tqdm(_iterable.items(), desc="Sampling slabs", disable=self.settings.logger.level == logging.INFO):
-             # Skip if sediment grid is not sampled
-            if cols == "sediment_thickness" and not self.settings.options[key]["Sample sediment grid"]:
-                logging.info(f"Skipping sampling of sediment thickness for case {key} at age {_age} Ma.")
+            # Skip if sediment grid is not sampled
+            if cols == ["sediment_thickness"] and not self.settings.options[key]["Sample sediment grid"]:
+                logging.info(f"Skipping sampling of sediment thickness for case {key}.")
                 continue
             
             # Skip if erosion grid is not sampled
-            if cols == "erosion_rate" and not self.settings.options[key]["Sample erosion grid"]:
-                logging.info(f"Skipping sampling of sediment thickness for case {key} at age {_age} Ma.")
-                continue   
-            
+            if cols == ["erosion_rate"] and not self.settings.options[key]["Sample erosion grid"]:
+                logging.info(f"Skipping sampling of erosion rate for case {key}.")
+                continue
+
             # Loop through ages
             for _age in _ages:
                 # Define plateIDs if not provided
@@ -314,35 +310,46 @@ class Slabs:
                     continue  # Skip this iteration if no valid grid is found
 
                 # Define variables and columns
-                if cols == "sediment_thickness":
+                if cols == ["sediment_thickness"]:
                     # Specific case for sampling sediment thickness, with the variable name set to the one specified in the settings
                     _cols = [cols]
-                    _vars = self.settings.options[key]["Sample sediment grid"]
-                elif cols == "erosion_rate":
+                    _vars = [self.settings.options[key]["Sample sediment grid"]]
+                    logging.info(f"Sampling sediment thickness for case {key}.")
+
+                elif cols == ["erosion_rate"]:
                     # Specific case for sampling erosion rate, with the variable name set to the one specified in the settings
                     _cols = [cols]
-                    _vars = self.settings.options[key]["Sample erosion grid"]
+                    _vars = [self.settings.options[key]["Sample erosion grid"]]
+                    logging.info(f"Sampling erosion rate for case {key}.")
+
                 elif isinstance(cols, str) and isinstance(vars, list):
                     # General case for sampling a single variable with multiple columns
                     _cols = [cols]
                     _vars = vars
+                    logging.info(f"Sampling {_vars} for case {key}.")
+
                 elif isinstance(cols, str) and isinstance(vars, str):
                     # General case for sampling a single variable with a single column
                     _cols = [cols]
                     _vars = [vars]
+                    logging.info(f"Sampling {_vars} for case {key}.")
+
                 elif isinstance(cols, list) and isinstance(vars, list) and len(cols) == len(vars):
                     # General case for sampling multiple variables with multiple columns
                     _cols = cols
                     _vars = vars
+                    logging.info(f"Sampling {_vars} for case {key}.")
+
                 else:
                     # Default case for sampling all variables in the grid and using the variable names as column names
                     _cols = list(_grid.data_vars)
                     _vars = list(_grid.data_vars)
+                    logging.info(f"Sampling {_vars} for case {key}.")
 
                 # Sample grid at points for each variable
                 for _col in _cols:
                     # Accumulate data if multiple variables are sampled for the same column
-                    accumulated_data = []
+                    accumulated_data = _numpy.empty(len(_data.lat))
 
                     for _var in _vars:
                         sampled_data = utils_calc.sample_grid(
@@ -350,14 +357,7 @@ class Slabs:
                             _data[f"{type}_sampling_lon"],
                             _grid[_var],
                         )
-                        accumulated_data.append(sampled_data)
-
-                    # Combine accumulated data into a single array (e.g., using numpy)
-                    if len(accumulated_data) > 1:
-                        import numpy as np
-                        accumulated_data = np.vstack(accumulated_data).T  # Combine along new axis
-                    else:
-                        accumulated_data = accumulated_data[0]  # Single sampled dataset
+                        accumulated_data += sampled_data
 
                     # Enter sampled data back into the DataFrame
                     self.data[_age][key].loc[_data.index, _col] = accumulated_data
@@ -501,6 +501,79 @@ class Slabs:
             # Inform the user that the slab bend forces have been calculated
             logging.info(f"Calculated slab bend forces for case {key} Ma.")
 
+    def extract_data_through_time(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            var: Optional[Union[List[str], str]] = "None",
+        ):
+        """
+        Function to extract data on slabs through time as a pandas.DataFrame.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Define plateIDs if not provided
+        # Default is to select all major plates in the Müller et al. (2016) reconstruction
+        _plateIDs = utils_data.select_plateIDs(
+            plateIDs, 
+            [101,   # North America
+            201,    # South America
+            301,    # Eurasia
+            501,    # India
+            801,    # Australia
+            802,    # Antarctica
+            901,    # Pacific
+            902,    # Farallon
+            911,    # Nazca
+            919,    # Phoenix
+            926,    # Izanagi
+            ]
+        )
+
+        # Initialise dictionary to store results
+        extracted_data = {case: None for case in _cases}
+
+        # Loop through valid cases
+        for _case in _cases:
+            # Initialise DataFrame
+            extracted_data[_case] = _pandas.DataFrame({
+                "Age": _ages,
+            })
+            for _plateID in _plateIDs:
+                # Initialise column for each plate
+                extracted_data[_case][_plateID] = _numpy.nan
+
+            for i, _age in enumerate(_ages):
+                # Select data for the given age and case
+                _data = self.data[_age][_case]
+
+                # Loop through plateIDs
+                for i, _plateID in enumerate(_plateIDs):
+                    if _data.lower_plateID.isin([_plateID]).any():
+                        # Hard-coded exception for the Indo-Australian plate for 20-43 Ma (which is defined as 801 in the Müller et al. (2016) reconstruction)
+                        _plateID = 801 if _plateID == 501 and _age >= 20 and _age <= 43 else _plateID
+
+                        # Extract data
+                        value = _data[_data.lower_plateID == _plateID][var].values[0]
+
+                        # Assign value to DataFrame if not zero
+                        # This assumes that any of the variables of interest are never zero
+                        if value != 0:
+                            extracted_data[_case].loc[i, _plateID] = value
+
+        # Return extracted data
+        if len(_cases) == 1:
+            # If only one case is selected, return the DataFrame
+            return extracted_data[_cases[0]]
+        else:
+            # If multiple cases are selected, return the dictionary
+            return extracted_data
+        
     def save(
             self,
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,

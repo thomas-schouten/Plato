@@ -246,6 +246,8 @@ class Globe:
                 self.data[_case].loc[i, "net_rotation_pole_lon"] = net_rotation_pole[1]
                 self.data[_case].loc[i, "net_rotation_rate"] = net_rotation_pole[2]
 
+                logging.info(f"Net rotation for case {_case} at age {_age} has been calculated!")
+
     def calculate_world_uncertainty(
             self,
             ages = None,

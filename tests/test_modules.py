@@ -68,7 +68,7 @@ def run_tests():
     # Test Plates
     if TEST_CONFIGS["TEST_PLATES"]:
         if TEST_CONFIGS["TEST_LOCAL_FILES"]:
-            functions_test.test_plates(settings_file=settings_file, reconstruction_files=reconstruction_files, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
+            functions_test.test_plates(settings_file=settings_file, reconstruction_files=reconstruction_files, test_ages=test_ages, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
         else:
             functions_test.test_plates(settings_file=settings_file, test_functions=TEST_CONFIGS["TEST_FUNCTIONS"])
 

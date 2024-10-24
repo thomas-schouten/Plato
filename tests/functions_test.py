@@ -14,7 +14,7 @@ import pandas as pd
 
 # Local application imports
 # Add the path to the plato directory
-new_path = os.path.abspath(os.path.join(os.getcwd(), "..", "plato"))
+new_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 
 # Check if the path is successfully added
 if new_path not in sys.path:
@@ -22,15 +22,15 @@ if new_path not in sys.path:
     if new_path not in sys.path:
         raise RuntimeError("Error: Path not added")
 
-from settings import Settings
-from plates import Plates
-from points import Points
-from slabs import Slabs
-from grids import Grids
-from plate_torques import PlateTorques
-from globe import Globe
-from optimisation import Optimisation
-from plot import Plot
+from plato.settings import Settings
+from plato.plates import Plates
+from plato.points import Points
+from plato.slabs import Slabs
+from plato.grids import Grids
+from plato.plate_torques import PlateTorques
+from plato.globe import Globe
+from plato.optimisation import Optimisation
+from plato.plot import Plot
 
 def test_settings(
         settings_file=None,
@@ -97,27 +97,27 @@ def test_plates(
 
     # Test various functions of the Plates class
     if plates_test is not None and test_functions:
-        # Test saving
-        try:
-            plates_test.save(
-                ages=test_ages,
-            )
-            logging.info(f"Successfully saved 'Plates' object!")
+        # # Test saving
+        # try:
+        #     plates_test.save(
+        #         ages=test_ages,
+        #     )
+        #     logging.info(f"Successfully saved 'Plates' object!")
 
-        except Exception as e:
-            logging.error(f"An error occurred during saving of the 'Plates' object: {e}")
-            traceback.print_exc()
+        # except Exception as e:
+        #     logging.error(f"An error occurred during saving of the 'Plates' object: {e}")
+        #     traceback.print_exc()
 
-        # Test exporting
-        try:
-            plates_test.export(
-                ages=test_ages,
-            )
-            logging.info(f"Successfully exported 'Plates' object!")
+        # # Test exporting
+        # try:
+        #     plates_test.export(
+        #         ages=test_ages,
+        #     )
+        #     logging.info(f"Successfully exported 'Plates' object!")
 
-        except Exception as e:
-            logging.error(f"An error occurred during exporting of the 'Plates' object: {e}")
-            traceback.print_exc()
+        # except Exception as e:
+        #     logging.error(f"An error occurred during exporting of the 'Plates' object: {e}")
+        #     traceback.print_exc()
 
         # # Test calculation of RMS plate velocities
         # try:
@@ -164,6 +164,17 @@ def test_plates(
         #     print(f"An error occurred during torque optimisation: {e}")
         #     traceback.print_exc()
 
+        # Test extraction of data through time
+        try:
+            data = plates_test.extract_data_through_time()
+            logging.info("Successfully extracted data through time.")
+
+            print(data[list(data.keys())[0]])
+
+        except Exception as e:
+            logging.error(f"An error occurred during testing of the 'extract_data' function: {e}")
+            traceback.print_exc()
+
         logging.info("Successfully completed plates test.")
         
         return plates_test
@@ -207,55 +218,64 @@ def test_points(
 
     # Test functions of the Points class
     if points_test is not None and test_functions:
-        # Test saving
+        # # Test saving
+        # try:
+        #     points_test.save(
+        #         ages=test_ages,
+        #     )
+        #     logging.info(f"Successfully saved 'Points' object!")
+
+        # except Exception as e:
+        #     logging.error(f"An error occurred during saving of the 'Points' object: {e}")
+        #     traceback.print_exc()
+
+        # # Test exporting
+        # try:
+        #     points_test.export(
+        #         ages=test_ages,
+        #     )
+        #     logging.info(f"Successfully exported 'Points' object!")
+
+        # except Exception as e:
+        #     logging.error(f"An error occurred during exporting of the 'Points' object: {e}")
+        #     traceback.print_exc()
+
+        # # Test sampling of seafloor age grid at points
+        # if seafloor_grid:
+        #     try:
+        #         points_test.sample_points(seafloor_grid = seafloor_grid)
+
+        #     except Exception as e:
+        #         logging.error(f"An error occurred during testing of the 'sample_points' function: {e}")
+        #         traceback.print_exc()
+        # else:
+        #     logging.info("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
+
+        # # Test computation of GPE force
+        # try:
+        #     points_test.compute_gpe_force()
+
+        # except Exception as e:
+        #     logging.error(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
+        #     traceback.print_exc()
+
+        # # Test computation of mantle drag force
+        # try:
+        #     points_test.compute_mantle_drag_force()
+        #     logging.info("Successfully computed mantle drag force.")
+
+        # except Exception as e:
+        #     print(f"An error occurred during testing of the 'compute_mantle_drag_force' function: {e}")
+        #     traceback.print_exc()
+
+        # Test extraction of data through time
         try:
-            points_test.save(
-                ages=test_ages,
-            )
-            logging.info(f"Successfully saved 'Points' object!")
+            points_test.extract_data()
+            logging.info("Successfully extracted data through time.")
 
         except Exception as e:
-            logging.error(f"An error occurred during saving of the 'Points' object: {e}")
+            logging.error(f"An error occurred during testing of the 'extract_data' function: {e}")
             traceback.print_exc()
-
-        # Test exporting
-        try:
-            points_test.export(
-                ages=test_ages,
-            )
-            logging.info(f"Successfully exported 'Points' object!")
-
-        except Exception as e:
-            logging.error(f"An error occurred during exporting of the 'Points' object: {e}")
-            traceback.print_exc()
-
-            # # Test sampling of seafloor age grid at points
-            # if seafloor_grid:
-            #     try:
-            #         points_test.sample_points(seafloor_grid = seafloor_grid)
-
-            #     except Exception as e:
-            #         logging.error(f"An error occurred during testing of the 'sample_points' function: {e}")
-            #         traceback.print_exc()
-            # else:
-            #     logging.info("No seafloor grid provided for sampling. Testing of 'sample_points()' function skipped.")
-
-            # # Test computation of GPE force
-            # try:
-            #     points_test.compute_gpe_force()
-
-            # except Exception as e:
-            #     logging.error(f"An error occurred during testing of the 'compute_gpe_force' function: {e}")
-            #     traceback.print_exc()
-
-            # # Test computation of mantle drag force
-            # try:
-            #     points_test.compute_mantle_drag_force()
-            #     logging.info("Successfully computed mantle drag force.")
-
-            # except Exception as e:
-            #     print(f"An error occurred during testing of the 'compute_mantle_drag_force' function: {e}")
-            #     traceback.print_exc()
 
         logging.info("Testing of the 'points' module complete.")
 
@@ -559,9 +579,18 @@ def test_plate_torques(
             logging.error(f"An error occurred during sampling of the seafloor age grid at slabs: {e}")
             traceback.print_exc()
 
+        # Test sampling of seafloor age grid at slabs
+        try:
+            plate_torques_test.sample_arc_seafloor_ages()
+            logging.info("Successfully sampled seafloor age grid at slabs.")
+
+        except Exception as e:
+            logging.error(f"An error occurred during sampling of the seafloor age grid at slabs: {e}")
+            traceback.print_exc()
+
         # Test sampling of sediment thickness grid at slabs
         try:
-            plate_torques_test.sample_slab_sediment_thickness()
+            plate_torques_test.sample_slab_sediment_thicknesses()
             logging.info("Successfully sampled sediment thickness grid at slabs.")
 
         except Exception as e:
@@ -618,7 +647,6 @@ def test_plate_torques(
             plate_torques_test.calculate_synthetic_velocity()
             logging.info("Successfully computed synthetic velocity.")
 
-            print(plate_torques_test.settings.options["syn"]["Slab pull constant"], plate_torques_test.settings.options["syn"]["Mantle viscosity"])
             print("plateID", "slab_pull_torque", "slab_bend_torque", "GPE_torque", "mantle_drag_torque", "driving_torque")
             for i in range(len(plate_torques_test.plates.data[0]["test"].plateID.values)):
                 print(

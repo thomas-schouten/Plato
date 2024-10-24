@@ -359,7 +359,6 @@ class Points:
         for _age in _tqdm(_ages, desc="Computing mantle drag forces", disable=(self.settings.logger.level==logging.INFO)):
             # Loop through gpe cases
             for key, entries in _iterable.items():
-                print("Mantle drag force:", key, entries)
                 if self.settings.options[key]["Mantle drag torque"] and self.settings.options[key]["Reconstructed motions"]:
                     # Select points
                     _data = self.data[_age][key]
