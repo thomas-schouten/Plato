@@ -349,7 +349,7 @@ class Slabs:
                 # Sample grid at points for each variable
                 for _col in _cols:
                     # Accumulate data if multiple variables are sampled for the same column
-                    accumulated_data = _numpy.empty(len(_data.lat))
+                    accumulated_data = _numpy.zeros_like(_data.lat.values)
 
                     for _var in _vars:
                         sampled_data = utils_calc.sample_grid(

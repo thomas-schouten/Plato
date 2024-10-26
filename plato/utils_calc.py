@@ -617,7 +617,7 @@ def compute_velocity(
         v_lats[mask] = velocities_sph[0] * constants.deg_a2cm_a
         v_lons[mask] = velocities_sph[1] * constants.deg_a2cm_a
         v_mags[mask] = velocities_sph[2] * constants.deg_a2cm_a
-        v_azis[mask] = velocities_sph[3] * constants.deg_a2cm_a
+        v_azis[mask] = velocities_sph[3]
 
         # Calculate the spin rate in degrees per year as the dot product of the velocity and the unit position vector
         spin_rates[mask] = _numpy.rad2deg(positions_xyz[:,0] * rotation_pole_xyz[0] + positions_xyz[:,1] * rotation_pole_xyz[1] + positions_xyz[:,2] * rotation_pole_xyz[2])

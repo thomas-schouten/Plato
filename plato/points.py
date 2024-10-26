@@ -182,6 +182,7 @@ class Points:
                     self.data[_age][_case]["velocity_lat"].values[mask] = velocities[0]
                     self.data[_age][_case]["velocity_lon"].values[mask] = velocities[1]
                     self.data[_age][_case]["velocity_mag"].values[mask] = velocities[2]
+                    self.data[_age][_case]["velocity_azi"].values[mask] = velocities[3]
                     self.data[_age][_case]["spin_rate_mag"].values[mask] = velocities[4]
 
     def sample_seafloor_ages(

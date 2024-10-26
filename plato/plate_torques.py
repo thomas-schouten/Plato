@@ -126,6 +126,9 @@ class PlateTorques():
                 slabs = self.slabs,
             )
 
+        # Calculate RMS plate velocities
+        self.calculate_rms_velocity()
+
         logging.info("PlateTorques object successfully instantiated!")
 
     def add_grid(
