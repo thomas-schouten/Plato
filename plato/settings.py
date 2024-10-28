@@ -108,6 +108,32 @@ class Settings:
         self.constants = utils_calc.set_constants()
         self.mech = utils_calc.set_mech_params()
 
+        # Store plateIDs of oceanic arcs of the Earthbyte reconstructions^* that are masked (i.e. value is NaN) on the seafloor age grid
+        # This is to make sure that when adding active margin sediments, these arcs are not included
+        # NOTE: this is hardcoded for lack of a better alternative
+        # ^* Earthbyte reconstructions: Seton et al. (2012), Müller et al. (2016, 2019), Matthews et al. (2016), Clennett et al. (2020)
+        self.oceanic_arc_plateIDs = [
+            529, # Kohistan-Ladakh
+            608, 659, 699, # Izu-Bonin-Marianas
+            612, # Luzon
+            645, # East Sunda
+            678, # East Philippine
+            679, # Halmahera
+            673, # Woyla
+            688, # Proto-Caroline
+            806, # Hikurangi
+            821, # Tonga-Kermadec
+            827, # New Hebrides
+            847, # Vityaz
+            853, # West Solomon Sea
+            844, 841, 865, 943, # Junction
+            1072, 1073, 1080, # Insular
+            2007, # Antilles
+            9052, 95104, # Central America
+            9022, # Cascadia root
+            9040, # Angayucham
+        ]
+
         logging.info("Settings initialisation complete.")
 
     def process_cases(

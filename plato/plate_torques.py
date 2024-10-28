@@ -186,6 +186,24 @@ class PlateTorques():
             plateIDs,
         )
 
+    def sample_all(
+            self,
+            ages,
+            cases,
+            plateIDs
+        ):
+        """
+        Function to sample all variables relevant to the plate torques calculation.
+        """
+        # Sample slab seafloor ages
+        self.sample_slab_seafloor_ages(ages, cases, plateIDs)
+
+        # Sample arc seafloor ages
+        self.sample_arc_seafloor_ages(ages, cases, plateIDs)
+
+        # Sample slab sediment thicknesses
+        self.sample_slab_sediment_thicknesses(ages, cases, plateIDs)
+
     def sample_seafloor_ages(
             self,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
@@ -223,17 +241,6 @@ class PlateTorques():
         """
         self.slabs.sample_slab_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
 
-    def sample_slab_sediment_thicknesses(
-            self,
-            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
-            cases: Optional[Union[str, List[str]]] = None,
-            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
-        ):
-        """
-        Function to sample the seafloor ages and other variables (if available)
-        """
-        self.slabs.sample_slab_sediment_thickness(ages, cases, plateIDs, self.grids.sediment)
-
     def sample_arc_seafloor_ages(
             self,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
@@ -244,6 +251,21 @@ class PlateTorques():
         Function to sample the seafloor ages and other variables (if available)
         """
         self.slabs.sample_arc_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
+
+    def sample_slab_sediment_thicknesses(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+        ):
+        """
+        Function to sample the seafloor ages and other variables (if available)
+        """
+        # Sample arc seafloor ages
+        self.sample_arc_seafloor_ages(ages, cases, plateIDs)
+
+        # Sample slab sediment thickness
+        self.slabs.sample_slab_sediment_thickness(ages, cases, plateIDs, self.grids.sediment)
 
     def calculate_all_torques(
             self,

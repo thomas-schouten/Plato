@@ -204,30 +204,6 @@ class Slabs:
         # Set sampling flag to true
         self.sampled_seafloor_at_slabs = True
 
-    def sample_slab_sediment_thickness(
-            self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            grids: Optional[Dict] = None,
-        ):
-        """
-        Samples seafloor age at slabs.
-        """
-        # Sample grid
-        self.sample_grid(
-            ages,
-            cases,
-            plateIDs,
-            grids,
-            plate = "lower",
-            vars = None,
-            cols = ["sediment_thickness"],
-        )
-
-        # Set sampling flag to true
-        self.sampled_seafloor_at_slabs = True
-
     def sample_arc_seafloor_ages(
             self,
             ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
@@ -251,6 +227,91 @@ class Slabs:
 
         # Set sampling flag to true
         self.sampled_seafloor_at_arcs = True
+
+    def sample_slab_sediment_thickness(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            grids: Optional[Dict] = None,
+        ):
+        """
+        Samples seafloor age at slabs.
+        """
+        # Sample grid
+        self.sample_grid(
+            ages,
+            cases,
+            plateIDs,
+            grids,
+            plate = "lower",
+            vars = None,
+            cols = ["sediment_thickness"],
+        )
+
+        # Get continental arcs
+        self.set_continental_arc(
+            ages,
+            cases,
+            plateIDs,
+        )
+
+        # Set active margin sediment thickness
+        self.set_values(
+            ages,
+            cases,
+            plateIDs,
+            cols = "sediment_thickness",
+        )
+
+        # Set sampling flag to true
+        self.sampled_sediment_thickness_at_slabs = True
+
+    def set_continental_arc(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+        ):
+        """
+        Function to set whether a trench has a continental arc
+        """
+        # Check whether arc seafloor ages have been sampled
+        if not self.sampled_seafloor_at_arcs:
+            self.sample_arc_seafloor_ages(ages, cases, plateIDs)
+
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.slab_cases)
+
+        # Loop through slab cases
+        for key, entries in _iterable.items():
+            # Loop through ages
+            for _age in _ages:
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][key]["trench_plateID"].unique())
+
+                # Select points
+                _data = self.data[_age][key]
+                if plateIDs is not None:
+                    _data = _data[_data.trench_plateID.isin(_plateIDs)]
+
+                # Set continental arc
+                _data.loc[_data.arc_seafloor_age.isna() & ~_data.trench_plateID.isin(self.settings.oceanic_arc_plateIDs), "continental_arc"] = True
+
+                # Enter sampled data back into the DataFrame
+                self.data[_age][key].loc[_data.index] = _data
+
+                # Copy to other entries
+                if len(entries) > 1:
+                    self.data[_age] = utils_data.copy_values(
+                        self.data[_age], 
+                        key, 
+                        entries, 
+                        ["continental_arc"],
+                    )
 
     def sample_grid(
             self,
@@ -363,11 +424,86 @@ class Slabs:
                     self.data[_age][key].loc[_data.index, _col] = accumulated_data
 
                     # Copy to other entries
+                    if len(entries) > 1:
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries, 
+                            [_col]
+                        )
+
+    def set_values(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            plate: Optional[str] = "lower",
+            cols: Optional[Union[List[str], str]] = None,
+            vals: Optional[Union[List[float], float]] = None,
+        ):
+        """
+        Function to add values to the 'Slabs' object.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.cases)
+
+        # Define whether to add values to slabs or arcs
+        type = "arc" if plate == "upper" else "slab"
+
+        # Loop through valid cases
+        for key, entries in _tqdm(_iterable.items(), desc="Adding values", disable=(self.settings.logger.level==logging.INFO)):
+            # Special case for active margin sediments
+            if cols == "sediment_thickness" and vals == None:
+                if not self.settings.options[key]["Active margin sediments"]:
+                    logging.info(f"Skipping setting active margin sediments for case {key}.")
+                    continue
+                
+                _cols = [cols]
+                _vals = [self.settings.options[key]["Active margin sediments"]]
+                logging.info(f"Setting active margin sediments for case {key}.")
+
+            elif isinstance(cols, str) and isinstance(vals, float):
+                _cols = [cols]
+                _vals = [vals]
+
+            elif isinstance(cols, list) and isinstance(vals, list) and len(cols) == len(vals):
+                _cols = cols
+                _vals = vals
+
+            else:
+                logging.warning(f"Invalid input for setting values for case {key}.")
+                continue
+
+            # Loop through ages
+            for _age in _ages:
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][key][f"{plate}_plateID"].unique())
+
+                # Select points
+                _data = self.data[_age][key]
+                if plateIDs is not None:
+                    _data = _data[_data.plateID.isin(_plateIDs)]
+
+                # Mask continental overriding plates if setting active margin sediment thickness
+                if cols == "sediment_thickness" and vals == None:
+                    _data = _data[_data.continental_arc == True]
+
+                for _col, _val in zip(_cols, _vals):
+                    _data[_col] = _val
+
+                # Enter sampled data back into the DataFrame
+                self.data[_age][key].loc[_data.index] = _data
+
+                # Copy to other entries
+                if len(entries) > 1:
                     self.data[_age] = utils_data.copy_values(
                         self.data[_age], 
                         key, 
                         entries, 
-                        [_col]
+                        cols,
                     )
 
     def calculate_slab_pull_force(
