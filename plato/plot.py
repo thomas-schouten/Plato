@@ -4,10 +4,14 @@ import warnings
 from typing import Optional, Union
 
 # Third-party libraries
-import numpy as _numpy
+import gplately as _gplately
+from gplately import pygplates as _pygplates
 import cartopy.crs as ccrs
+import numpy as _numpy
+import xarray as _xarray
 
 # Plato libraries
+from . import utils_init
 from .settings import Settings
 from .plates import Plates
 from .slabs import Slabs
@@ -16,19 +20,21 @@ from .grids import Grids
 from .globe import Globe
 from .plate_torques import PlateTorques
 
-class Plot():
+class PlotReconstruction():
     """
     A class to make standardised plots of reconstructions.
     """
     def __init__(
             self,
+            plate_torques: Optional[PlateTorques] = None,
             settings: Optional[Settings] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
             plates: Optional[Plates] = None,
             slabs: Optional[Slabs] = None,
             points: Optional[Points] = None,
             grids: Optional[Grids] = None,
             globe: Optional[Globe] = None,
-            plate_torques: Optional[PlateTorques] = None,
+            coastlines: Optional[_pygplates.FeatureCollection] = None,
         ):
         """
         Constructor for the Plot class.
@@ -52,6 +58,11 @@ class Plot():
             self.settings = settings
         else:
             self.settings = None
+
+        if isinstance(reconstruction, _gplately.PlateReconstruction):
+            self.reconstruction = reconstruction
+        else:
+            self.reconstruction = None
 
         if isinstance(plates, Plates):
             self.plates = plates
@@ -89,11 +100,16 @@ class Plot():
             self.globe = None
 
         if isinstance(plate_torques, PlateTorques):
+            self.settings = plate_torques.settings
+            self.reconstruction = plate_torques.reconstruction
             self.plates = plate_torques.plates
             self.slabs = plate_torques.slabs
             self.points = plate_torques.points
             self.grids = plate_torques.grids
             self.globe = plate_torques.globe
+
+        # Get coastlines if not provided
+        self.coastlines = utils_init.get_coastlines(coastlines, self.settings)
 
     def plot_seafloor_age_map(
             self,
@@ -134,7 +150,7 @@ class Plot():
         """
         # Check if age is in valid reconstruction ages
         if age not in self.settings.ages:
-            raise ValueError("Invalid reconstruction time")
+            raise ValueError("Invalid reconstruction age")
         
         # Set basemap
         gl = self.plot_basemap(ax)
@@ -143,19 +159,25 @@ class Plot():
         gl.top_labels = False
         gl.right_labels = False
 
-        if self.grids is not None:
+        if isinstance(self.grids.seafloor_age, dict) and age in self.grids.seafloor_age.keys() and "seafloor_age" in self.grids.seafloor_age[age].data_vars:
+            ax.imshow(self.grids.seafloor_age[age].seafloor_age,)
+            
             # Plot seafloor age grid
             im = self.plot_grid(
                 ax,
-                self.grids.seafloor_age[age].seafloor_age.values,
+                self.grids.seafloor_age[age].seafloor_age,
                 cmap = cmap,
                 vmin = vmin,
                 vmax = vmax,
                 log_scale = log_scale
             )
 
+        else:
+            warnings.warn("No seafloor age grid available, only plotting the reconstruction")
+            im = None
+
         # Plot plates and coastlines
-        ax = self.plot_reconstruction(
+        self.plot_reconstruction(
             ax,
             age,
             coastlines_facecolour = coastlines_facecolour,
@@ -825,7 +847,6 @@ class Plot():
         :return:            image object
         :rtype:             matplotlib.image.AxesImage
         """
-
         # Set log scale
         if log_scale:
             if vmin == 0:
@@ -844,15 +865,18 @@ class Plot():
                     _numpy.log10(grid),
                 )
 
+        transform = None if ax.projection == ccrs.PlateCarree() else ccrs.PlateCarree()
+        print(transform)
         # Plot grid    
         im = ax.imshow(
             grid,
             cmap = cmap,
-            transform = ccrs.PlateCarree(), 
+            transform = transform, 
             zorder = 1, 
             vmin = vmin, 
             vmax = vmax, 
-            origin = "lower"
+            origin = "lower",
+            extent = [-180, 180, -90, 90]
         )
 
         return im
@@ -962,7 +986,7 @@ class Plot():
         :rtype:                         matplotlib.axes.Axes
         """
         # Set gplot object
-        gplot = gplately.PlotTopologies(self.reconstruction, time=_age, coastlines=self.coastlines)
+        gplot = _gplately.PlotTopologies(self.reconstruction, time=_age, coastlines=self.coastlines)
 
         # Set zorder for coastlines. They should be plotted under seafloor grids but above velocity grids.
         if coastlines_facecolour == "none":

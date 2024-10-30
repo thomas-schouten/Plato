@@ -27,7 +27,7 @@ def get_settings(
     if settings:
             _settings = settings
     else:
-        if ages and cases_file:
+        if ages is not None and cases_file is not None:
             if reconstruction_name:
                 name = reconstruction_name
             else:
@@ -109,6 +109,36 @@ def get_reconstruction(
     logging.info("Plate reconstruction ready!")  
     
     return reconstruction
+
+def get_coastlines(
+        coastlines: Optional[_pygplates.FeatureCollection] = None,
+        settings: Optional['Settings'] = None,
+    ):
+
+    if isinstance(coastlines, _pygplates.FeatureCollection):
+        return coastlines
+    
+    elif isinstance(coastlines, str):
+        coastlines = _pygplates.FeatureCollection(coastlines)
+        return coastlines
+    
+    elif isinstance(settings, Settings):
+        valid_reconstructions = [
+            "Muller2019", "Muller2016", "Merdith2021", "Cao2020", "Clennett2020", 
+            "Seton2012", "Matthews2016", "Merdith2017", "Li2008", "Pehrsson2015", 
+            "Young2019", "Scotese2008", "Clennett2020_M19", "Clennett2020_S13", 
+            "Muller2020", "Shephard2013"
+        ]
+        
+        if settings.name in valid_reconstructions:
+            logging.info(f"Downloading {settings.name} reconstruction files from the _gplately DataServer...")
+            gdownload = _gplately.DataServer(settings.name)
+            coastlines, _, _ = gdownload.get_topology_geometries()
+
+    else:
+        raise Warning("No coastlines provided. Plotting maps without coastlines.")
+
+    return coastlines
 
 def check_object_data(
         obj,
