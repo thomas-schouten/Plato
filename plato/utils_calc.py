@@ -614,7 +614,7 @@ def compute_velocity(
         v_mags[mask] = _numpy.linalg.norm(velocities_xyz, axis=1) * constants.deg_a2cm_a
         
         # Compute the azimuth of the velocity vector
-        v_azis[mask] = (_numpy.rad2deg(_numpy.arctan2(velocities_xyz[:, 1], velocities_xyz[:, 0])))
+        v_azis[mask] = (_numpy.rad2deg(_numpy.arctan2(velocities_xyz[:, 1], velocities_xyz[:, 0])) - 90)
         v_azis[mask] = _numpy.where(v_azis[mask] < 0, v_azis[mask] + 360, v_azis[mask])
 
         # Decompose the velocity vector into latitudinal and longitudinal components
