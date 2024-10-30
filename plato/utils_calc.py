@@ -190,7 +190,7 @@ def sample_slabs_from_seafloor(
         options, 
         plate, 
         age_variable="seafloor_age", 
-        coords=["latitude", "longitude"], 
+        coords=["lat", "lon"], 
         continental_arc=None, 
         sediment_thickness=None, 
     ):
@@ -498,7 +498,7 @@ def sample_grid(
         lat: _numpy.ndarray,
         lon: _numpy.ndarray,
         grid: _xarray.Dataset,
-        coords = ["latitude", "longitude"],
+        coords = ["lat", "lon"],
     ):
     """
     Function to sample a grid
@@ -606,21 +606,22 @@ def compute_velocity(
             plate.pole_angle * 1e-6,
         ))
 
-        # Calculate the velocity in radians per year as the cross product of the rotation and the position vectors
+        # Calculate the velocity in degrees per year as the cross product of the rotation and the position vectors
         # The shape of the velocity vectors is (n, 3)
         velocities_xyz = _numpy.cross(rotation_pole_xyz[None, :], positions_xyz)
 
-        # Convert to spherical coordinates (note that the function 'cartesian2spherical' converts radians to degrees (see below))
-        velocities_sph = cartesian2spherical(velocities_xyz[:, 0], velocities_xyz[:, 1], velocities_xyz[:, 2])
+        # Compute the magnitude of the velocity vector and convert to cm/a
+        v_mags[mask] = _numpy.linalg.norm(velocities_xyz, axis=1) * constants.deg_a2cm_a
+        
+        # Compute the azimuth of the velocity vector
+        v_azis[mask] = (_numpy.rad2deg(_numpy.arctan2(velocities_xyz[:, 1], velocities_xyz[:, 0])))
+        v_azis[mask] = _numpy.where(v_azis[mask] < 0, v_azis[mask] + 360, v_azis[mask])
 
-        # Assign the velocity to the respective arrays and convert from degrees per year to centimetres per year
-        v_lats[mask] = velocities_sph[0] * constants.deg_a2cm_a
-        v_lons[mask] = velocities_sph[1] * constants.deg_a2cm_a
-        v_mags[mask] = velocities_sph[2] * constants.deg_a2cm_a
-        v_azis[mask] = velocities_sph[3]
+        # Decompose the velocity vector into latitudinal and longitudinal components
+        v_lons[mask], v_lats[mask] = mag_azi2lat_lon(v_mags[mask], v_azis[mask])
 
-        # Calculate the spin rate in degrees per year as the dot product of the velocity and the unit position vector
-        spin_rates[mask] = _numpy.rad2deg(positions_xyz[:,0] * rotation_pole_xyz[0] + positions_xyz[:,1] * rotation_pole_xyz[1] + positions_xyz[:,2] * rotation_pole_xyz[2])
+        # Calculate the spin rate in degrees per million years as the dot product of the velocity and the unit position vector
+        spin_rates[mask] = (positions_xyz[:,0] * rotation_pole_xyz[0] + positions_xyz[:,1] * rotation_pole_xyz[1] + positions_xyz[:,2] * rotation_pole_xyz[2]) * 1e6
         
     return v_lats, v_lons, v_mags, v_azis, spin_rates
 

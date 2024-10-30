@@ -148,9 +148,15 @@ class PlotReconstruction():
         :return:                        image object
         :rtype:                         matplotlib.image.AxesImage
         """
-        # Check if age is in valid reconstruction ages
-        if age not in self.settings.ages:
-            raise ValueError("Invalid reconstruction age")
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
+        
+        # Set case to first in list if not provided
+        if case is None or case not in self.settings.cases:
+            warnings.warn("Invalid case, using first case.")
+            case = self.settings.cases[0]
         
         # Set basemap
         gl = self.plot_basemap(ax)
@@ -159,7 +165,7 @@ class PlotReconstruction():
         gl.top_labels = False
         gl.right_labels = False
 
-        if isinstance(self.grids.seafloor_age, dict) and age in self.grids.seafloor_age.keys() and "seafloor_age" in self.grids.seafloor_age[age].data_vars:
+        if age in self.grids.seafloor_age and "seafloor_age" in self.grids.seafloor_age[age].data_vars:
             ax.imshow(self.grids.seafloor_age[age].seafloor_age,)
             
             # Plot seafloor age grid
@@ -191,7 +197,7 @@ class PlotReconstruction():
     def plot_sediment_map(
             self,
             ax,
-            _age: int,
+            age: int,
             case,
             cmap = "cmc.imola",
             vmin = 1e0,
@@ -206,9 +212,15 @@ class PlotReconstruction():
         """
         Function to create subplot with global sediment thicknesses.
         """
-        # Check if reconstruction time is in valid times
-        if _age not in self.times:
-            return print("Invalid reconstruction time")
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
+        
+        # Set case to first in list if not provided
+        if case is None or case not in self.settings.cases:
+            warnings.warn("Invalid case, using first case.")
+            case = self.settings.cases[0]
         
         # Set basemap
         gl = self.plot_basemap(ax)
@@ -217,27 +229,27 @@ class PlotReconstruction():
         gl.top_labels = False
         gl.right_labels = False
 
-        if self.grid is not None:
-            # Get sediment thickness grid
-            if self.options[case]["Sample sediment grid"] !=0:
-                grid = self.seafloor[_age][self.options[case]["Sample sediment grid"]].values
-            else:
-                grid = _numpy.where(_numpy.isnan(self.seafloor[_age].seafloor_age.values), _numpy.nan, vmin)
+        # Get sediment thickness grid
+        if age in self.grids.sediment and self.settings.options[case]["Sample sediment grid"] in self.grids.sediment[age].data_vars:           
+            grid = self.seafloor[age][self.options[case]["Sample sediment grid"]].values
+        else:
+            grid = _numpy.where(_numpy.isnan(self.seafloor[age].seafloor_age.values), _numpy.nan, vmin)
 
-            # Plot sediment thickness grid
-            im = self.plot_grid(
-                ax,
-                grid,
-                cmap = cmap,
-                vmin = vmin,
-                vmax = vmax,
-                log_scale = log_scale
-                )
+        # Plot sediment thickness grid
+        im = self.plot_grid(
+            ax,
+            grid,
+            cmap = cmap,
+            vmin = vmin,
+            vmax = vmax,
+            log_scale = log_scale
+            )
 
+        # Plot active margin sediments, if activated
         if self.settings.options[case]["Active margin sediments"] != 0 or self.settings.options[case]["Sample erosion grid"]:
-            lat = self.slabs[_age][case].lat.values
-            lon = self.slabs[_age][case].lon.values
-            data = self.slabs[_age][case].sediment_thickness.values
+            lat = self.slabs.data[age][case].lat.values
+            lon = self.slabs.data[age][case].lon.values
+            data = self.slabs.data[age][case].sediment_thickness.values
             
             if log_scale is True:
                 if vmin == 0:
@@ -270,7 +282,7 @@ class PlotReconstruction():
         # Plot plates and coastlines
         ax = self.plot_reconstruction(
             ax,
-            _age,
+            age,
             coastlines_facecolour = coastlines_facecolour,
             coastlines_edgecolour = coastlines_edgecolour,
             coastlines_linewidth = coastlines_linewidth,
@@ -282,8 +294,8 @@ class PlotReconstruction():
     def plot_erosion_rate_map(
             self,
             ax,
-            age: int,
-            case,
+            age: int = None,
+            case: str = None,
             cmap = "cmc.davos_r",
             vmin = 1e0,
             vmax = 1e3,
@@ -292,16 +304,21 @@ class PlotReconstruction():
             coastlines_edgecolour = "none",
             coastlines_linewidth = 0,
             plate_boundaries_linewidth = 0.5,
-            marker_size = 20,
         ):
         """
         Function to create subplot with global sediment thicknesses
             case:               case for which to plot the sediments
             plotting_options:   dictionary with options for plotting
         """
-        # Check if reconstruction time is in valid times
-        if age not in self.settings.ages:
-            return print("Invalid reconstruction time")
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
+        
+        # Set case to first in list if not provided
+        if case is None or case not in self.settings.cases:
+            warnings.warn("Invalid case, using first case.")
+            case = self.settings.cases[0]
         
         # Set basemap
         gl = self.plot_basemap(ax)
@@ -311,12 +328,8 @@ class PlotReconstruction():
         gl.right_labels = False
 
         # Get erosion rate grid
-        if self.grids is not None:
-            if self.settings.options[case]["Sample erosion grid"] !=0:
-                grid = self.seafloor[_age].erosion_rate.values
-            else:
-                grid = _numpy.zeros_like(self.seafloor[_age].seafloor_age.values)
-
+        if age in self.grids.continent and self.settings.options[case]["Sample erosion rate"] in self.grids.continent[age].data_vars:           
+            grid = self.grids.continent[age].erosion_rate.values
             # Get erosion rate grid
             im = self.plot_grid(
                 ax,
@@ -326,8 +339,9 @@ class PlotReconstruction():
                 vmax = vmax,
                 log_scale = log_scale
             )
+
         else:
-            raise Warning("No erosion rate grid available, only plotting the reconstruction")
+            warnings.warn("No erosion rate grid available, only plotting the reconstruction")
             im = None
         
         # Plot plates and coastlines
@@ -345,12 +359,13 @@ class PlotReconstruction():
     def plot_velocity_map(
             self,
             ax,
-            _age,
+            age,
             case = None,
             cmap = "cmc.bilbao_r",
+            velocity_component = "velocity_mag",
             vmin = 0,
             vmax = 25,
-            normalise_vectors = False,
+            normalise_vectors = True,
             log_scale = False,
             coastlines_facecolour = "none",
             coastlines_edgecolour = "black",
@@ -358,32 +373,47 @@ class PlotReconstruction():
             plate_boundaries_linewidth = 0.5,
             vector_width = 4e-3,
             vector_scale = 3e2,
+            vector_scale_units = "width",
             vector_color = "k",
             vector_alpha = 0.5,
         ):
         """
         Function to plot plate velocities on an axes object
-            ax:                     axes object
-            fig:                    figure
-            _age:    the time for which to display the map
-            case:                   case for which to plot the sediments
-            plotting_options:       dictionary with options for plotting
         """
-        # Check if reconstruction time is in valid times
-        if _age not in self.times:
-            return print("Invalid reconstruction time")
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
         
-        # Set case to first case in cases list if not specified
-        if case is None:
-            case = self.cases[0]
+        # Set case to first in list if not provided
+        if case is None or case not in self.settings.cases:
+            warnings.warn("Invalid case, using first case.")
+            case = self.settings.cases[0]
         
         # Set basemap
         gl = self.plot_basemap(ax)
 
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
+
+        # Interpolate data from points to grid if not available
+        if self.grids.velocity[age][case] is None or velocity_component not in self.grids.velocity[age][case]:
+            print("Interpolating data to grid")
+            self.grids.generate_velocity_grid(
+                age,
+                case,
+                self.points.data,
+                velocity_component,
+            )
+        
+        # Get velocity grid
+        grid = self.grids.velocity[age][case][velocity_component].values
+        
         # Plot velocity difference grid
         im = self.plot_grid(
             ax,
-            self.velocity[_age][case].velocity_magnitude.values,
+            grid,
             cmap = cmap,
             vmin = vmin,
             vmax = vmax,
@@ -391,19 +421,20 @@ class PlotReconstruction():
         )
 
         # Get velocity vectors
-        velocity_vectors = self.points[_age][case].iloc[::209].copy()
+        velocity_vectors = self.points.data[age][case].iloc[::209].copy()
 
         # Plot velocity vectors
         qu = self.plot_vectors(
             ax,
             velocity_vectors.lat.values,
             velocity_vectors.lon.values,
-            velocity_vectors.v_lat.values,
-            velocity_vectors.v_lon.values,
-            velocity_vectors.v_mag.values,
+            velocity_vectors.velocity_lat.values,
+            velocity_vectors.velocity_lon.values,
+            velocity_vectors.velocity_mag.values,
             normalise_vectors = normalise_vectors,
             width = vector_width,
             scale = vector_scale,
+            scale_units = vector_scale_units,
             facecolour = vector_color,
             alpha = vector_alpha
         )
@@ -411,7 +442,7 @@ class PlotReconstruction():
         # Plot plates and coastlines
         ax = self.plot_reconstruction(
             ax,
-            _age,
+            age,
             coastlines_facecolour = coastlines_facecolour,
             coastlines_edgecolour = coastlines_edgecolour,
             coastlines_linewidth = coastlines_linewidth,
@@ -866,7 +897,7 @@ class PlotReconstruction():
                 )
 
         transform = None if ax.projection == ccrs.PlateCarree() else ccrs.PlateCarree()
-        print(transform)
+
         # Plot grid    
         im = ax.imshow(
             grid,
@@ -892,6 +923,7 @@ class PlotReconstruction():
             normalise_vectors = False,
             width = 4e-3,
             scale = 3e2,
+            scale_units = "width",
             facecolour = "k",
             edgecolour = "none",
             linewidth = 1,
@@ -931,8 +963,14 @@ class PlotReconstruction():
         """
         # Normalise vectors, if necessary
         if normalise_vectors and vector_mag is not None:
+            # Normalise by dividing by the magnitude of the vectors
+            # Multiply by 10 to make the vectors more visible
             vector_lon = vector_lon / vector_mag * 10
             vector_lat = vector_lat / vector_mag * 10
+
+            print(_numpy.nanmean(_numpy.sqrt(vector_lon**2 + vector_lat**2)))
+
+            print("Normalised vectors!")
 
         # Plot vectors
         # Ignore annoying warnings
@@ -946,6 +984,7 @@ class PlotReconstruction():
                     transform = ccrs.PlateCarree(),
                     width = width,
                     scale = scale,
+                    scale_units = scale_units,
                     zorder = zorder,
                     color = facecolour,
                     edgecolor = edgecolour,

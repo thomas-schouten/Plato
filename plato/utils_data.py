@@ -1121,11 +1121,6 @@ def rename_coordinates_and_variables(
     """
     Function to rename coordinates and variables 
     """
-    # Clean up the grid a little
-    if "lat" in grid.coords:
-        grid = grid.rename({"lat": "latitude"})
-    if "lon" in grid.coords:
-        grid = grid.rename({"lon": "longitude"})
     if var_old_name in grid.data_vars:
         grid = grid.rename({"z": var_new_name})
 

@@ -104,7 +104,9 @@ class Grids():
                     # Make sure that the coordinates and variables are named correctly
                     self.continent[_age] = utils_data.rename_coordinates_and_variables(self.sediment[_age], "z", "continental_thickness")
 
-        self.velocity = {_age: None for _age in self.settings.ages}
+        # Initialise dictionary to store velocity grids
+        # The entries are empty because the velocity is interpolated from point data
+        self.velocity = {_age: {_case: None for _case in self.settings.cases} for _age in self.settings.ages}
 
     def __str__(self):
         return f"Plato grids object with global grids."
@@ -193,6 +195,122 @@ class Grids():
         else:
             raise ValueError("Input grids should be either a single xarray.Dataset or a dictionary of xarray.Datasets.")
         
+        # Ensure the modified new_grids is saved back to the object's attribute
+        setattr(self, grid_type, new_grids)
+        logging.info(f"{grid_type} updated:", getattr(self, grid_type))
+    
+    def generate_velocity_grid(
+            self,
+            ages: Union[int, float],
+            cases: Optional[str],
+            point_data: Dict[str, _numpy.ndarray],
+            components: Union[str, List[str]] = None,
+        ):
+        """
+        Function to generate a velocity grid.
+        """
+        # Define ages, if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases, if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Define components, if not provided
+        _components = components if components else ["velocity_lat", "velocity_lon", "velocity_mag", "spin_rate_mag"]
+        _components = [_components] if isinstance(_components, str) else _components
+
+        # Loop through the ages
+        for _age in _tqdm(_ages, desc="Generating velocity grids", disable=self.settings.logger.level==logging.INFO):
+            # Loop through the cases
+            for _case in _cases:
+                if _age in point_data and _case in point_data[_age]:
+                    logging.info(f"Generating velocity grid for {_age} Ma and case {_case}.")
+
+                    # Initialise a dictionary to store DataArrays for each component
+                    data_arrays = {}
+
+                    # Interpolate the different components of the velocity to the resolution of the seafloor age grid
+                    for _component in _components:
+                        if _component in point_data[_age][_case]:
+                            logging.info(f"Generating velocity grid for {_age} Ma and case {_case}.")
+
+                            # Get the component longitude and latitude
+                            lon = point_data[_age][_case]["lon"].unique()
+                            lat = point_data[_age][_case]["lat"].unique()
+
+                            # Reshape the component data to 2D
+                            data = point_data[_age][_case][_component].values.reshape(len(lat), len(lon))
+                            
+                            # Create a DataArray for this component
+                            data_arrays[_component] = _xarray.DataArray(
+                                data=data,
+                                coords={"lat": lat, "lon": lon},
+                                dims=["lat", "lon"],
+                            )
+
+                    # Create a Dataset from the collected DataArrays
+                    dataset = _xarray.Dataset(data_arrays)
+
+                    # Store the dataset in the velocity grid
+                    self.velocity[_age][_case] = dataset
+    
+    def interpolate_data_to_grid(
+            self,
+            age: Union[int, float],
+            lat: Union[float, List[float], _numpy.ndarray],
+            lon: Union[float, List[float], _numpy.ndarray],
+            data: Union[float, List[float], _numpy.ndarray],
+            case: Optional[str] = None,
+            grid_type: str = "velocity",
+        ):
+        """
+        Function to interpolate data to the resolution of the seafloor age grid.
+        """
+        # Convert inputs to numpy arrays if they are lists
+        lat = _numpy.asarray(lat)
+        lon = _numpy.asarray(lon)
+        data = _numpy.asarray(data)
+        
+        # Get unique values of lat and lon
+        lat = _numpy.unique(lat)
+        lon = _numpy.unique(lon)
+
+        # Check if the data is 2D
+        if len(data.shape) != 2:
+            try:
+                data = data.reshape(len(lat), len(lon))
+            except ValueError:
+                raise ValueError("Data should be 2D with dimensions of lat and lon.")
+
+        # Check if the attribute exists and is initially None
+        if getattr(self, grid_type) is None:
+            if case is not None:
+                setattr(self, grid_type, {age: {case: None}})
+            else:
+                setattr(self, grid_type, {age: {}})
+
+        # Initialise the dictionary to store the new grids
+        new_grids = getattr(self, grid_type)
+
+        # Make an xarray.Dataset with the data
+        dataset = _xarray.Dataset(
+            {
+                grid_type: (["lat", "lon"], data),
+            },
+            coords={
+                "lat": (["lat"], lat),
+                "lon": (["lon"], lon),
+            },
+        )
+
+        if case is not None:
+            # Store the dataset with the case
+            new_grids[age][case] = dataset
+
+        else:
+            # Store the dataset without the case
+            new_grids[age] = dataset
+
         # Ensure the modified new_grids is saved back to the object's attribute
         setattr(self, grid_type, new_grids)
         logging.info(f"{grid_type} updated:", getattr(self, grid_type))
