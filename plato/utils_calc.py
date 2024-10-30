@@ -611,14 +611,16 @@ def compute_velocity(
         velocities_xyz = _numpy.cross(rotation_pole_xyz[None, :], positions_xyz)
 
         # Compute the magnitude of the velocity vector and convert to cm/a
-        v_mags[mask] = _numpy.linalg.norm(velocities_xyz, axis=1) * constants.deg_a2cm_a
-        
-        # Compute the azimuth of the velocity vector
-        v_azis[mask] = (_numpy.rad2deg(_numpy.arctan2(velocities_xyz[:, 1], velocities_xyz[:, 0])) - 90)
-        v_azis[mask] = _numpy.where(v_azis[mask] < 0, v_azis[mask] + 360, v_azis[mask])
+        v_mags[mask] = _numpy.linalg.norm(velocities_xyz, axis=1)
 
-        # Decompose the velocity vector into latitudinal and longitudinal components
-        v_lons[mask], v_lats[mask] = mag_azi2lat_lon(v_mags[mask], v_azis[mask])
+        # Calculate the longitudinal and latitudinal components of the velocity
+        v_lats[mask] = _numpy.arcsin(velocities_xyz[:,2]) / constants.mean_Earth_radius_m
+        v_lons[mask] = _numpy.arctan(_numpy.linalg.norm(_numpy.array([velocities_xyz[:,1], velocities_xyz[:,0]]), axis=0))
+        
+        # Convert velocity components to cm/a
+        v_mags[mask] *= constants.deg_a2cm_a
+        v_lats[mask] *= constants.deg_a2cm_a
+        v_lons[mask] *= constants.deg_a2cm_a
 
         # Calculate the spin rate in degrees per million years as the dot product of the velocity and the unit position vector
         spin_rates[mask] = (positions_xyz[:,0] * rotation_pole_xyz[0] + positions_xyz[:,1] * rotation_pole_xyz[1] + positions_xyz[:,2] * rotation_pole_xyz[2]) * 1e6
