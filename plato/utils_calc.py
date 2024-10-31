@@ -613,9 +613,19 @@ def compute_velocity(
         # Compute the magnitude of the velocity vector and convert to cm/a
         v_mags[mask] = _numpy.linalg.norm(velocities_xyz, axis=1)
 
+        # Convert locations to radians
+        lats = _numpy.deg2rad(point_data[mask].lat)
+        lons = _numpy.deg2rad(point_data[mask].lon)
+
         # Calculate the longitudinal and latitudinal components of the velocity
-        v_lats[mask] = _numpy.arcsin(velocities_xyz[:,2]) / constants.mean_Earth_radius_m
-        v_lons[mask] = _numpy.arctan(_numpy.linalg.norm(_numpy.array([velocities_xyz[:,1], velocities_xyz[:,0]]), axis=0))
+        e_lats = _numpy.array([-_numpy.sin(lats) * _numpy.cos(lons), -_numpy.sin(lats) * _numpy.sin(lons), _numpy.cos(lats)])
+        e_lons = _numpy.array([-_numpy.sin(lons), _numpy.cos(lats), _numpy.zeros_like(lons)]) 
+
+        v_lats[mask] = e_lats[0] * velocities_xyz[:,0] + e_lats[1] * velocities_xyz[:,1] + e_lats[2] * velocities_xyz[:,2]
+        v_lons[mask] = e_lons[0] * velocities_xyz[:,0] + e_lons[1] * velocities_xyz[:,1] + e_lons[2] * velocities_xyz[:,2]
+
+        # v_lats[mask] = _numpy.arcsin(velocities_xyz[:,2])
+        # v_lons[mask] = _numpy.arctan(_numpy.linalg.norm(_numpy.array([velocities_xyz[:,1], velocities_xyz[:,0]]), axis=0))
         
         # Convert velocity components to cm/a
         v_mags[mask] *= constants.deg_a2cm_a
