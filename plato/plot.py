@@ -361,8 +361,8 @@ class PlotReconstruction():
             ax,
             age,
             case = None,
-            cmap = "cmc.bilbao_r",
             velocity_component = "velocity_mag",
+            cmap = "cmc.bilbao_r",
             vmin = 0,
             vmax = 25,
             normalise_vectors = True,
@@ -454,9 +454,10 @@ class PlotReconstruction():
     def plot_velocity_difference_map(
             self,
             ax,
-            _age,
+            age,
             case1,
             case2,
+            velocity_component = "velocity_mag",
             cmap = "cmc.vik",
             vmin = -10,
             vmax = 10,
@@ -490,16 +491,49 @@ class PlotReconstruction():
         :return:                    image object and quiver object
         :rtype:                     matplotlib.image.AxesImage and matplotlib.quiver.Quiver
         """
-
-        # Check if reconstruction time is in valid times
-        if _age not in self.times:
-            return print("Invalid reconstruction time")
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
+        
+        # Set case to first in list if not provided
+        if case1 is None or case1 not in self.settings.cases:
+            warnings.warn("Invalid case a, using first case.")
+            case1 = self.settings.cases[0]
+        
+        if case2 is None or case2 not in self.settings.cases:
+            if self.settings.cases[1] is not None:
+                warnings.warn("Invalid case b, using second case.")
+                case2 = self.settings.cases[1]
+            else:
+                raise ValueError("No second case provided.")
         
         # Set basemap
         gl = self.plot_basemap(ax)
 
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
+
+        # Interpolate data from points to grid if not available
+        if self.grids.velocity[age][case1] is None or velocity_component not in self.grids.velocity[age][case1]:
+            self.grids.generate_velocity_grid(
+                age,
+                case1,
+                self.points.data,
+                velocity_component,
+            )
+        
+        if self.grids.velocity[age][case2] is None or velocity_component not in self.grids.velocity[age][case2]:
+            self.grids.generate_velocity_grid(
+                age,
+                case2,
+                self.points.data,
+                velocity_component,
+            )
+
         # Get velocity difference grid
-        grid = self.velocity[_age][case1].velocity_magnitude.values-self.velocity[_age][case2].velocity_magnitude.values
+        grid = self.grids.velocity[age][case1][velocity_component].values-self.grids.velocity[age][case2][velocity_component].values
 
         # Plot velocity difference grid
         im = self.plot_grid(
@@ -512,17 +546,17 @@ class PlotReconstruction():
         )
 
         # Subsample velocity vectors
-        velocity_vectors1 = self.points[_age][case1].iloc[::209].copy()
-        velocity_vectors2 = self.points[_age][case2].iloc[::209].copy()
+        velocity_vectors1 = self.points.data[age][case1].iloc[::209].copy()
+        velocity_vectors2 = self.points.data[age][case2].iloc[::209].copy()
 
         # Plot velocity vectors
         qu = self.plot_vectors(
             ax,
             velocity_vectors1.lat.values,
             velocity_vectors1.lon.values,
-            velocity_vectors1.v_lat.values - velocity_vectors2.v_lat.values,
-            velocity_vectors1.v_lon.values - velocity_vectors2.v_lon.values,
-            velocity_vectors1.v_mag.values - velocity_vectors2.v_mag.values,
+            velocity_vectors1.velocity_lat.values - velocity_vectors2.velocity_lat.values,
+            velocity_vectors1.velocity_lon.values - velocity_vectors2.velocity_lon.values,
+            velocity_vectors1[velocity_component].values - velocity_vectors2[velocity_component].values,
             normalise_vectors = normalise_vectors,
             width = vector_width,
             scale = vector_scale,
@@ -533,7 +567,7 @@ class PlotReconstruction():
         # Plot plates and coastlines
         ax = self.plot_reconstruction(
             ax,
-            _age,
+            age,
             coastlines_facecolour = coastlines_facecolour,
             coastlines_edgecolour = coastlines_edgecolour,
             coastlines_linewidth = coastlines_linewidth,
@@ -545,9 +579,10 @@ class PlotReconstruction():
     def plot_relative_velocity_difference_map(
             self,
             ax,
-            _age,
+            age,
             case1,
             case2,
+            velocity_component = "velocity_mag",
             cmap = "cmc.cork",
             vmin = 1e-1,
             vmax = 1e1,
@@ -566,28 +601,62 @@ class PlotReconstruction():
             case:               case for which to plot the sediments
             plotting_options:   dictionary with options for plotting
         """
-        # Check if reconstruction time is in valid times
-        if _age not in self.times:
-            return print("Invalid reconstruction time")
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
+        
+        # Set case to first in list if not provided
+        if case1 is None or case1 not in self.settings.cases:
+            warnings.warn("Invalid case a, using first case.")
+            case1 = self.settings.cases[0]
+        
+        if case2 is None or case2 not in self.settings.cases:
+            if self.settings.cases[1] is not None:
+                warnings.warn("Invalid case b, using second case.")
+                case2 = self.settings.cases[1]
+            else:
+                raise ValueError("No second case provided.")
         
         # Set basemap
         gl = self.plot_basemap(ax)
+
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
+
+        # Interpolate data from points to grid if not available
+        if self.grids.velocity[age][case1] is None or velocity_component not in self.grids.velocity[age][case1]:
+            self.grids.generate_velocity_grid(
+                age,
+                case1,
+                self.points.data,
+                velocity_component,
+            )
+        
+        if self.grids.velocity[age][case2] is None or velocity_component not in self.grids.velocity[age][case2]:
+            self.grids.generate_velocity_grid(
+                age,
+                case2,
+                self.points.data,
+                velocity_component,
+            )
 
         # Get relative velocity difference grid
         # Ignore annoying warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             grid = _numpy.where(
-                (self.velocity[_age][case1].velocity_magnitude.values == 0) | 
-                (self.velocity[_age][case2].velocity_magnitude.values == 0) | 
-                (_numpy.isnan(self.velocity[_age][case1].velocity_magnitude.values)) | 
-                (_numpy.isnan(self.velocity[_age][case2].velocity_magnitude.values)),
+                (self.grids.velocity[age][case1][velocity_component].values == 0) | 
+                (self.grids.velocity[age][case2][velocity_component].values == 0) | 
+                (_numpy.isnan(self.grids.velocity[age][case1][velocity_component].values)) | 
+                (_numpy.isnan(self.grids.velocity[age][case2][velocity_component].values)),
                 _numpy.nan,
-                (self.velocity[_age][case1].velocity_magnitude.values / 
+                (self.grids.velocity[age][case1][velocity_component].values / 
                 _numpy.where(
-                    self.velocity[_age][case2].velocity_magnitude.values == 0,
+                    self.grids.velocity[age][case2][velocity_component].values == 0,
                     1e-10,
-                    self.velocity[_age][case2].velocity_magnitude.values)
+                    self.grids.velocity[age][case2][velocity_component].values)
                 )
             )
 
@@ -602,11 +671,11 @@ class PlotReconstruction():
         )
 
         # Get velocity vectors
-        velocity_vectors1 = self.points[_age][case1].iloc[::209].copy()
-        velocity_vectors2 = self.points[_age][case2].iloc[::209].copy()
+        velocity_vectors1 = self.points.data[age][case1].iloc[::209].copy()
+        velocity_vectors2 = self.points.data[age][case2].iloc[::209].copy()
 
-        vector_lat = velocity_vectors1.v_lat.values - velocity_vectors2.v_lat.values
-        vector_lon = velocity_vectors1.v_lon.values - velocity_vectors2.v_lon.values
+        vector_lat = velocity_vectors1.velocity_lat.values - velocity_vectors2.velocity_lat.values
+        vector_lon = velocity_vectors1.velocity_lon.values - velocity_vectors2.velocity_lon.values
         vector_mag = _numpy.sqrt(vector_lat**2 + vector_lon**2)
 
         # Plot velocity vectors
@@ -627,7 +696,7 @@ class PlotReconstruction():
         # Plot plates and coastlines
         ax = self.plot_reconstruction(
             ax,
-            _age,
+            age,
             coastlines_facecolour = coastlines_facecolour,
             coastlines_edgecolour = coastlines_edgecolour,
             coastlines_linewidth = coastlines_linewidth,
@@ -639,7 +708,7 @@ class PlotReconstruction():
     def plot_residual_force_map(
             self,
             ax,
-            _age,
+            age,
             case = None,
             trench_means = False,
             cmap = "cmc.lipari_r",
@@ -672,20 +741,26 @@ class PlotReconstruction():
             case:                   case for which to plot the sediments
             plotting_options:       dictionary with options for plotting
         """
-        # Check if reconstruction time is in valid times
-        if _age not in self.times:
-            return print("Invalid reconstruction time")
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
         
-        # Set case to first case in cases list if not specified
-        if case is None:
-            case = self.cases[0]
+        # Set case to first in list if not provided
+        if case is None or case not in self.settings.cases:
+            warnings.warn("Invalid case, using first case.")
+            case = self.settings.cases[0]
         
         # Set basemap
         gl = self.plot_basemap(ax)
 
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
+
         # Copy dataframe
-        plot_slabs = self.slabs[_age][case].copy()
-        plot_plates = self.plates[_age][case].copy()
+        plot_slabs = self.slabs.data[age][case].copy()
+        plot_plates = self.plates.data[age][case].copy()
 
         # Calculate means at trenches for the "residual_force_mag" column
         if trench_means is True:
@@ -769,7 +844,7 @@ class PlotReconstruction():
             )
 
         # Get velocity vectors
-        force_vectors = self.slabs[_age][case].iloc[::5].copy()
+        force_vectors = self.slabs.data[age][case].iloc[::5].copy()
 
         # Plot velocity vectors
         slab_qu = self.plot_vectors(
@@ -807,7 +882,7 @@ class PlotReconstruction():
         # Plot plates and coastlines
         ax = self.plot_reconstruction(
             ax,
-            _age,
+            age,
             coastlines_facecolour = coastlines_facecolour,
             coastlines_edgecolour = coastlines_edgecolour,
             coastlines_linewidth = coastlines_linewidth,
@@ -997,7 +1072,7 @@ class PlotReconstruction():
     def plot_reconstruction(
             self,
             ax,
-            _age: int, 
+            age: int, 
             coastlines_facecolour = "none",
             coastlines_edgecolour = "none",
             coastlines_linewidth = "none",
@@ -1025,7 +1100,7 @@ class PlotReconstruction():
         :rtype:                         matplotlib.axes.Axes
         """
         # Set gplot object
-        gplot = _gplately.PlotTopologies(self.reconstruction, time=_age, coastlines=self.coastlines)
+        gplot = _gplately.PlotTopologies(self.reconstruction, time=age, coastlines=self.coastlines)
 
         # Set zorder for coastlines. They should be plotted under seafloor grids but above velocity grids.
         if coastlines_facecolour == "none":
