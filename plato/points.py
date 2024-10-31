@@ -393,6 +393,55 @@ class Points:
                         cols,
                     )
 
+    def calculate_residual_force(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            residual_torque: Optional[Dict] = None,
+        ):
+        """
+        Function to calculate residual torque along trenches.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+
+        # Loop through ages and cases
+        for _age in _ages:
+            for _case in _cases:
+                # Select plateIDs
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case]["plateID"].unique())
+
+                for _plateID in _plateIDs:
+                    if (
+                        isinstance(residual_torque, Dict)
+                        and _age in residual_torque.keys()
+                        and _case in residual_torque[_age].keys()
+                        and isinstance(residual_torque[_age][_case], _pandas.DataFrame)
+                    ):
+                        # Get stage rotation from the provided DataFrame in the dictionary
+                        _residual_torque = residual_torque[_age][_case][residual_torque[_age][_case].plateID == _plateID]
+                    
+                    # Make mask for plate
+                    mask = self.data[_age][_case]["plateID"] == _plateID
+                                            
+                    # Compute velocities
+                    forces = utils_calc.compute_residual_force(
+                        self.data[_age][_case].loc[mask],
+                        _residual_torque,
+                        plateID_col = "plateID",
+                        weight_col = "segment_area",
+                    )
+
+                    # Store velocities
+                    self.data[_age][_case].loc[mask, "residual_force_lat"] = forces[0]
+                    self.data[_age][_case].loc[mask, "residual_force_lon"] = forces[1]
+                    self.data[_age][_case].loc[mask, "residual_force_mag"] = forces[2]
+                    self.data[_age][_case].loc[mask, "residual_force_azi"] = forces[3]
+
     def save(
             self,
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,

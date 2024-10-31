@@ -189,7 +189,9 @@ def get_slab_data(
 
     # Lower plate
     slabs["slab_seafloor_age"] = 0.
-    slabs["slab_thickness"] = 0.
+    slabs["slab_lithospheric_thickness"] = 0.
+    slabs["slab_crustal_thickness"] = 0.
+    slabs["slab_water_depth"] = 0.
     slabs["shear_zone_width"] = 0.
     slabs["sediment_thickness"] = 0.
     slabs["sediment_fraction"] = 0.
@@ -241,6 +243,7 @@ def get_point_data(
     # Convert degree spacing to metre spacing
     segment_length_lat = constants.mean_Earth_radius_m * (_numpy.pi/180) * options["Grid spacing"]
     segment_length_lon = constants.mean_Earth_radius_m * (_numpy.pi/180) * _numpy.cos(_numpy.deg2rad(lat_grid)) * options["Grid spacing"]
+    segment_area = segment_length_lat * segment_length_lon
 
     # Organise as DataFrame
     points = _pandas.DataFrame({"lat": lat_grid, 
@@ -248,6 +251,7 @@ def get_point_data(
                            "plateID": plateIDs, 
                            "segment_length_lat": segment_length_lat,
                            "segment_length_lon": segment_length_lon,
+                            "segment_area": segment_area,
                            },
                            dtype=float
                         )
@@ -264,8 +268,8 @@ def get_point_data(
     points["U"] = 0.
 
     # Add additional columns to store forces
-    forces = ["GPE", "mantle_drag"]
-    coords = ["lat", "lon", "mag"]
+    forces = ["GPE", "mantle_drag", "residual"]
+    coords = ["lat", "lon", "mag", "azi"]
     points[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(forces) * len(coords) for _ in range(len(points))]
     
     return points

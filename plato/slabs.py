@@ -529,7 +529,7 @@ class Slabs:
                 # Loop through ages
                 for _age in _ages:
                     # Select points
-                    _data = self.data[_age][key]
+                    _data = self.data[_age][key].copy()
 
                     # Define plateIDs if not provided
                     _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
@@ -539,38 +539,39 @@ class Slabs:
                         _data = _data[_data.lower_plateID.isin(_plateIDs)]
                         
                     # Calculate slab pull force
-                    _data = utils_calc.compute_slab_pull_force(
+                    computed_data1 = utils_calc.compute_slab_pull_force(
                         _data,
                         self.settings.options[key],
                         self.settings.mech,
                     )
 
                     # Compute interface term
-                    _data = utils_calc.compute_interface_term(
-                        _data,
+                    computed_data2 = utils_calc.compute_interface_term(
+                        computed_data1,
                         self.settings.options[key],
                     )
 
                     # Enter sampled data back into the DataFrame
-                    self.data[_age][key].loc[_data.index] = _data
+                    self.data[_age][key].loc[_data.index] = computed_data2
                     
                     # Copy to other entries
-                    cols = [
-                        "slab_lithospheric_thickness",
-                        "slab_crustal_thickness",
-                        "slab_water_depth",
-                        "shear_zone_width",
-                        "sediment_fraction",
-                        "slab_pull_force_lat",
-                        "slab_pull_force_lon",
-                        "slab_pull_force_mag",
-                    ]
-                    self.data[_age] = utils_data.copy_values(
-                        self.data[_age], 
-                        key, 
-                        entries,
-                        cols,
-                    )
+                    if len(entries) > 1:
+                        cols = [
+                            "slab_lithospheric_thickness",
+                            "slab_crustal_thickness",
+                            "slab_water_depth",
+                            "shear_zone_width",
+                            "sediment_fraction",
+                            "slab_pull_force_lat",
+                            "slab_pull_force_lon",
+                            "slab_pull_force_mag",
+                        ]
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries,
+                            cols,
+                        )
 
             # Inform the user that the slab pull forces have been calculated
             logging.info(f"Calculated slab pull forces for case {key} Ma.")
@@ -636,6 +637,55 @@ class Slabs:
             
             # Inform the user that the slab bend forces have been calculated
             logging.info(f"Calculated slab bend forces for case {key} Ma.")
+
+    def calculate_residual_force(
+            self,
+            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
+            cases: Optional[Union[List[str], str]] = None,
+            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            residual_torque: Optional[Dict] = None,
+        ):
+        """
+        Function to calculate residual torque along trenches.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+
+        # Loop through ages and cases
+        for _age in _ages:
+            for _case in _cases:
+                # Select plateIDs
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case]["lower_plateID"].unique())
+
+                for _plateID in _plateIDs:
+                    if (
+                        isinstance(residual_torque, Dict)
+                        and _age in residual_torque.keys()
+                        and _case in residual_torque[_age].keys()
+                        and isinstance(residual_torque[_age][_case], _pandas.DataFrame)
+                    ):
+                        # Get stage rotation from the provided DataFrame in the dictionary
+                        _residual_torque = residual_torque[_age][_case][residual_torque[_age][_case].plateID == _plateID]
+                    
+                    # Make mask for plate
+                    mask = self.data[_age][_case]["lower_plateID"] == _plateID
+                                            
+                    # Compute velocities
+                    forces = utils_calc.compute_residual_force(
+                        self.data[_age][_case].loc[mask],
+                        _residual_torque,
+                        plateID_col = "lower_plateID",
+                        weight_col = "trench_normal_azimuth",
+                    )
+
+                    # Store velocities
+                    self.data[_age][_case].loc[mask, "residual_force_lat"] = forces[0]
+                    self.data[_age][_case].loc[mask, "residual_force_lon"] = forces[1]
+                    self.data[_age][_case].loc[mask, "residual_force_mag"] = forces[2]
+                    self.data[_age][_case].loc[mask, "residual_force_azi"] = forces[3]
 
     def extract_data_through_time(
             self,

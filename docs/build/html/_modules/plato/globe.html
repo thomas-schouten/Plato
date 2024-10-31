@@ -498,6 +498,8 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;net_rotation_pole_lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">net_rotation_pole</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;net_rotation_rate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">net_rotation_pole</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Net rotation for case </span><span class="si">{</span><span class="n">_case</span><span class="si">}</span><span class="s2"> at age </span><span class="si">{</span><span class="n">_age</span><span class="si">}</span><span class="s2"> has been calculated!&quot;</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">calculate_world_uncertainty</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -633,7 +635,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=2e9f1842"></script>
+</div><script src="../../_static/documentation_options.js?v=591a841a"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

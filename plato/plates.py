@@ -406,7 +406,7 @@ class Plates:
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
         for _case in _tqdm(_cases, desc="Calculating residual torque", disable=self.settings.logger.level==logging.INFO):
             # Skip if reconstructed motions are enabled
-            if self.settings.options[_case]["Reconstructed motions"]:
+            if not self.settings.options[_case]["Reconstructed motions"]:
                 continue
 
             # Loop through ages

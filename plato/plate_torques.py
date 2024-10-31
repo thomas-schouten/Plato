@@ -188,9 +188,9 @@ class PlateTorques():
 
     def sample_all(
             self,
-            ages,
-            cases,
-            plateIDs
+            ages = None,
+            cases = None,
+            plateIDs = None,
         ):
         """
         Function to sample all variables relevant to the plate torques calculation.
@@ -435,6 +435,53 @@ class PlateTorques():
             cases,
             plateIDs,
         )
+
+        # Calculate residual torque at slabs
+        self.calculate_residual_force(
+            ages,
+            cases,            
+            plateIDs,
+            type = "slabs",
+        )
+
+        # Calculate residual torque at points
+        self.calculate_residual_force(
+            ages,
+            cases,
+            plateIDs,
+            type = "points",
+        )
+
+    def calculate_residual_force(
+            self,
+            ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List]] = None,
+            plateIDs: Optional[Union[int, float, _numpy.integer, _numpy.floating, List, _numpy.ndarray]] = None,
+            type = "slabs",
+        ):
+        """
+        Function to calculate the residual forces.
+        """
+        if type == "slabs":
+            # Calculate residual forces at slabs
+            self.slabs.calculate_residual_force(
+                ages,
+                cases,
+                plateIDs,
+                self.plates.data,
+            )
+
+        elif type == "points":
+            # Calculate residual forces at points
+            self.points.calculate_residual_force(
+                ages,
+                cases,
+                plateIDs,
+                self.plates.data,
+            )
+
+        else:
+            logging.error("Invalid type provided! Please choose from 'slabs' or 'points'.")
 
     def calculate_synthetic_velocity(
             self,

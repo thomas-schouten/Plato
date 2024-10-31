@@ -710,6 +710,7 @@ class PlotReconstruction():
             ax,
             age,
             case = None,
+            type = "slabs",
             trench_means = False,
             cmap = "cmc.lipari_r",
             vmin = 1e-2,
@@ -759,49 +760,54 @@ class PlotReconstruction():
         gl.right_labels = False
 
         # Copy dataframe
-        plot_slabs = self.slabs.data[age][case].copy()
+        if type == "slabs":
+            plot_data = self.slabs.data[age][case].copy()
+        elif type == "points":
+            plot_data = self.points.data[age][case].copy()
+        
         plot_plates = self.plates.data[age][case].copy()
 
         # Calculate means at trenches for the "residual_force_mag" column
-        if trench_means is True:
+        if type == "slabs" and trench_means is True:
             # Calculate the mean of "residual_force_mag" for each trench_plateID
-            mean_values = plot_slabs.groupby("trench_plateID")["residual_force_mag"].transform("mean")
+            mean_values = plot_data.groupby("trench_plateID")["residual_force_mag"].transform("mean")
             
             # Assign the mean values back to the original "residual_force_mag" column
-            plot_slabs["residual_force_mag"] = mean_values
+            plot_data["residual_force_mag"] = mean_values
 
         # Reorder entries to make sure the largest values are plotted on top
-        plot_slabs = plot_slabs.sort_values("residual_force_mag", ascending=True)
+        plot_data = plot_data.sort_values("residual_force_mag", ascending=True)
 
         # Normalise data by dividing by the slab pull force magnitude
-        slab_data = plot_slabs.residual_force_mag.values
+        slab_data = plot_data.residual_force_mag.values
         plate_data_lat = plot_plates.residual_force_lat.values
         plate_data_lon = plot_plates.residual_force_lon.values
         plate_data_mag = plot_plates.residual_force_mag.values
 
         if normalise_data is True:
+            normalise_col = "slab_pull_force_mag" if type == "slabs" else "mantle_drag_force_mag"
             slab_data = _numpy.where(
-                plot_slabs.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_slabs.slab_pull_force_mag.values),
+                plot_data[normalise_col].values == 0 | _numpy.isnan(plot_data[normalise_col].values),
                 0,
-                slab_data / plot_slabs.slab_pull_force_mag.values
+                slab_data / plot_data[normalise_col].values
             )
 
             plate_data_lat = _numpy.where(
-                plot_plates.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_plates.slab_pull_force_mag.values),
+                plot_plates[normalise_col].values == 0 | _numpy.isnan(plot_plates[normalise_col].values),
                 0,
-                plate_data_lat / plot_plates.slab_pull_force_mag.values
+                plate_data_lat / plot_plates[normalise_col].values
             )
 
             plate_data_lon = _numpy.where(
-                plot_plates.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_plates.slab_pull_force_mag.values),
+                plot_plates[normalise_col].values == 0 | _numpy.isnan(plot_plates[normalise_col].values),
                 0,
-                plate_data_lon / plot_plates.slab_pull_force_mag.values
+                plate_data_lon / plot_plates[normalise_col].values
             )
 
             plate_data_mag = _numpy.where(
-                plot_plates.slab_pull_force_mag.values == 0 | _numpy.isnan(plot_plates.slab_pull_force_mag.values),
+                plot_plates[normalise_col].values == 0 | _numpy.isnan(plot_plates[normalise_col].values),
                 0,
-                plate_data_mag / plot_plates.slab_pull_force_mag.values
+                plate_data_mag / plot_plates[normalise_col].values
             )
             
         # Convert to log scale, if needed
@@ -833,8 +839,8 @@ class PlotReconstruction():
 
         # Plot velocity difference grid
         sc = ax.scatter(
-                plot_slabs.lon.values,
-                plot_slabs.lat.values,
+                plot_data.lon.values,
+                plot_data.lat.values,
                 c = slab_data,
                 s = marker_size,
                 transform = ccrs.PlateCarree(),
