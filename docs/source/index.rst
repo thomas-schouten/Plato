@@ -22,9 +22,8 @@ components work together.
    api/globe/index
    api/grids/index
    api/plates/index
-   api/points/index
    api/plot/index
-   api/settings/index
+   api/points/index
    api/slabs/index
 
 .. autosummary::
@@ -34,7 +33,6 @@ components work together.
    plato.globe
    plato.grids
    plato.plates
-   plato.points
    plato.plot
-   plato.settings
+   plato.points
    plato.slabs

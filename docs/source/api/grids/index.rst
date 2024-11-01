@@ -2,15 +2,14 @@
 Grids
 #############
 
-.. automodule:: hmclab.Distributions
+.. automodule:: plato.grids
    :no-members:
    :show-inheritance:
 
-Available classes within `Grids`:
+`Grids` is a class that contains data for working with grids.
+In the `PlateTorques` module, the `Grids` class is used to store the seafloor age grids and, if available, marine sediment thickness and/or erosion grids.
 
-
-.. autosummary:: 
-   :toctree: _autosummary
-   :template: custom-class-template.rst
-   :nosignatures:
-   :recursive:
+.. autoclass:: plato.grids.Grids
+   :members:
+   :undoc-members:
+   :inherited-members:
