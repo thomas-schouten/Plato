@@ -23,6 +23,20 @@ from .plate_torques import PlateTorques
 class PlotReconstruction():
     """
     A class to make standardised plots of reconstructions.
+
+    :param settings:        settings object
+    :type settings:         Settings
+    :param plates:          plates object
+    :type plates:           Plates
+    :param slabs:           slabs object
+    :type slabs:            Slabs
+    :param points:          points object
+    :type points:           Points
+    :param grids:           grids object
+    :type grids:            Grids
+    :param globe:           globe object
+    :type globe:            Globe
+    :param plate_torques:   plate torques object
     """
     def __init__(
             self,
@@ -39,19 +53,7 @@ class PlotReconstruction():
         """
         Constructor for the Plot class.
 
-        :param settings:        settings object
-        :type settings:         Settings
-        :param plates:          plates object
-        :type plates:           Plates
-        :param slabs:           slabs object
-        :type slabs:            Slabs
-        :param points:          points object
-        :type points:           Points
-        :param grids:           grids object
-        :type grids:            Grids
-        :param globe:           globe object
-        :type globe:            Globe
-        :param plate_torques:   plate torques object
+        
         """
         # Store the input data, if provided
         if isinstance(settings, Settings):
