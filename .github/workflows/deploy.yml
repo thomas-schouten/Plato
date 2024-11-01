@@ -20,10 +20,11 @@ jobs:
 
       - name: Build Documentation 📖
         run: |
-          sphinx-build -b html docs/source docs/build  # Build the Sphinx documentation
+          cd docs  # Change to the docs directory
+          make html  # Run make html to build the documentation
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: docs/build  # The folder the action should deploy to the gh-pages branch.
-          branch: gh-pages     # Specify the branch to deploy to.
+          folder: docs/build/html  # Update to match the output folder specified in Makefile
+          branch: gh-pages  # Specify the branch to deploy to
