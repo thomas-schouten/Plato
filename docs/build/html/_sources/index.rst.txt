@@ -19,20 +19,20 @@ components work together.
    :maxdepth: 2
    :caption: Overview of submodules
 
-   api/globe/globe-index
-   api/grids/grids-index
-   api/plates/plates-index
-   api/plot/plot-index
-   api/points/points-index
-   api/settings/settings-index
-   api/slabs/slabs-index
+   api/globe/index
+   api/grids/index
+   api/plates/index
+   api/plot/index
+   api/points/index
+   api/slabs/index
 
 .. autosummary::
+   :toctree: api/generated
+   :nosignatures:  # Optional to suppress method signatures
 
-   globe
-   grids
-   plates
-   plot
-   points
-   settings
-   slabs
+   plato.globe
+   plato.grids
+   plato.plates
+   plato.plot
+   plato.points
+   plato.slabs

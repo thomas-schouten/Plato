@@ -211,7 +211,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/plot/index.html">Plot</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/plot/index.html">Plot</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Plot</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plot/_autosummary/plato.plot.PlotReconstruction.html">plato.plot.PlotReconstruction</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/settings/index.html">Settings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
 </ul>
@@ -272,7 +275,7 @@
 <span class="kn">from</span> <span class="nn">.plate_torques</span> <span class="kn">import</span> <span class="n">PlateTorques</span>
 
 <div class="viewcode-block" id="PlotReconstruction">
-<a class="viewcode-back" href="../../api/plot/_autosummary/plato.plot.PlotReconstruction.html#plato.plot.PlotReconstruction">[docs]</a>
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction">[docs]</a>
 <span class="k">class</span> <span class="nc">PlotReconstruction</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to make standardised plots of reconstructions.</span>
@@ -364,6 +367,8 @@
         <span class="c1"># Get coastlines if not provided</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">coastlines</span> <span class="o">=</span> <span class="n">utils_init</span><span class="o">.</span><span class="n">get_coastlines</span><span class="p">(</span><span class="n">coastlines</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">)</span>
 
+<div class="viewcode-block" id="PlotReconstruction.plot_seafloor_age_map">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_seafloor_age_map">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_seafloor_age_map</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
@@ -445,8 +450,11 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="n">plate_boundaries_linewidth</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">im</span>
+        <span class="k">return</span> <span class="n">im</span></div>
 
+
+<div class="viewcode-block" id="PlotReconstruction.plot_sediment_map">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_sediment_map">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_sediment_map</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -542,8 +550,11 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="n">plate_boundaries_linewidth</span><span class="p">,</span>
         <span class="p">)</span>
             
-        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">sc</span>
+        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">sc</span></div>
+
     
+<div class="viewcode-block" id="PlotReconstruction.plot_erosion_rate_map">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_erosion_rate_map">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_erosion_rate_map</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -607,8 +618,11 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="n">plate_boundaries_linewidth</span><span class="p">,</span>
         <span class="p">)</span>
             
-        <span class="k">return</span> <span class="n">im</span>
+        <span class="k">return</span> <span class="n">im</span></div>
+
     
+<div class="viewcode-block" id="PlotReconstruction.plot_velocity_map">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_velocity_map">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_velocity_map</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -702,8 +716,11 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="n">plate_boundaries_linewidth</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">qu</span>
+        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">qu</span></div>
 
+
+<div class="viewcode-block" id="PlotReconstruction.plot_velocity_difference_map">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_velocity_difference_map">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_velocity_difference_map</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -827,8 +844,11 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="n">plate_boundaries_linewidth</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">qu</span>
+        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">qu</span></div>
+
     
+<div class="viewcode-block" id="PlotReconstruction.plot_relative_velocity_difference_map">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_relative_velocity_difference_map">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_relative_velocity_difference_map</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -956,8 +976,11 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="n">plate_boundaries_linewidth</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">qu</span>
+        <span class="k">return</span> <span class="n">im</span><span class="p">,</span> <span class="n">qu</span></div>
+
     
+<div class="viewcode-block" id="PlotReconstruction.plot_residual_force_map">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_residual_force_map">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_residual_force_map</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -1148,8 +1171,11 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="n">plate_boundaries_linewidth</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">sc</span><span class="p">,</span> <span class="n">slab_qu</span><span class="p">,</span> <span class="n">plate_qu</span>
+        <span class="k">return</span> <span class="n">sc</span><span class="p">,</span> <span class="n">slab_qu</span><span class="p">,</span> <span class="n">plate_qu</span></div>
+
     
+<div class="viewcode-block" id="PlotReconstruction.plot_basemap">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_basemap">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_basemap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to plot a basemap on an axes object.</span>
@@ -1182,8 +1208,11 @@
         <span class="n">gl</span><span class="o">.</span><span class="n">top_labels</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">gl</span><span class="o">.</span><span class="n">right_labels</span> <span class="o">=</span> <span class="kc">False</span>  
 
-        <span class="k">return</span> <span class="n">gl</span>
+        <span class="k">return</span> <span class="n">gl</span></div>
+
     
+<div class="viewcode-block" id="PlotReconstruction.plot_grid">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_grid">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_grid</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -1244,8 +1273,11 @@
             <span class="n">extent</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="o">-</span><span class="mi">90</span><span class="p">,</span> <span class="mi">90</span><span class="p">]</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">im</span>
+        <span class="k">return</span> <span class="n">im</span></div>
+
     
+<div class="viewcode-block" id="PlotReconstruction.plot_vectors">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_vectors">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_vectors</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -1326,8 +1358,11 @@
                     <span class="n">linewidth</span> <span class="o">=</span> <span class="n">linewidth</span><span class="p">,</span>
                 <span class="p">)</span>
         
-        <span class="k">return</span> <span class="n">qu</span>
+        <span class="k">return</span> <span class="n">qu</span></div>
+
         
+<div class="viewcode-block" id="PlotReconstruction.plot_reconstruction">
+<a class="viewcode-back" href="../../api/plot/index.html#plato.plot.PlotReconstruction.plot_reconstruction">[docs]</a>
     <span class="k">def</span> <span class="nf">plot_reconstruction</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ax</span><span class="p">,</span>
@@ -1386,6 +1421,7 @@
             <span class="n">gplot</span><span class="o">.</span><span class="n">plot_subduction_teeth</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
             
         <span class="k">return</span> <span class="n">ax</span></div>
+</div>
 
 </pre></div>
         </article>
@@ -1419,7 +1455,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=591a841a"></script>
+</div><script src="../../_static/documentation_options.js?v=9993f566"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

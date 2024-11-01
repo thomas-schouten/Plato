@@ -6,11 +6,10 @@ Plates
    :no-members:
    :show-inheritance:
 
-Available classes within `Plates`:
+`Plates` is a class that contains data, geometries and methods for working with tectonic plates.
+In the `PlateTorques` module, the `Plates` class is used to store the plates of the model and to store the torques acting on the plates.
 
-
-.. autosummary:: 
-   :toctree: _autosummary
-   :template: custom-class-template.rst
-   :nosignatures:
-   :recursive:
+.. autoclass:: plato.plates.Plates
+   :members:
+   :undoc-members:
+   :inherited-members:

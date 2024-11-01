@@ -3,7 +3,7 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Points" href="../points/index.html" /><link rel="prev" title="Grids" href="../grids/index.html" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="PlotReconstruction" href="../plot/index.html" /><link rel="prev" title="Grids" href="../grids/index.html" />
 
     <!-- Generated with Sphinx 8.0.2 and Furo 2024.08.06 -->
         <title>Plates - Version v0.0.1</title>
@@ -179,7 +179,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -205,18 +205,11 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Overview of submodules</span></p>
 <ul class="current">
-<li class="toctree-l1 has-children"><a class="reference internal" href="../globe/index.html">Globe</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Globe</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../globe/_autosummary/plato.globe.Globe.html">plato.globe.Globe</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="../globe/index.html">Globe</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../grids/index.html">Grids</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Plates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plot/index.html">PlotReconstruction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../points/index.html">Points</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../plot/index.html">Plot</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Plot</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../plot/_autosummary/plato.plot.PlotReconstruction.html">plato.plot.PlotReconstruction</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../settings/index.html">Settings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../slabs/index.html">Slabs</a></li>
 </ul>
 
@@ -252,7 +245,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -260,13 +253,165 @@
         <article role="main" id="furo-main-content">
           <section id="module-plato.plates">
 <span id="plates"></span><h1>Plates<a class="headerlink" href="#module-plato.plates" title="Link to this heading">¶</a></h1>
-<p>Available classes within <cite>Plates</cite>:</p>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-</tbody>
-</table>
-</div>
+<p><cite>Plates</cite> is a class that contains data, geometries and methods for working with tectonic plates.
+In the <cite>PlateTorques</cite> module, the <cite>Plates</cite> class is used to store the plates of the model and to store the torques acting on the plates.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="plato.plates.Plates">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">plato.plates.</span></span><span class="sig-name descname"><span class="pre">Plates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconstruction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">topology_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">polygon_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconstruction_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases_sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Sheet1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PARALLEL_MODE</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">DEBUG_MODE</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates" title="Link to this definition">¶</a></dt>
+<dd><p>Class that contains all information for the plates in a reconstruction.
+A Plates object can be initialised in multiple ways:</p>
+<ol class="arabic">
+<li><p>The user can initialise a Plates object from scratch by providing the reconstruction and the ages of interest.
+The reconstruction can be provided as a file with rotation poles, a file with topologies, and a file with polygons, or as one of the model name string identifiers for the models available on the GPlately DataServer (<a class="reference external" href="https://gplates.github.io/gplately/v1.3.0/#dataserver">https://gplates.github.io/gplately/v1.3.0/#dataserver</a>).</p>
+<p>Additionally, the user may specify the excel file with a number of different cases (combinations of options) to be considered.</p>
+</li>
+<li><p>Alternatively, the user can initialise a <cite>Plates</cite> object by providing a <cite>Settings</cite> object and a Reconstruction object from a <cite>Globe</cite>, <cite>Grids</cite>, <cite>Points</cite>, or <cite>Slabs</cite> object.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>settings</strong> (<em>plato.settings.Settings</em>) – <cite>Settings</cite> object (default: None)</p></li>
+<li><p><strong>reconstruction</strong> (<em>gplately.PlateReconstruction</em>) – <cite>Reconstruction</cite> object (default: None)</p></li>
+<li><p><strong>rotation_file</strong> (<em>str</em>) – filepath to .rot file with rotation poles (default: None)</p></li>
+<li><p><strong>topology_file</strong> (<em>str</em>) – filepath to .gpml file with topologies (default: None)</p></li>
+<li><p><strong>polygon_file</strong> (<em>str</em>) – filepath to .gpml file with polygons (default: None)</p></li>
+<li><p><strong>reconstruction_name</strong> (<em>str</em>) – model name string identifiers for the GPlately DataServer (default: None)</p></li>
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases_file</strong> (<em>str</em>) – filepath to excel file with cases (default: None)</p></li>
+<li><p><strong>cases_sheet</strong> (<em>str</em>) – name of the sheet in the excel file with cases (default: “Sheet1”)</p></li>
+<li><p><strong>files_dir</strong> (<em>str</em>) – directory to store files (default: None)</p></li>
+<li><p><strong>PARALLEL_MODE</strong> (<em>bool</em>) – flag to enable parallel mode (default: False)</p></li>
+<li><p><strong>DEBUG_MODE</strong> (<em>bool</em>) – flag to enable debug mode (default: False)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.calculate_rms_velocity">
+<span class="sig-name descname"><span class="pre">calculate_rms_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.calculate_rms_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.calculate_rms_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Function to calculate the root mean square (RMS) velocity of the plates.</p>
+<p>This function can be called in multiple ways:</p>
+<ol class="arabic simple">
+<li><p>If no <cite>Points</cite> object is provided, the function will initialise a <cite>Points</cite> object and calculate the RMS velocity.</p></li>
+<li><p>If a <cite>Points</cite> object is provided, the function will calculate the RMS velocity for using the data in the <cite>Points</cite> object.</p></li>
+<li><p>If ages, cases, and plateIDs are provided, the function will calculate the RMS velocity for the specified ages, cases, and plateIDs.
+Otherwise, the function will calculate the RMS velocity for all ages, cases, and plateIDs.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>points</strong> (<a class="reference internal" href="../points/index.html#plato.points.Points" title="plato.points.Points"><em>plato.points.Points</em></a>) – <cite>Points</cite> object (default: None)</p></li>
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.calculate_torque_on_plates">
+<span class="sig-name descname"><span class="pre">calculate_torque_on_plates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torque_var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'torque'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.calculate_torque_on_plates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.calculate_torque_on_plates" title="Link to this definition">¶</a></dt>
+<dd><p>Function to calculate the torque on plates from the forces acting on a set of points on Earth.</p>
+<p>This function is used in the <cite>PlateTorques</cite> module to calculate the torque on plates arising from slab pull, slab bend, gravitational potential energy (GPE), and mantle drag.
+It can also be used directly if the user has a set of points on Earth with forces acting on them. Thes should be organised in a dictionary with the ages of interest as keys and the cases as subkeys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>point_data</strong> (<em>dict</em>) – dictionary with point data</p></li>
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+<li><p><strong>torque_var</strong> (<em>str</em>) – variable to calculate torque for (default: “torque”)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.calculate_driving_torque">
+<span class="sig-name descname"><span class="pre">calculate_driving_torque</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.calculate_driving_torque"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.calculate_driving_torque" title="Link to this definition">¶</a></dt>
+<dd><p>Function to calculate the driving torque acting on each plate.</p>
+<p>The driving torque is the sum of the torques arising from the slab pull and gravitational potential energy (GPE) force.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.calculate_residual_torque">
+<span class="sig-name descname"><span class="pre">calculate_residual_torque</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.calculate_residual_torque"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.calculate_residual_torque" title="Link to this definition">¶</a></dt>
+<dd><p>Function to calculate the residual torque acting on each plate.</p>
+<p>The residual torque is the sum of the torques arising from driving (slab pull and gravitational potential energy (GPE) force) and resistive forces (slab bend and mantle drag force).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.calculate_synthetic_velocity">
+<span class="sig-name descname"><span class="pre">calculate_synthetic_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.calculate_synthetic_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.calculate_synthetic_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Function to calculate synthetic velocity of plates.</p>
+<p>The synthetic velocity is calculated by summing all torques acting on a plate, except for the mantle drag torque.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.extract_data_through_time">
+<span class="sig-name descname"><span class="pre">extract_data_through_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'velocity_rms_mag'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.extract_data_through_time"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.extract_data_through_time" title="Link to this definition">¶</a></dt>
+<dd><p>Function to extract data on slabs through time as a pandas.DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+<li><p><strong>var</strong> (<em>str</em>) – variable to extract (default: “velocity_rms_mag”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>extracted data with age as index and plateID as columns</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, pandas.DataFrame] or pandas.DataFrame if only one case is selected</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.save" title="Link to this definition">¶</a></dt>
+<dd><p>Function to save the ‘Plates’ object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plates.Plates.export">
+<span class="sig-name descname"><span class="pre">export</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.export"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.export" title="Link to this definition">¶</a></dt>
+<dd><p>Function to export the ‘Plates’ object.
+Geometries are saved as shapefiles, data are saved as .csv files.</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
         </article>
@@ -274,12 +419,12 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../points/index.html">
+          <a class="next-page" href="../plot/index.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Points</div>
+                <div class="title">PlotReconstruction</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -312,13 +457,42 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Plates</a><ul>
+<li><a class="reference internal" href="#plato.plates.Plates"><code class="docutils literal notranslate"><span class="pre">Plates</span></code></a><ul>
+<li><a class="reference internal" href="#plato.plates.Plates.calculate_rms_velocity"><code class="docutils literal notranslate"><span class="pre">Plates.calculate_rms_velocity()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plates.Plates.calculate_torque_on_plates"><code class="docutils literal notranslate"><span class="pre">Plates.calculate_torque_on_plates()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plates.Plates.calculate_driving_torque"><code class="docutils literal notranslate"><span class="pre">Plates.calculate_driving_torque()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plates.Plates.calculate_residual_torque"><code class="docutils literal notranslate"><span class="pre">Plates.calculate_residual_torque()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plates.Plates.calculate_synthetic_velocity"><code class="docutils literal notranslate"><span class="pre">Plates.calculate_synthetic_velocity()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plates.Plates.extract_data_through_time"><code class="docutils literal notranslate"><span class="pre">Plates.extract_data_through_time()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plates.Plates.save"><code class="docutils literal notranslate"><span class="pre">Plates.save()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plates.Plates.export"><code class="docutils literal notranslate"><span class="pre">Plates.export()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=5a120ae1"></script>
+</div><script src="../../_static/documentation_options.js?v=9993f566"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

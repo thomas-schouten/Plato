@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="plato.plot.PlotReconstruction" href="_autosummary/plato.plot.PlotReconstruction.html" /><link rel="prev" title="Points" href="../points/index.html" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Slabs" href="../slabs/index.html" /><link rel="prev" title="Points" href="../points/index.html" />
 
     <!-- Generated with Sphinx 8.0.2 and Furo 2024.08.06 -->
-        <title>Plot - Version v0.0.1</title>
+        <title>PlotReconstruction - Version v0.0.1</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../_static/autoclasstoc.css?v=08871587" />
@@ -212,11 +212,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../grids/index.html">Grids</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../plates/index.html">Plates</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../points/index.html">Points</a></li>
-<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">Plot</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Plot</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="_autosummary/plato.plot.PlotReconstruction.html">plato.plot.PlotReconstruction</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../settings/index.html">Settings</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">PlotReconstruction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../slabs/index.html">Slabs</a></li>
 </ul>
 
@@ -258,21 +254,12 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-plato.plot">
-<span id="plot"></span><h1>Plot<a class="headerlink" href="#module-plato.plot" title="Link to this heading">¶</a></h1>
-<p>Available classes within <cite>Plot</cite>:</p>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#plato.plot.PlotReconstruction" title="plato.plot.PlotReconstruction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PlotReconstruction</span></code></a></p></td>
-<td><p>A class to make standardised plots of reconstructions.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
+          <section id="plotreconstruction">
+<h1>PlotReconstruction<a class="headerlink" href="#plotreconstruction" title="Link to this heading">¶</a></h1>
+<p id="module-plato.plot"><cite>PlotReconstruction</cite> is a class that can be used to generate plots of global plate reconstructions.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="plato.plot.PlotReconstruction">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">plato.plot.</span></span><span class="sig-name descname"><span class="pre">PlotReconstruction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plate_torques</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PlateTorques</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Settings</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconstruction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PlateReconstruction</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Plates</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slabs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Slabs</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Points</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Grids</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">globe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../globe/index.html#plato.globe.Globe" title="plato.globe.Globe"><span class="pre">Globe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coastlines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">FeatureCollection</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plot.html#PlotReconstruction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plot.PlotReconstruction" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">plato.plot.</span></span><span class="sig-name descname"><span class="pre">PlotReconstruction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plate_torques</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PlateTorques</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Settings</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconstruction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PlateReconstruction</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../plates/index.html#plato.plates.Plates" title="plato.plates.Plates"><span class="pre">Plates</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slabs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../slabs/index.html#plato.slabs.Slabs" title="plato.slabs.Slabs"><span class="pre">Slabs</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../points/index.html#plato.points.Points" title="plato.points.Points"><span class="pre">Points</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../grids/index.html#plato.grids.Grids" title="plato.grids.Grids"><span class="pre">Grids</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">globe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../globe/_autosummary/plato.globe.Globe.html#plato.globe.Globe" title="plato.globe.Globe"><span class="pre">Globe</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coastlines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">FeatureCollection</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plot.html#PlotReconstruction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plot.PlotReconstruction" title="Link to this definition">¶</a></dt>
 <dd><p>A class to make standardised plots of reconstructions.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="plato.plot.PlotReconstruction.plot_seafloor_age_map">
@@ -475,12 +462,12 @@ plotting_options:       dictionary with options for plotting</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="_autosummary/plato.plot.PlotReconstruction.html">
+          <a class="next-page" href="../slabs/index.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">plato.plot.PlotReconstruction</div>
+                <div class="title">Slabs</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -525,7 +512,7 @@ plotting_options:       dictionary with options for plotting</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Plot</a><ul>
+<li><a class="reference internal" href="#">PlotReconstruction</a><ul>
 <li><a class="reference internal" href="#plato.plot.PlotReconstruction"><code class="docutils literal notranslate"><span class="pre">PlotReconstruction</span></code></a><ul>
 <li><a class="reference internal" href="#plato.plot.PlotReconstruction.plot_seafloor_age_map"><code class="docutils literal notranslate"><span class="pre">PlotReconstruction.plot_seafloor_age_map()</span></code></a></li>
 <li><a class="reference internal" href="#plato.plot.PlotReconstruction.plot_sediment_map"><code class="docutils literal notranslate"><span class="pre">PlotReconstruction.plot_sediment_map()</span></code></a></li>
@@ -551,7 +538,7 @@ plotting_options:       dictionary with options for plotting</p>
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=5a120ae1"></script>
+</div><script src="../../_static/documentation_options.js?v=9993f566"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

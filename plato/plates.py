@@ -13,34 +13,55 @@ from .points import Points
 class Plates:
     """
     Class that contains all information for the plates in a reconstruction.
+    A Plates object can be initialised in multiple ways:
+
+    1.  The user can initialise a Plates object from scratch by providing the reconstruction and the ages of interest.
+        The reconstruction can be provided as a file with rotation poles, a file with topologies, and a file with polygons, or as one of the model name string identifiers for the models available on the GPlately DataServer (https://gplates.github.io/gplately/v1.3.0/#dataserver).
+        
+        Additionally, the user may specify the excel file with a number of different cases (combinations of options) to be considered.
+
+    2.  Alternatively, the user can initialise a `Plates` object by providing a `Settings` object and a Reconstruction object from a `Globe`, `Grids`, `Points`, or `Slabs` object.
+
+    :param settings:            `Settings` object (default: None)
+    :type settings:             plato.settings.Settings
+    :param reconstruction:      `Reconstruction` object (default: None)
+    :type reconstruction:       gplately.PlateReconstruction
+    :param rotation_file:       filepath to .rot file with rotation poles (default: None)
+    :type rotation_file:        str
+    :param topology_file:       filepath to .gpml file with topologies (default: None)
+    :type topology_file:        str
+    :param polygon_file:        filepath to .gpml file with polygons (default: None)
+    :type polygon_file:         str
+    :param reconstruction_name: model name string identifiers for the GPlately DataServer (default: None)
+    :type reconstruction_name:  str
+    :param ages:                ages of interest (default: None)
+    :type ages:                 float, int, list, numpy.ndarray
+    :param cases_file:          filepath to excel file with cases (default: None)
+    :type cases_file:           str
+    :param cases_sheet:         name of the sheet in the excel file with cases (default: "Sheet1")
+    :type cases_sheet:          str
+    :param files_dir:           directory to store files (default: None)
+    :type files_dir:            str
+    :param PARALLEL_MODE:       flag to enable parallel mode (default: False)
+    :type PARALLEL_MODE:        bool
+    :param DEBUG_MODE:          flag to enable debug mode (default: False)
+    :type DEBUG_MODE:           bool
     """
     def __init__(
             self,
-            settings: Optional[Settings] = None,
-            reconstruction: Optional[_gplately.PlateReconstruction]= None,
-            rotation_file: Optional[str]= None,
-            topology_file: Optional[str]= None,
-            polygon_file: Optional[str]= None,
-            reconstruction_name: Optional[str] = None,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases_file: Optional[list[str]]= None,
-            cases_sheet: Optional[str]= "Sheet1",
-            files_dir: Optional[str]= None,
-            PARALLEL_MODE: Optional[bool] = False,
-            DEBUG_MODE: Optional[bool] = False,
+            settings = None,
+            reconstruction = None,
+            rotation_file = None,
+            topology_file = None,
+            polygon_file = None,
+            reconstruction_name = None,
+            ages = None,
+            cases_file = None,
+            cases_sheet = "Sheet1",
+            files_dir = None,
+            PARALLEL_MODE = False,
+            DEBUG_MODE = False,
         ):
-        """
-        Initialise the Plates object with the required objects.
-
-        :param settings:            Settings object (default: None)
-        :type settings:             Optional[Settings]
-        :param reconstruction:      Reconstruction object (default: None)
-        :type reconstruction:       Optional[Reconstruction]
-        :param data:                Data object (default: None)
-        :type data:                 Optional[Data]
-        :param resolved_geometries: Resolved geometries (default: None)
-        :type resolved_geometries:  Optional[dict]
-        """
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
@@ -162,13 +183,31 @@ class Plates:
 
     def calculate_rms_velocity(
             self,
-            points: Optional['Points'] = None,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List, _numpy.ndarray]] = None,
+            points = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
         ):
         """
         Function to calculate the root mean square (RMS) velocity of the plates.
+
+        This function can be called in multiple ways:
+
+        1.  If no `Points` object is provided, the function will initialise a `Points` object and calculate the RMS velocity.
+
+        2.  If a `Points` object is provided, the function will calculate the RMS velocity for using the data in the `Points` object.
+
+        3.  If ages, cases, and plateIDs are provided, the function will calculate the RMS velocity for the specified ages, cases, and plateIDs.
+            Otherwise, the function will calculate the RMS velocity for all ages, cases, and plateIDs.
+
+        :param points:      `Points` object (default: None)
+        :type points:       plato.points.Points
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list, numpy.ndarray
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -237,23 +276,28 @@ class Plates:
 
     def calculate_torque_on_plates(
             self,
-            point_data: Dict,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[
-                Union[
-                    int,
-                    float,
-                    _numpy.floating,
-                    _numpy.integer,
-                    List[Union[int, float, _numpy.floating, _numpy.integer]],
-                    _numpy.ndarray
-                ]
-            ] = None,
-            torque_var: str = "torque",
+            point_data,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            torque_var = "torque",
         ):
         """
         Function to calculate the torque on plates from the forces acting on a set of points on Earth.
+
+        This function is used in the `PlateTorques` module to calculate the torque on plates arising from slab pull, slab bend, gravitational potential energy (GPE), and mantle drag.
+        It can also be used directly if the user has a set of points on Earth with forces acting on them. Thes should be organised in a dictionary with the ages of interest as keys and the cases as subkeys.
+
+        :param point_data:  dictionary with point data
+        :type point_data:   dict
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list, numpy.ndarray
+        :param torque_var:  variable to calculate torque for (default: "torque")
+        :type torque_var:   str
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -329,21 +373,21 @@ class Plates:
 
     def calculate_driving_torque(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[
-                Union[
-                    int,
-                    float,
-                    _numpy.floating,
-                    _numpy.integer,
-                    List[Union[int, float, _numpy.floating, _numpy.integer]],
-                    _numpy.ndarray
-                ]
-            ] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
         ):
         """
-        Function to calculate driving torque.
+        Function to calculate the driving torque acting on each plate.
+
+        The driving torque is the sum of the torques arising from the slab pull and gravitational potential energy (GPE) force.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list[str]
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list[int, float], numpy.ndarray
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -377,21 +421,21 @@ class Plates:
 
     def calculate_residual_torque(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[
-                Union[
-                    int,
-                    float,
-                    _numpy.floating,
-                    _numpy.integer,
-                    List[Union[int, float, _numpy.floating, _numpy.integer]],
-                    _numpy.ndarray
-                ]
-            ] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
         ):
         """
-        Function to calculate driving torques.
+        Function to calculate the residual torque acting on each plate.
+
+        The residual torque is the sum of the torques arising from driving (slab pull and gravitational potential energy (GPE) force) and resistive forces (slab bend and mantle drag force).
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list[str]
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list[int, float], numpy.ndarray
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -429,21 +473,21 @@ class Plates:
                 
     def calculate_synthetic_velocity(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[
-                Union[
-                    int,
-                    float,
-                    _numpy.floating,
-                    _numpy.integer,
-                    List[Union[int, float, _numpy.floating, _numpy.integer]],
-                    _numpy.ndarray
-                ]
-            ] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
         ):
         """
         Function to calculate synthetic velocity of plates.
+
+        The synthetic velocity is calculated by summing all torques acting on a plate, except for the mantle drag torque.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list[str]
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list[int, float], numpy.ndarray
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -482,13 +526,25 @@ class Plates:
 
     def extract_data_through_time(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            var: Optional[Union[List[str], str]] = "velocity_rms_mag",
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            var = "velocity_rms_mag",
         ):
         """
         Function to extract data on slabs through time as a pandas.DataFrame.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list[str]
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list[int, float], numpy.ndarray
+        :param var:         variable to extract (default: "velocity_rms_mag")
+        :type var:          str
+
+        :return:            extracted data with age as index and plateID as columns
+        :rtype:             dict[str, pandas.DataFrame] or pandas.DataFrame if only one case is selected
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)

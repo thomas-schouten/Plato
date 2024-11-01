@@ -1,0 +1,1163 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
+
+    <!-- Generated with Sphinx 8.0.2 and Furo 2024.08.06 -->
+        <title>plato.slabs - Version v0.0.1</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/autoclasstoc.css?v=08871587" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">Version v0.0.1</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo only-light" src="../../_static/HMC Lab.png" alt="Light Logo"/>
+    <img class="sidebar-logo only-dark" src="../../_static/HMC Lab-dark.png" alt="Dark Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">Version v0.0.1</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview of submodules</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/globe/index.html">Globe</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Globe</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/globe/_autosummary/plato.globe.Globe.html">plato.globe.Globe</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/settings/index.html">Settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for plato.slabs</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">_geopandas</span>
+<span class="kn">import</span> <span class="nn">gplately</span> <span class="k">as</span> <span class="nn">_gplately</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_numpy</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">_pandas</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">_xarray</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span> <span class="k">as</span> <span class="n">_tqdm</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">utils_data</span><span class="p">,</span> <span class="n">utils_calc</span><span class="p">,</span> <span class="n">utils_init</span>
+<span class="kn">from</span> <span class="nn">.settings</span> <span class="kn">import</span> <span class="n">Settings</span>
+
+<div class="viewcode-block" id="Slabs">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs">[docs]</a>
+<span class="k">class</span> <span class="nc">Slabs</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">settings</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">Settings</span><span class="p">]]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_gplately</span><span class="o">.</span><span class="n">PlateReconstruction</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">rotation_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">topology_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">polygon_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_sheet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span><span class="p">,</span>
+            <span class="n">files_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">resolved_geometries</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PARALLEL_MODE</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">DEBUG_MODE</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">CALCULATE_VELOCITIES</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Class to store and manipulate data on slabs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Store settings object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">utils_init</span><span class="o">.</span><span class="n">get_settings</span><span class="p">(</span>
+            <span class="n">settings</span><span class="p">,</span> 
+            <span class="n">reconstruction_name</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">,</span> 
+            <span class="n">cases_file</span><span class="p">,</span>
+            <span class="n">cases_sheet</span><span class="p">,</span>
+            <span class="n">files_dir</span><span class="p">,</span>
+            <span class="n">PARALLEL_MODE</span> <span class="o">=</span> <span class="n">PARALLEL_MODE</span><span class="p">,</span>
+            <span class="n">DEBUG_MODE</span> <span class="o">=</span> <span class="n">DEBUG_MODE</span><span class="p">,</span>
+        <span class="p">)</span>
+            
+        <span class="c1"># Store reconstruction object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction</span> <span class="o">=</span> <span class="n">utils_init</span><span class="o">.</span><span class="n">get_reconstruction</span><span class="p">(</span>
+            <span class="n">reconstruction</span><span class="p">,</span>
+            <span class="n">rotation_file</span><span class="p">,</span>
+            <span class="n">topology_file</span><span class="p">,</span>
+            <span class="n">polygon_file</span><span class="p">,</span>
+            <span class="n">reconstruction_name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Initialise data dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">age</span><span class="p">:</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">age</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">}</span>
+
+        <span class="c1"># Loop through times</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Loading data&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="o">==</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+            <span class="c1"># Load available data</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">slab_cases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="c1"># Make list to store available cases</span>
+                <span class="n">available_cases</span> <span class="o">=</span> <span class="p">[]</span>
+
+                <span class="c1"># Try to load all DataFrames</span>
+                <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">entry</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">DataFrame_from_parquet</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">dir_path</span><span class="p">,</span>
+                        <span class="s2">&quot;Slabs&quot;</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="n">entry</span><span class="p">,</span>
+                        <span class="n">_age</span>
+                    <span class="p">)</span>
+                    <span class="c1"># Store the cases for which a DataFrame could be loaded</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">entry</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">available_cases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                
+                <span class="c1"># Check if any DataFrames were loaded</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">available_cases</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># Copy all DataFrames from the available case        </span>
+                    <span class="k">for</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">entry</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_cases</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">entry</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">available_cases</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Initialise missing data</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resolved_geometries</span><span class="p">,</span> <span class="n">Dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resolved_geometries</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">_geopandas</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">):</span>
+                        <span class="n">resolved_geometries</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">get_topology_geometries</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction</span><span class="p">,</span> <span class="n">_age</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="s2">&quot;Anchor plateID&quot;</span><span class="p">]</span>
+                        <span class="p">)</span>
+
+                    <span class="c1"># Initialise missing data</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">get_slab_data</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction</span><span class="p">,</span>
+                        <span class="n">_age</span><span class="p">,</span>
+                        <span class="n">resolved_geometries</span><span class="p">,</span> 
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># Copy data to other cases</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">entry</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Calculate velocities along slabs</span>
+        <span class="k">if</span> <span class="n">CALCULATE_VELOCITIES</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">calculate_velocities</span><span class="p">()</span>
+
+        <span class="c1"># Calculate total slab length as a function of age and case</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_slab_length</span> <span class="o">=</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">slab_pull_cases</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_age</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">_case</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">slab_pull_cases</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">total_slab_length</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">trench_segment_length</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="c1"># Set flag for sampling slabs and upper plates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampled_slabs</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampled_arcs</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Slabs.calculate_velocities">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.calculate_velocities">[docs]</a>
+    <span class="k">def</span> <span class="nf">calculate_velocities</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">stage_rotation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to compute velocities at slabs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+        
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_cases</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_cases</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">)</span>
+
+        <span class="c1"># Loop through ages and cases</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">plate</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;upper_plate&quot;</span><span class="p">,</span> <span class="s2">&quot;lower_plate&quot;</span><span class="p">,</span> <span class="s2">&quot;trench&quot;</span><span class="p">]:</span>
+                <span class="n">plateID_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plate</span><span class="si">}</span><span class="s2">ID&quot;</span> <span class="k">if</span> <span class="n">plate</span> <span class="o">!=</span> <span class="s2">&quot;trench&quot;</span> <span class="k">else</span> <span class="s2">&quot;trench_plateID&quot;</span>
+                <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">plateID</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="n">plateID_col</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="p">(</span>
+                            <span class="nb">isinstance</span><span class="p">(</span><span class="n">stage_rotation</span><span class="p">,</span> <span class="n">Dict</span><span class="p">)</span>
+                            <span class="ow">and</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">stage_rotation</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                            <span class="ow">and</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">stage_rotation</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                            <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stage_rotation</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">],</span> <span class="n">_pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span>
+                        <span class="p">):</span>
+                            <span class="c1"># Get stage rotation from the provided DataFrame in the dictionary</span>
+                            <span class="n">_stage_rotation</span> <span class="o">=</span> <span class="n">stage_rotation</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="n">stage_rotation</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">plateID</span><span class="p">]</span>
+                    
+                        <span class="c1"># Get stage rotation, if not provided</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">stage_rotation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction</span><span class="o">.</span><span class="n">rotation_model</span><span class="o">.</span><span class="n">get_rotation</span><span class="p">(</span>
+                                <span class="n">to_time</span> <span class="o">=</span><span class="n">_age</span><span class="p">,</span>
+                                <span class="n">moving_plate_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">plateID</span><span class="p">),</span>
+                                <span class="n">from_time</span><span class="o">=</span><span class="n">_age</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Velocity time step&quot;</span><span class="p">],</span>
+                                <span class="n">anchor_plate_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Anchor plateID&quot;</span><span class="p">]</span>
+                            <span class="p">)</span><span class="o">.</span><span class="n">get_lat_lon_euler_pole_and_angle_degrees</span><span class="p">()</span>
+
+                            <span class="c1"># Organise as DataFrame</span>
+                            <span class="n">_stage_rotation</span> <span class="o">=</span> <span class="n">_pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                                    <span class="s2">&quot;plateID&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">plateID</span><span class="p">],</span>
+                                    <span class="s2">&quot;pole_lat&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">stage_rotation</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                                    <span class="s2">&quot;pole_lon&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">stage_rotation</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                                    <span class="s2">&quot;pole_angle&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">stage_rotation</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span>
+                                <span class="p">})</span>
+                        
+                        <span class="c1"># Make mask for plate</span>
+                        <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="n">plateID_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">plateID</span>
+                                                
+                        <span class="c1"># Compute velocities</span>
+                        <span class="n">velocities</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">compute_velocity</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+                            <span class="n">_stage_rotation</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">constants</span><span class="p">,</span>
+                            <span class="n">plateID_col</span><span class="p">,</span>
+                        <span class="p">)</span>
+
+                        <span class="c1"># Store velocities</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plate</span><span class="si">}</span><span class="s2">_velocity_lat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">velocities</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plate</span><span class="si">}</span><span class="s2">_velocity_lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">velocities</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plate</span><span class="si">}</span><span class="s2">_velocity_mag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">velocities</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plate</span><span class="si">}</span><span class="s2">_spin_rate_mag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">velocities</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Slabs.sample_slab_seafloor_ages">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.sample_slab_seafloor_ages">[docs]</a>
+    <span class="k">def</span> <span class="nf">sample_slab_seafloor_ages</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Samples seafloor age at slabs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Sample grid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_grid</span><span class="p">(</span>
+            <span class="n">ages</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">,</span>
+            <span class="n">grids</span><span class="p">,</span>
+            <span class="n">plate</span> <span class="o">=</span> <span class="s2">&quot;lower&quot;</span><span class="p">,</span>
+            <span class="nb">vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;seafloor_age&quot;</span><span class="p">],</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;slab_seafloor_age&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Set sampling flag to true</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampled_seafloor_at_slabs</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="Slabs.sample_arc_seafloor_ages">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.sample_arc_seafloor_ages">[docs]</a>
+    <span class="k">def</span> <span class="nf">sample_arc_seafloor_ages</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Samples seafloor age at slabs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Sample grid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_grid</span><span class="p">(</span>
+            <span class="n">ages</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">,</span>
+            <span class="n">grids</span><span class="p">,</span>
+            <span class="n">plate</span> <span class="o">=</span> <span class="s2">&quot;upper&quot;</span><span class="p">,</span>
+            <span class="nb">vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;seafloor_age&quot;</span><span class="p">],</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;arc_seafloor_age&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Set sampling flag to true</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampled_seafloor_at_arcs</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="Slabs.sample_slab_sediment_thickness">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.sample_slab_sediment_thickness">[docs]</a>
+    <span class="k">def</span> <span class="nf">sample_slab_sediment_thickness</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Samples seafloor age at slabs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Sample grid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_grid</span><span class="p">(</span>
+            <span class="n">ages</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">,</span>
+            <span class="n">grids</span><span class="p">,</span>
+            <span class="n">plate</span> <span class="o">=</span> <span class="s2">&quot;lower&quot;</span><span class="p">,</span>
+            <span class="nb">vars</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;sediment_thickness&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Get continental arcs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_continental_arc</span><span class="p">(</span>
+            <span class="n">ages</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Set active margin sediment thickness</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">(</span>
+            <span class="n">ages</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">,</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="s2">&quot;sediment_thickness&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Set sampling flag to true</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampled_sediment_thickness_at_slabs</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="Slabs.set_continental_arc">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.set_continental_arc">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_continental_arc</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to set whether a trench has a continental arc</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check whether arc seafloor ages have been sampled</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampled_seafloor_at_arcs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sample_arc_seafloor_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">plateIDs</span><span class="p">)</span>
+
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_iterable</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_iterable</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">slab_cases</span><span class="p">)</span>
+
+        <span class="c1"># Loop through slab cases</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">_iterable</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># Loop through ages</span>
+            <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+                <span class="c1"># Define plateIDs if not provided</span>
+                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;trench_plateID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                <span class="c1"># Select points</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">trench_plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+
+                <span class="c1"># Set continental arc</span>
+                <span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">arc_seafloor_age</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">_data</span><span class="o">.</span><span class="n">trench_plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">oceanic_arc_plateIDs</span><span class="p">),</span> <span class="s2">&quot;continental_arc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="c1"># Enter sampled data back into the DataFrame</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_data</span>
+
+                <span class="c1"># Copy to other entries</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
+                        <span class="n">key</span><span class="p">,</span> 
+                        <span class="n">entries</span><span class="p">,</span> 
+                        <span class="p">[</span><span class="s2">&quot;continental_arc&quot;</span><span class="p">],</span>
+                    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slabs.sample_grid">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.sample_grid">[docs]</a>
+    <span class="k">def</span> <span class="nf">sample_grid</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plate</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;lower&quot;</span><span class="p">,</span>
+            <span class="nb">vars</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;seafloor_age&quot;</span><span class="p">],</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;slab_seafloor_age&quot;</span><span class="p">],</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Samples any grid at slabs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+        
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_iterable</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_iterable</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">)</span>
+
+        <span class="c1"># Define sampling points</span>
+        <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;arc&quot;</span> <span class="k">if</span> <span class="n">plate</span> <span class="o">==</span> <span class="s2">&quot;upper&quot;</span> <span class="k">else</span> <span class="s2">&quot;slab&quot;</span>
+
+        <span class="c1"># Loop through valid cases</span>
+        <span class="c1"># Order of loops is flipped to skip cases where no grid needs to be sampled</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_iterable</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Sampling slabs&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="o">==</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+            <span class="c1"># Skip if sediment grid is not sampled</span>
+            <span class="k">if</span> <span class="n">cols</span> <span class="o">==</span> <span class="p">[</span><span class="s2">&quot;sediment_thickness&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Sample sediment grid&quot;</span><span class="p">]:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping sampling of sediment thickness for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+            
+            <span class="c1"># Skip if erosion grid is not sampled</span>
+            <span class="k">if</span> <span class="n">cols</span> <span class="o">==</span> <span class="p">[</span><span class="s2">&quot;erosion_rate&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Sample erosion grid&quot;</span><span class="p">]:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping sampling of erosion rate for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Loop through ages</span>
+            <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+                <span class="c1"># Define plateIDs if not provided</span>
+                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plate</span><span class="si">}</span><span class="s2">_plateID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                <span class="c1"># Select points</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+
+                <span class="c1"># Determine the appropriate grid</span>
+                <span class="n">_grid</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">grids</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grids</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> <span class="n">_xarray</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+                        <span class="n">_grid</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grids</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> <span class="n">Dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">grids</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grids</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">],</span> <span class="n">_xarray</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+                        <span class="n">_grid</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+                
+                <span class="k">if</span> <span class="n">_grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No valid grid found for age </span><span class="si">{</span><span class="n">_age</span><span class="si">}</span><span class="s2"> and key </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                    <span class="k">continue</span>  <span class="c1"># Skip this iteration if no valid grid is found</span>
+
+                <span class="c1"># Define variables and columns</span>
+                <span class="k">if</span> <span class="n">cols</span> <span class="o">==</span> <span class="p">[</span><span class="s2">&quot;sediment_thickness&quot;</span><span class="p">]:</span>
+                    <span class="c1"># Specific case for sampling sediment thickness, with the variable name set to the one specified in the settings</span>
+                    <span class="n">_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+                    <span class="n">_vars</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Sample sediment grid&quot;</span><span class="p">]]</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sampling sediment thickness for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+                <span class="k">elif</span> <span class="n">cols</span> <span class="o">==</span> <span class="p">[</span><span class="s2">&quot;erosion_rate&quot;</span><span class="p">]:</span>
+                    <span class="c1"># Specific case for sampling erosion rate, with the variable name set to the one specified in the settings</span>
+                    <span class="n">_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+                    <span class="n">_vars</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Sample erosion grid&quot;</span><span class="p">]]</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sampling erosion rate for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">vars</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="c1"># General case for sampling a single variable with multiple columns</span>
+                    <span class="n">_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+                    <span class="n">_vars</span> <span class="o">=</span> <span class="nb">vars</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sampling </span><span class="si">{</span><span class="n">_vars</span><span class="si">}</span><span class="s2"> for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">vars</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="c1"># General case for sampling a single variable with a single column</span>
+                    <span class="n">_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+                    <span class="n">_vars</span> <span class="o">=</span> <span class="p">[</span><span class="nb">vars</span><span class="p">]</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sampling </span><span class="si">{</span><span class="n">_vars</span><span class="si">}</span><span class="s2"> for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">vars</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="nb">vars</span><span class="p">):</span>
+                    <span class="c1"># General case for sampling multiple variables with multiple columns</span>
+                    <span class="n">_cols</span> <span class="o">=</span> <span class="n">cols</span>
+                    <span class="n">_vars</span> <span class="o">=</span> <span class="nb">vars</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sampling </span><span class="si">{</span><span class="n">_vars</span><span class="si">}</span><span class="s2"> for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Default case for sampling all variables in the grid and using the variable names as column names</span>
+                    <span class="n">_cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_grid</span><span class="o">.</span><span class="n">data_vars</span><span class="p">)</span>
+                    <span class="n">_vars</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_grid</span><span class="o">.</span><span class="n">data_vars</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sampling </span><span class="si">{</span><span class="n">_vars</span><span class="si">}</span><span class="s2"> for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+                <span class="c1"># Sample grid at points for each variable</span>
+                <span class="k">for</span> <span class="n">_col</span> <span class="ow">in</span> <span class="n">_cols</span><span class="p">:</span>
+                    <span class="c1"># Accumulate data if multiple variables are sampled for the same column</span>
+                    <span class="n">accumulated_data</span> <span class="o">=</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">_data</span><span class="o">.</span><span class="n">lat</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+                    <span class="k">for</span> <span class="n">_var</span> <span class="ow">in</span> <span class="n">_vars</span><span class="p">:</span>
+                        <span class="n">sampled_data</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">sample_grid</span><span class="p">(</span>
+                            <span class="n">_data</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2">_sampling_lat&quot;</span><span class="p">],</span>
+                            <span class="n">_data</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2">_sampling_lon&quot;</span><span class="p">],</span>
+                            <span class="n">_grid</span><span class="p">[</span><span class="n">_var</span><span class="p">],</span>
+                        <span class="p">)</span>
+                        <span class="n">accumulated_data</span> <span class="o">+=</span> <span class="n">sampled_data</span>
+
+                    <span class="c1"># Enter sampled data back into the DataFrame</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">accumulated_data</span>
+
+                    <span class="c1"># Copy to other entries</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
+                            <span class="n">key</span><span class="p">,</span> 
+                            <span class="n">entries</span><span class="p">,</span> 
+                            <span class="p">[</span><span class="n">_col</span><span class="p">]</span>
+                        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slabs.set_values">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.set_values">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_values</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plate</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;lower&quot;</span><span class="p">,</span>
+            <span class="n">cols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">vals</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to add values to the &#39;Slabs&#39; object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_iterable</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_iterable</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">)</span>
+
+        <span class="c1"># Define whether to add values to slabs or arcs</span>
+        <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;arc&quot;</span> <span class="k">if</span> <span class="n">plate</span> <span class="o">==</span> <span class="s2">&quot;upper&quot;</span> <span class="k">else</span> <span class="s2">&quot;slab&quot;</span>
+
+        <span class="c1"># Loop through valid cases</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_iterable</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Adding values&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)):</span>
+            <span class="c1"># Special case for active margin sediments</span>
+            <span class="k">if</span> <span class="n">cols</span> <span class="o">==</span> <span class="s2">&quot;sediment_thickness&quot;</span> <span class="ow">and</span> <span class="n">vals</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Active margin sediments&quot;</span><span class="p">]:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping setting active margin sediments for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                
+                <span class="n">_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+                <span class="n">_vals</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Active margin sediments&quot;</span><span class="p">]]</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Setting active margin sediments for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+                <span class="n">_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+                <span class="n">_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">vals</span><span class="p">]</span>
+
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">):</span>
+                <span class="n">_cols</span> <span class="o">=</span> <span class="n">cols</span>
+                <span class="n">_vals</span> <span class="o">=</span> <span class="n">vals</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid input for setting values for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Loop through ages</span>
+            <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+                <span class="c1"># Define plateIDs if not provided</span>
+                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plate</span><span class="si">}</span><span class="s2">_plateID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                <span class="c1"># Select points</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+
+                <span class="c1"># Mask continental overriding plates if setting active margin sediment thickness</span>
+                <span class="k">if</span> <span class="n">cols</span> <span class="o">==</span> <span class="s2">&quot;sediment_thickness&quot;</span> <span class="ow">and</span> <span class="n">vals</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">continental_arc</span> <span class="o">==</span> <span class="kc">True</span><span class="p">]</span>
+
+                <span class="k">for</span> <span class="n">_col</span><span class="p">,</span> <span class="n">_val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">_cols</span><span class="p">,</span> <span class="n">_vals</span><span class="p">):</span>
+                    <span class="n">_data</span><span class="p">[</span><span class="n">_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">_val</span>
+
+                <span class="c1"># Enter sampled data back into the DataFrame</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_data</span>
+
+                <span class="c1"># Copy to other entries</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
+                        <span class="n">key</span><span class="p">,</span> 
+                        <span class="n">entries</span><span class="p">,</span> 
+                        <span class="n">cols</span><span class="p">,</span>
+                    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slabs.calculate_slab_pull_force">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.calculate_slab_pull_force">[docs]</a>
+    <span class="k">def</span> <span class="nf">calculate_slab_pull_force</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to compute slab pull force along trenches.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+        
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_iterable</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_iterable</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">slab_pull_cases</span><span class="p">)</span>
+
+        <span class="c1"># Loop through valid cases</span>
+        <span class="c1"># Order of loops is flipped to skip cases where no slab pull torque needs to be sampled</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_iterable</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Computing slab pull forces&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)):</span>
+            <span class="c1"># Skip if slab pull torque is not sampled</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Slab pull torque&quot;</span><span class="p">]:</span>                
+                <span class="c1"># Loop through ages</span>
+                <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+                    <span class="c1"># Select points</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+                    <span class="c1"># Define plateIDs if not provided</span>
+                    <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                    <span class="c1"># Select points</span>
+                    <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+                        
+                    <span class="c1"># Calculate slab pull force</span>
+                    <span class="n">computed_data1</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">compute_slab_pull_force</span><span class="p">(</span>
+                        <span class="n">_data</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">mech</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># Compute interface term</span>
+                    <span class="n">computed_data2</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">compute_interface_term</span><span class="p">(</span>
+                        <span class="n">computed_data1</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># Enter sampled data back into the DataFrame</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">computed_data2</span>
+                    
+                    <span class="c1"># Copy to other entries</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="s2">&quot;slab_lithospheric_thickness&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_crustal_thickness&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_water_depth&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;shear_zone_width&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;sediment_fraction&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_pull_force_lat&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_pull_force_lon&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_pull_force_mag&quot;</span><span class="p">,</span>
+                        <span class="p">]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
+                            <span class="n">key</span><span class="p">,</span> 
+                            <span class="n">entries</span><span class="p">,</span>
+                            <span class="n">cols</span><span class="p">,</span>
+                        <span class="p">)</span>
+
+            <span class="c1"># Inform the user that the slab pull forces have been calculated</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculated slab pull forces for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> Ma.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slabs.calculate_slab_bend_force">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.calculate_slab_bend_force">[docs]</a>
+    <span class="k">def</span> <span class="nf">calculate_slab_bend_force</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to compute slab bend force along trenches.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+        
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_iterable</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_iterable</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">slab_pull_cases</span><span class="p">)</span>
+
+        <span class="c1"># Loop through valid cases</span>
+        <span class="c1"># Order of loops is flipped to skip cases where no slab bend torque needs to be sampled</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_iterable</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Computing slab bend forces&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)):</span>
+            <span class="c1"># Skip if slab pull torque is not sampled</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Slab bend torque&quot;</span><span class="p">]:</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Loop through ages</span>
+            <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+                <span class="c1"># Select points</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+
+                <span class="c1"># Define plateIDs if not provided</span>
+                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                <span class="c1"># Select points</span>
+                <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+                    
+                <span class="c1"># Calculate slab pull force</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">compute_slab_bend_force</span><span class="p">(</span>
+                    <span class="n">_data</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">mech</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Enter sampled data back into the DataFrame</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_data</span>
+                
+                <span class="c1"># Copy to other entries</span>
+                <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="s2">&quot;slab_lithospheric_thickness&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;slab_crustal_thickness&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;slab_water_depth&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;slab_bend_force_lat&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;slab_bend_force_lon&quot;</span><span class="p">,</span>
+                <span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
+                    <span class="n">key</span><span class="p">,</span> 
+                    <span class="n">entries</span><span class="p">,</span>
+                    <span class="n">cols</span><span class="p">,</span>
+                <span class="p">)</span>
+            
+            <span class="c1"># Inform the user that the slab bend forces have been calculated</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculated slab bend forces for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> Ma.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slabs.calculate_residual_force">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.calculate_residual_force">[docs]</a>
+    <span class="k">def</span> <span class="nf">calculate_residual_force</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">residual_torque</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to calculate residual torque along trenches.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_cases</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_iterable</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">slab_pull_cases</span><span class="p">)</span>
+
+        <span class="c1"># Loop through ages and cases</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+                <span class="c1"># Select plateIDs</span>
+                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;lower_plateID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                <span class="k">for</span> <span class="n">_plateID</span> <span class="ow">in</span> <span class="n">_plateIDs</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="nb">isinstance</span><span class="p">(</span><span class="n">residual_torque</span><span class="p">,</span> <span class="n">Dict</span><span class="p">)</span>
+                        <span class="ow">and</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">residual_torque</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                        <span class="ow">and</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">residual_torque</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                        <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">residual_torque</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">],</span> <span class="n">_pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span>
+                    <span class="p">):</span>
+                        <span class="c1"># Get stage rotation from the provided DataFrame in the dictionary</span>
+                        <span class="n">_residual_torque</span> <span class="o">=</span> <span class="n">residual_torque</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="n">residual_torque</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">]</span>
+                    
+                    <span class="c1"># Make mask for plate</span>
+                    <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;lower_plateID&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">_plateID</span>
+                                            
+                    <span class="c1"># Compute velocities</span>
+                    <span class="n">forces</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">compute_residual_force</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+                        <span class="n">_residual_torque</span><span class="p">,</span>
+                        <span class="n">plateID_col</span> <span class="o">=</span> <span class="s2">&quot;lower_plateID&quot;</span><span class="p">,</span>
+                        <span class="n">weight_col</span> <span class="o">=</span> <span class="s2">&quot;trench_normal_azimuth&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># Store velocities</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;residual_force_lat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;residual_force_lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">forces</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;residual_force_mag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">forces</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;residual_force_azi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">forces</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Slabs.extract_data_through_time">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.extract_data_through_time">[docs]</a>
+    <span class="k">def</span> <span class="nf">extract_data_through_time</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">var</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;None&quot;</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to extract data on slabs through time as a pandas.DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_cases</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_cases</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">)</span>
+
+        <span class="c1"># Define plateIDs if not provided</span>
+        <span class="c1"># Default is to select all major plates in the Müller et al. (2016) reconstruction</span>
+        <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span>
+            <span class="n">plateIDs</span><span class="p">,</span> 
+            <span class="p">[</span><span class="mi">101</span><span class="p">,</span>   <span class="c1"># North America</span>
+            <span class="mi">201</span><span class="p">,</span>    <span class="c1"># South America</span>
+            <span class="mi">301</span><span class="p">,</span>    <span class="c1"># Eurasia</span>
+            <span class="mi">501</span><span class="p">,</span>    <span class="c1"># India</span>
+            <span class="mi">801</span><span class="p">,</span>    <span class="c1"># Australia</span>
+            <span class="mi">802</span><span class="p">,</span>    <span class="c1"># Antarctica</span>
+            <span class="mi">901</span><span class="p">,</span>    <span class="c1"># Pacific</span>
+            <span class="mi">902</span><span class="p">,</span>    <span class="c1"># Farallon</span>
+            <span class="mi">911</span><span class="p">,</span>    <span class="c1"># Nazca</span>
+            <span class="mi">919</span><span class="p">,</span>    <span class="c1"># Phoenix</span>
+            <span class="mi">926</span><span class="p">,</span>    <span class="c1"># Izanagi</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Initialise dictionary to store results</span>
+        <span class="n">extracted_data</span> <span class="o">=</span> <span class="p">{</span><span class="n">case</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">}</span>
+
+        <span class="c1"># Loop through valid cases</span>
+        <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+            <span class="c1"># Initialise DataFrame</span>
+            <span class="n">extracted_data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span> <span class="o">=</span> <span class="n">_pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                <span class="s2">&quot;Age&quot;</span><span class="p">:</span> <span class="n">_ages</span><span class="p">,</span>
+            <span class="p">})</span>
+            <span class="k">for</span> <span class="n">_plateID</span> <span class="ow">in</span> <span class="n">_plateIDs</span><span class="p">:</span>
+                <span class="c1"># Initialise column for each plate</span>
+                <span class="n">extracted_data</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="n">_plateID</span><span class="p">]</span> <span class="o">=</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">nan</span>
+
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_age</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_ages</span><span class="p">):</span>
+                <span class="c1"># Select data for the given age and case</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span>
+
+                <span class="c1"># Loop through plateIDs</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_plateID</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="n">_plateID</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                        <span class="c1"># Hard-coded exception for the Indo-Australian plate for 20-43 Ma (which is defined as 801 in the Müller et al. (2016) reconstruction)</span>
+                        <span class="n">_plateID</span> <span class="o">=</span> <span class="mi">801</span> <span class="k">if</span> <span class="n">_plateID</span> <span class="o">==</span> <span class="mi">501</span> <span class="ow">and</span> <span class="n">_age</span> <span class="o">&gt;=</span> <span class="mi">20</span> <span class="ow">and</span> <span class="n">_age</span> <span class="o">&lt;=</span> <span class="mi">43</span> <span class="k">else</span> <span class="n">_plateID</span>
+
+                        <span class="c1"># Extract data</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">][</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                        <span class="c1"># Assign value to DataFrame if not zero</span>
+                        <span class="c1"># This assumes that any of the variables of interest are never zero</span>
+                        <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">extracted_data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">_plateID</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="c1"># Return extracted data</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_cases</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># If only one case is selected, return the DataFrame</span>
+            <span class="k">return</span> <span class="n">extracted_data</span><span class="p">[</span><span class="n">_cases</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># If multiple cases are selected, return the dictionary</span>
+            <span class="k">return</span> <span class="n">extracted_data</span></div>
+
+        
+<div class="viewcode-block" id="Slabs.save">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.save">[docs]</a>
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to save the &#39;Slabs&#39; object.</span>
+<span class="sd">        Data of the &#39;Slabs&#39; object is saved to .parquet files.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_cases</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_cases</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">)</span>
+        
+        <span class="c1"># Get file dir</span>
+        <span class="n">_file_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">dir_path</span> <span class="k">if</span> <span class="n">file_dir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">file_dir</span>
+
+        <span class="c1"># Loop through ages</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Saving Slabs&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+            <span class="c1"># Loop through cases</span>
+            <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+                <span class="n">utils_data</span><span class="o">.</span><span class="n">DataFrame_to_parquet</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">],</span>
+                    <span class="s2">&quot;Slabs&quot;</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">_age</span><span class="p">,</span>
+                    <span class="n">_case</span><span class="p">,</span>
+                    <span class="n">_file_dir</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Slabs saved to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">dir_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slabs.export">
+<a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.export">[docs]</a>
+    <span class="k">def</span> <span class="nf">export</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to export the &#39;Slabs&#39; object.</span>
+<span class="sd">        Data of the &#39;Slabs&#39; object is exported to .csv files.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Define ages if not provided</span>
+        <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
+
+        <span class="c1"># Define cases if not provided</span>
+        <span class="n">_cases</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_cases</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">)</span>
+        
+        <span class="c1"># Get file dir</span>
+        <span class="n">_file_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">dir_path</span> <span class="k">if</span> <span class="n">file_dir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">file_dir</span>
+
+        <span class="c1"># Loop through ages</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Exporting Slabs&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+            <span class="c1"># Loop through cases</span>
+            <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+                <span class="n">utils_data</span><span class="o">.</span><span class="n">DataFrame_to_csv</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">],</span>
+                    <span class="s2">&quot;Slabs&quot;</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">_age</span><span class="p">,</span>
+                    <span class="n">_case</span><span class="p">,</span>
+                    <span class="n">_file_dir</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Slabs exported to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">dir_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2023-2024, Thomas Schouten
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=9993f566"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>
