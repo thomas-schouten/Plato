@@ -1,0 +1,29 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - master  # Trigger this workflow only for pushes to the master branch
+permissions:
+  contents: write
+jobs:
+  build-and-deploy:
+    concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
+    runs-on: macOS
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies 📦
+        run: |
+          pip install sphinx  # Install Sphinx if it's not already installed
+          # Add any other dependencies you need for your Sphinx documentation
+
+      - name: Build Documentation 📖
+        run: |
+          sphinx-build -b html docs/source docs/build  # Build the Sphinx documentation
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: docs/build  # The folder the action should deploy to the gh-pages branch.
+          branch: gh-pages     # Specify the branch to deploy to.
