@@ -213,6 +213,8 @@ class PlotReconstruction():
         ):
         """
         Function to create subplot with global sediment thicknesses.
+
+        :param ax:                      axes object
         """
         # Set age to first in list if not provided
         if age is None or age not in self.settings.ages:
