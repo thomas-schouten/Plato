@@ -1,0 +1,15 @@
+#############
+PlotReconstruction
+#############
+
+.. automodule:: plato.plot
+   :no-members:
+   :show-inheritance:
+   :no-index:
+
+`PlotReconstruction` is a class that generates standardised plots of reconstructions:
+
+.. autoclass:: plato.plot.PlotReconstruction
+   :members:
+   :undoc-members:
+   :inherited-members:

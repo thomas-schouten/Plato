@@ -8,7 +8,6 @@ Globe
 
 Available classes within `Globe`:
 
-
 .. autosummary:: 
    :toctree: _autosummary
    :template: custom-class-template.rst
@@ -16,3 +15,8 @@ Available classes within `Globe`:
    :recursive:
 
    Globe
+
+.. autoclass:: plato.globe.Globe
+   :members:
+   :undoc-members:
+   :inherited-members:
