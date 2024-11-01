@@ -131,7 +131,7 @@ class PlotReconstruction():
 
         :param ax:                      axes object
         :type ax:                       matplotlib.axes.Axes
-        :param age:                     the time for which to display the map
+        :param age:                     the age for which to display the map
         :type age:                      int
         :param cmap:                    colormap to use
         :type cmap:                     str
