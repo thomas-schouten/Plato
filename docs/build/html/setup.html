@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Installation" href="setup.html" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="API reference" href="api/index.html" /><link rel="prev" title="Plato" href="index.html" />
 
     <!-- Generated with Sphinx 8.0.2 and Furo 2024.08.06 -->
-        <title>Version v0.0.1</title>
+        <title>Installation - Version v0.0.1</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="_static/autoclasstoc.css?v=08871587" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="#"><div class="brand">Version v0.0.1</div></a>
+      <a href="index.html"><div class="brand">Version v0.0.1</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -188,7 +188,7 @@
   <aside class="sidebar-drawer">
     <div class="sidebar-container">
       
-      <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   <div class="sidebar-logo-container">
     <img class="sidebar-logo only-light" src="_static/HMC Lab.png" alt="Light Logo"/>
@@ -205,15 +205,9 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Plato</a></li>
-<li class="toctree-l1"><a class="reference internal" href="setup.html">Installation</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/globe/index.html">Globe</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/grids/index.html">Grids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/plates/index.html">Plates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/plot/index.html">PlotReconstruction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/points/index.html">Points</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/slabs/index.html">Slabs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Plato</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="simple">
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
@@ -237,7 +231,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/index.rst.txt" title="View this page">
+  <a class="muted-link" href="_sources/setup.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -257,30 +251,114 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="plato">
-<h1>Plato<a class="headerlink" href="#plato" title="Link to this heading">¶</a></h1>
-<p>These pages provide the documentation of the <cite>plato</cite> python package.
-<cite>plato</cite> was developed to provide a simple, flexible, and efficient way to perform geodynamic analyses of global plate reconstructions in GPlates.
-Here you’ll find the relevant documentation as well as a set of notebooks with examples of such analyses.</p>
-<p>Plato is tested on Python 3.10.12. In theory, it should work well on any system that has
-access to Conda.</p>
-<section id="quickstart">
-<h2>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">¶</a></h2>
-<p>To download the repo, create a Conda environment, and install all dependencies, run the
-following:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/thomas-schouten/plato.git
-&gt;<span class="w"> </span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>plato
-&gt;<span class="w"> </span>$<span class="w"> </span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
+          <section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
+<p>Installing the <code class="code docutils literal notranslate"><span class="pre">plato</span></code> package is dead-simple. It requires you to have
+Python 3.10 on your system. Using either virtual environments or <code class="code docutils literal notranslate"><span class="pre">Conda</span></code> is
+recommended.</p>
+<section id="quick-installation">
+<h2>Quick installation<a class="headerlink" href="#quick-installation" title="Link to this heading">¶</a></h2>
+<p>Run the following inside your local copy of the source code:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
 &gt;<span class="w"> </span>$<span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>plato
 &gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
 </pre></div>
 </div>
-<p>The resulting Conda environment should be able to run all notebooks found in
-hmclab/notebooks. See the installation page for more detailed instructions.</p>
-<div class="toctree-wrapper compound">
+<p>After this you can use the code anywhere on your system, or start a Jupyter Notebook
+server and have a look at our examples.</p>
+</section>
+<section id="installing-the-package">
+<h2>Installing the package<a class="headerlink" href="#installing-the-package" title="Link to this heading">¶</a></h2>
+<p>Activate your environment of choice. This can be your system Python, a virtualenv, Conda
+environment, etc.</p>
+<section id="environment-setup">
+<h3>Environment setup<a class="headerlink" href="#environment-setup" title="Link to this heading">¶</a></h3>
+<p>To create e.g. a new <code class="code docutils literal notranslate"><span class="pre">Conda</span></code> environment with the appropriate
+Python version and dependencies, run the following from your terminal:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/thomas-schouten/plato.git
+&gt;<span class="w"> </span>$<span class="w"> </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>plato<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.10
+&gt;<span class="w"> </span>$<span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>plato
+</pre></div>
 </div>
-<p class="centered">
-<strong>Thomas Schouten, 2024</strong></p></section>
+<p>You can also create this environment byu first downloading this repo, and running the
+following command inside of it:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
+&gt;<span class="w"> </span>$<span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>plato
+</pre></div>
+</div>
+<p>This does exactly the same as the previous commands.</p>
+</section>
+<section id="id1">
+<h3>Installing the package<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<p>There’s at the moment three ways to install the package:</p>
+<ol class="arabic simple">
+<li><p>Install the code directly from GitHub;</p></li>
+<li><p>Clone the GitHub repo and install from that directory.</p></li>
+<li><p>Download the <code class="code docutils literal notranslate"><span class="pre">.zip</span></code> file of the repo, unzip, and install from that directory.</p></li>
+</ol>
+<section id="installation-option-1">
+<h4>Installation option 1<a class="headerlink" href="#installation-option-1" title="Link to this heading">¶</a></h4>
+<p>Option one simply requires you to run the following command from your shell (with the
+appropriate environment activated):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>git+git@github.com:thomas-schouten/plato.git@master#egg<span class="o">=</span>plato
+</pre></div>
+</div>
+<p>This won’t work as long as the GitHub repo is private. If you’ve set up SSH keys with
+your GitHub account, and we’ve granted you access, you can run the following command
+instead:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>git+ssh://git@github.com/thomas-schouten/plato.git@master#egg<span class="o">=</span>plato
+</pre></div>
+</div>
+</section>
+<section id="installation-option-2">
+<h4>Installation option 2<a class="headerlink" href="#installation-option-2" title="Link to this heading">¶</a></h4>
+<p>Option two requires you to run the following commands (with the appropriate environment
+activated):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:thomas-schouten/plato.git
+&gt;<span class="w"> </span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>plato
+&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+<p>This also won’t work as long as the GitHub repo is private and you don’t have access.</p>
+</section>
+<section id="installation-option-3">
+<h4>Installation option 3<a class="headerlink" href="#installation-option-3" title="Link to this heading">¶</a></h4>
+<p>Option three requires you to decompress the <code class="code docutils literal notranslate"><span class="pre">.zip</span></code> file and open a terminal in
+the resulting folder (such that you see the files <code class="code docutils literal notranslate"><span class="pre">setup.py</span></code>, <code class="code docutils literal notranslate"><span class="pre">README.md</span></code>,
+etc. Once you have activated the proper environment in your shell, run the following:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="installing-development-dependencies">
+<h2>Installing development dependencies<a class="headerlink" href="#installing-development-dependencies" title="Link to this heading">¶</a></h2>
+<p>If you want to develop within this repo, we recommend a few extra packages. They can
+also be installed using pip.</p>
+<p>In <code class="code docutils literal notranslate"><span class="pre">Bash</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="c1"># from github</span>
+&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>git+git@github.com:thomas-schouten/plato.git@master#egg<span class="o">=</span>hmclab<span class="o">[</span>dev<span class="o">]</span>
+
+<span class="w">    </span><span class="c1"># from local clone</span>
+&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="o">[</span>dev<span class="o">]</span>
+</pre></div>
+</div>
+<p>… or <code class="code docutils literal notranslate"><span class="pre">Zsh</span></code>, which requires escapes for brackets:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="c1"># from github</span>
+&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="se">\</span>
+<span class="w">    </span>git+git@github.com:thomas-schouten/plato.git@master#egg<span class="o">=</span><span class="nv">plato</span><span class="o">=</span>hmclab<span class="se">\[</span>dev<span class="se">\]</span>
+
+<span class="w">    </span><span class="c1"># from local clone</span>
+&gt;<span class="w"> </span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="se">\[</span>dev<span class="se">\]</span>
+</pre></div>
+</div>
+<p>One could now test if all the package components run well by invoking PyTest:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;<span class="w"> </span>$<span class="w"> </span>pytest<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
 </section>
 
         </article>
@@ -288,16 +366,26 @@ hmclab/notebooks. See the installation page for more detailed instructions.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="setup.html">
+          <a class="next-page" href="api/index.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Installation</div>
+                <div class="title">API reference</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Home</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -328,8 +416,19 @@ hmclab/notebooks. See the installation page for more detailed instructions.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Plato</a><ul>
-<li><a class="reference internal" href="#quickstart">Quickstart</a></li>
+<li><a class="reference internal" href="#">Installation</a><ul>
+<li><a class="reference internal" href="#quick-installation">Quick installation</a></li>
+<li><a class="reference internal" href="#installing-the-package">Installing the package</a><ul>
+<li><a class="reference internal" href="#environment-setup">Environment setup</a></li>
+<li><a class="reference internal" href="#id1">Installing the package</a><ul>
+<li><a class="reference internal" href="#installation-option-1">Installation option 1</a></li>
+<li><a class="reference internal" href="#installation-option-2">Installation option 2</a></li>
+<li><a class="reference internal" href="#installation-option-3">Installation option 3</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#installing-development-dependencies">Installing development dependencies</a></li>
 </ul>
 </li>
 </ul>

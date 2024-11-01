@@ -13,14 +13,15 @@ from .points import Points
 class Plates:
     """
     Class that contains all information for the plates in a reconstruction.
-    A Plates object can be initialised in multiple ways:
+    A `Plates` object can be initialised in multiple ways:
 
-    1.  The user can initialise a Plates object from scratch by providing the reconstruction and the ages of interest.
+    1.  The user can initialise a `Plates` object from scratch by providing the reconstruction and the ages of interest.
         The reconstruction can be provided as a file with rotation poles, a file with topologies, and a file with polygons, or as one of the model name string identifiers for the models available on the GPlately DataServer (https://gplates.github.io/gplately/v1.3.0/#dataserver).
         
         Additionally, the user may specify the excel file with a number of different cases (combinations of options) to be considered.
 
-    2.  Alternatively, the user can initialise a `Plates` object by providing a `Settings` object and a Reconstruction object from a `Globe`, `Grids`, `Points`, or `Slabs` object.
+    2.  Alternatively, the user can initialise a `Plates` object by providing a `Settings` object and a `Reconstruction` object from a `Globe`, `Grids`, `Plates`, `Points` or `Slabs` object.
+        Providing the settings from a `Plates` object will allow the user to initialise a new `Plates` object with the same settings as the original object.
 
     :param settings:            `Settings` object (default: None)
     :type settings:             plato.settings.Settings
@@ -606,13 +607,26 @@ class Plates:
 
     def save(
             self,
-            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            cases: Union[None, str, List[str]] = None,
-            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            file_dir: Optional[str] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            file_dir = None,
         ):
         """
-        Function to save the 'Plates' object.
+        Function to export the `Plates` object.
+        All files are saved as .parquet files to reduce file size and enable rapid reloading.
+        The `Plates` object can be filtered by age, case, and plateID.
+        By default, the files are saved to the directory specified in the settings object.
+        The user can specify the directory to store the files using the `file_dir`.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list[str]
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list[int, float], numpy.ndarray
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -661,14 +675,26 @@ class Plates:
 
     def export(
             self,
-            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            cases: Union[None, str, List[str]] = None,
-            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            file_dir: Optional[str] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            file_dir = None,
         ):
         """
-        Function to export the 'Plates' object.
-        Geometries are saved as shapefiles, data are saved as .csv files.
+        Function to export the `Plates` object.
+        Geometries are exported as shapefiles, data are exported as .csv files.
+        The `Plates` object can be filtered by age, case, and plateID.
+        By default, the files are saved to the directory specified in the settings object.
+        The user can specify the directory to store the files using the `file_dir`.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list[str]
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list[int, float], numpy.ndarray
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)

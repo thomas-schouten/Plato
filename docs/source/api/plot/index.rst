@@ -1,14 +1,11 @@
-#############
+##########################
 PlotReconstruction
-#############
+##########################
 
 .. automodule:: plato.plot
-   :no-members:
-   :show-inheritance:
-
-`PlotReconstruction` is a class that can be used to generate plots of global plate reconstructions.
-
-.. autoclass:: plato.plot.PlotReconstruction
    :members:
    :undoc-members:
    :inherited-members:
+   :show-inheritance:
+
+`PlotReconstruction` is a class that can be used to generate plots of global plate reconstructions.

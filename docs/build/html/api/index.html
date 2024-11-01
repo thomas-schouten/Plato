@@ -3,7 +3,7 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Globe" href="globe/index.html" /><link rel="prev" title="Installation" href="../setup.html" />
 
     <!-- Generated with Sphinx 8.0.2 and Furo 2024.08.06 -->
         <title>API reference - Version v0.0.1</title>
@@ -203,21 +203,20 @@
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
-  <p class="caption" role="heading"><span class="caption-text">Overview of submodules</span></p>
-<ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="globe/index.html">Globe</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Globe</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="globe/_autosummary/plato.globe.Globe.html">plato.globe.Globe</a></li>
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Plato</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">Installation</a></li>
+<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">API reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="globe/index.html">Globe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plates/index.html">Plates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plot/index.html">PlotReconstruction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="points/index.html">Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="slabs/index.html">Slabs</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="grids/index.html">Grids</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plates/index.html">Plates</a></li>
-<li class="toctree-l1"><a class="reference internal" href="points/index.html">Points</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="plot/index.html">Plot</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Plot</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="plot/_autosummary/plato.plot.PlotReconstruction.html">plato.plot.PlotReconstruction</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="settings/index.html">Settings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="slabs/index.html">Slabs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genindex.html">Index</a></li>
 </ul>
 
 </div>
@@ -267,10 +266,34 @@ of the descriptions are still missing. Additionally, we expect that some argumen
 might still change names, potentially breaking code. Be aware of this in future
 updates.</p>
 </div>
-<p>These packages describe the modules, classes and methods that constitute the
+<p>These packages describe the modules, classes, and methods that constitute the
 <code class="code docutils literal notranslate"><span class="pre">plato</span></code> package. Here you’ll find detailed explanations of how all the
 components work together.</p>
 <div class="toctree-wrapper compound">
+</div>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="globe/index.html#plato.globe.Globe" title="plato.globe.Globe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">globe.Globe</span></code></a>([settings, reconstruction, ...])</p></td>
+<td><p>Class to store information on global plate tectonic properties of the Earth.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="grids/index.html#plato.grids.Grids" title="plato.grids.Grids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">grids.Grids</span></code></a>([settings, reconstruction, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="plates/index.html#plato.plates.Plates" title="plato.plates.Plates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plates.Plates</span></code></a>([settings, reconstruction, ...])</p></td>
+<td><p>Class that contains all information for the plates in a reconstruction.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="plot/index.html#plato.plot.PlotReconstruction" title="plato.plot.PlotReconstruction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot.PlotReconstruction</span></code></a>([plate_torques, ...])</p></td>
+<td><p>A class to make standardised plots of reconstructions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="points/index.html#plato.points.Points" title="plato.points.Points"><code class="xref py py-obj docutils literal notranslate"><span class="pre">points.Points</span></code></a>([settings, reconstruction, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="slabs/index.html#plato.slabs.Slabs" title="plato.slabs.Slabs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">slabs.Slabs</span></code></a>([settings, reconstruction, ...])</p></td>
+<td><p>Class that contains all information for the slabs in a reconstruction.</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </section>
 
@@ -279,8 +302,26 @@ components work together.</p>
       <footer>
         
         <div class="related-pages">
-          
-          
+          <a class="next-page" href="globe/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Globe</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../setup.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Installation</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -305,7 +346,7 @@ components work together.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=5a120ae1"></script>
+</div><script src="../_static/documentation_options.js?v=6b897a61"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

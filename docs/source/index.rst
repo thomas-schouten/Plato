@@ -1,38 +1,43 @@
-API reference
-=============
+#################
+Plato
+#################
 
-.. module:: plato
+These pages provide the documentation of the `plato` python package. 
+`plato` was developed to provide a simple, flexible, and efficient way to perform geodynamic analyses of global plate reconstructions in GPlates.
+Here you'll find the relevant documentation as well as a set of notebooks with examples of such analyses.
 
-.. warning:: 
+Plato is tested on Python 3.10.12. In theory, it should work well on any system that has
+access to Conda. 
 
-    The API reference includes all finished methods with full signature. However, a lot
-    of the descriptions are still missing. Additionally, we expect that some arguments 
-    might still change names, potentially breaking code. Be aware of this in future
-    updates.
+Quickstart
+----------
 
-These packages describe the modules, classes and methods that constitute the 
-:code:`plato` package. Here you'll find detailed explanations of how all the 
-components work together.
+To download the repo, create a Conda environment, and install all dependencies, run the
+following: 
+
+.. code-block:: bash    
+
+    > $ git clone https://github.com/thomas-schouten/plato.git
+    > $ cd plato
+    > $ conda env create -f environment.yml
+    > $ conda activate plato
+    > $ pip install -e .
+
+The resulting Conda environment should be able to run all notebooks found in
+hmclab/notebooks. See the installation page for more detailed instructions.
+
 
 .. toctree::
-   :hidden:
-   :maxdepth: 2
-   :caption: Overview of submodules
+    :maxdepth: 1
+    :caption: Contents:
+    :hidden:
 
-   api/globe/index
-   api/grids/index
-   api/plates/index
-   api/plot/index
-   api/points/index
-   api/slabs/index
+    self
+    plato
+    setup
+    notebooks
+    api/index
+    genindex
 
-.. autosummary::
-   :toctree: api/generated
-   :nosignatures:  # Optional to suppress method signatures
+.. centered:: Thomas Schouten, 2024
 
-   plato.globe
-   plato.grids
-   plato.plates
-   plato.plot
-   plato.points
-   plato.slabs

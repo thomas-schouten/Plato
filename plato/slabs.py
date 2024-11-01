@@ -12,26 +12,62 @@ from . import utils_data, utils_calc, utils_init
 from .settings import Settings
 
 class Slabs:
+    """
+    Class that contains all information for the slabs in a reconstruction.
+    A `Slabs` object can be initialised in multiple ways:
+
+    1.  The user can initialise a `Slabs` object from scratch by providing the reconstruction and the ages of interest.
+        The reconstruction can be provided as a file with rotation poles, a file with topologies, and a file with polygons, or as one of the model name string identifiers for the models available on the GPlately DataServer (https://gplates.github.io/gplately/v1.3.0/#dataserver).
+        
+        Additionally, the user may specify the excel file with a number of different cases (combinations of options) to be considered.
+
+    2.  Alternatively, the user can initialise a `Slabs` object by providing a `Settings` object and a `Reconstruction` object from a `Globe`, `Grids`, `Plates`, `Points` or `Slabs` object.
+        Providing the settings from a `Slabs` object will allow the user to initialise a new `Slabs` object with the same settings as the original object.
+
+    :param settings:            `Settings` object (default: None)
+    :type settings:             plato.settings.Settings
+    :param reconstruction:      `Reconstruction` object (default: None)
+    :type reconstruction:       gplately.PlateReconstruction
+    :param rotation_file:       filepath to .rot file with rotation poles (default: None)
+    :type rotation_file:        str
+    :param topology_file:       filepath to .gpml file with topologies (default: None)
+    :type topology_file:        str
+    :param polygon_file:        filepath to .gpml file with polygons (default: None)
+    :type polygon_file:         str
+    :param reconstruction_name: model name string identifiers for the GPlately DataServer (default: None)
+    :type reconstruction_name:  str
+    :param ages:                ages of interest (default: None)
+    :type ages:                 float, int, list, numpy.ndarray
+    :param cases_file:          filepath to excel file with cases (default: None)
+    :type cases_file:           str
+    :param cases_sheet:         name of the sheet in the excel file with cases (default: "Sheet1")
+    :type cases_sheet:          str
+    :param files_dir:           directory to store files (default: None)
+    :type files_dir:            str
+    :param PARALLEL_MODE:       flag to enable parallel mode (default: False)
+    :type PARALLEL_MODE:        bool
+    :param DEBUG_MODE:          flag to enable debug mode (default: False)
+    :type DEBUG_MODE:           bool
+    :param CALCULATE_VELOCITIES: flag to calculate velocities (default: True)
+    :type CALCULATE_VELOCITIES: bool
+    """
     def __init__(
             self,
-            settings: Optional[Union[None, Settings]]= None,
-            reconstruction: Optional[_gplately.PlateReconstruction]= None,
-            rotation_file: Optional[str]= None,
-            topology_file: Optional[str]= None,
-            polygon_file: Optional[str]= None,
-            reconstruction_name: Optional[str] = None,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases_file: Optional[list[str]]= None,
-            cases_sheet: Optional[str]= "Sheet1",
-            files_dir: Optional[str]= None,
-            resolved_geometries: Optional[Dict] = None,
-            PARALLEL_MODE: Optional[bool] = False,
-            DEBUG_MODE: Optional[bool] = False,
-            CALCULATE_VELOCITIES: Optional[bool] = True,
+            settings = None,
+            reconstruction = None,
+            rotation_file = None,
+            topology_file = None,
+            polygon_file = None,
+            reconstruction_name = None,
+            ages = None,
+            cases_file = None,
+            cases_sheet = "Sheet1",
+            files_dir = None,
+            resolved_geometries = None,
+            PARALLEL_MODE = False,
+            DEBUG_MODE = False,
+            CALCULATE_VELOCITIES = True,
         ):
-        """
-        Class to store and manipulate data on slabs.
-        """
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
@@ -118,12 +154,19 @@ class Slabs:
 
     def calculate_velocities(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            stage_rotation: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            stage_rotation = None,
         ):
         """
         Function to compute velocities at slabs.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param stage_rotation:  stage rotation model (default: None)
+        :type stage_rotation:   dict
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -182,13 +225,23 @@ class Slabs:
 
     def sample_slab_seafloor_ages(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            grids: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            grids = None,
         ):
         """
         Samples seafloor age at slabs.
+        This is a special case of the sample_grid function, where the variable to sample from the grid is set to "seafloor_age" and the column to store the sampled values is set to "slab_seafloor_age".
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param grids:           grids to sample from (default: None)
+        :type grids:            dict[float, dict[str, xarray.Dataset]]
         """
         # Sample grid
         self.sample_grid(
@@ -206,13 +259,23 @@ class Slabs:
 
     def sample_arc_seafloor_ages(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            grids: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            grids = None,
         ):
         """
-        Samples seafloor age at slabs.
+        Samples seafloor age at arcs.
+        This is a special case of the sample_grid function, where the variable to sample from the grid is set to "seafloor_age" and the column to store the sampled values is set to "arc_seafloor_age".
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param grids:           grids to sample from (default: None)
+        :type grids:            dict[float, dict[str, xarray.Dataset]]
         """
         # Sample grid
         self.sample_grid(
@@ -230,13 +293,31 @@ class Slabs:
 
     def sample_slab_sediment_thickness(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            grids: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            grids = None,
         ):
         """
-        Samples seafloor age at slabs.
+        Samples sediment thickness at slabs.
+        This function calls several internal functions to sample sediment thickness at slabs:
+
+        1.  A a special case of the sample_grid function, where the variable to sample from the grid is set to None and the column to store the sampled values is set to "sediment_thickness".
+            Settings the variable to sample from the grid to None will sample all variables in the grid specified in the case settings.
+
+        2.  The set_continental_arc function, which will call the sample_arc_seafloor_ages function if the seafloor ages at arcs have not been sampled yet,
+            and then sets whether a trench has a continental arc with additional manual overrides for known oceanic arcs that are masked on seafloor age grids of the Earthbyte reconstructions available on the GPlately DataServer.
+
+        3.  A special case of the set_values function, where the column to set the values is set to "sediment_thickness" and the value to set is set to the value specified in the case settings.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param grids:           grids to sample from (default: None)
+        :type grids:            dict[float, dict[str, xarray.Dataset]]
         """
         # Sample grid
         self.sample_grid(
@@ -269,12 +350,21 @@ class Slabs:
 
     def set_continental_arc(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
         ):
         """
-        Function to set whether a trench has a continental arc
+        Function to set whether a trench has a continental arc.
+        This function calls the sample_arc_seafloor_ages function if the seafloor ages at arcs have not been sampled yet,
+        and then sets whether a trench has a continental arc with additional manual overrides for known oceanic arcs that are masked on seafloor age grids of the Earthbyte reconstructions available on the GPlately DataServer.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
         """
         # Check whether arc seafloor ages have been sampled
         if not self.sampled_seafloor_at_arcs:
