@@ -22,6 +22,7 @@ components work together.
    globe/index
    grids/index
    plates/index
+   plate_torques/index
    plot/index
    points/index
    slabs/index
@@ -31,6 +32,7 @@ components work together.
     globe.Globe
     grids.Grids
     plates.Plates
+    plate_torques.PlateTorques
     plot.PlotReconstruction
     points.Points
     slabs.Slabs

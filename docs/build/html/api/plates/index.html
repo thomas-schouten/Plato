@@ -3,7 +3,7 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="PlotReconstruction" href="../plot/index.html" /><link rel="prev" title="Grids" href="../grids/index.html" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="PlateTorques" href="../plate_torques/index.html" /><link rel="prev" title="Grids" href="../grids/index.html" />
 
     <!-- Generated with Sphinx 8.0.2 and Furo 2024.08.06 -->
         <title>Plates - Version v0.0.1</title>
@@ -211,6 +211,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../globe/index.html">Globe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../grids/index.html">Grids</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Plates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../plate_torques/index.html">PlateTorques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../plot/index.html">PlotReconstruction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../points/index.html">Points</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../slabs/index.html">Slabs</a></li>
@@ -257,9 +258,11 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-plato.plates">
-<span id="plates"></span><h1>Plates<a class="headerlink" href="#module-plato.plates" title="Link to this heading">¶</a></h1>
-<dl class="py class">
+          <section id="plates">
+<h1>Plates<a class="headerlink" href="#plates" title="Link to this heading">¶</a></h1>
+<p><cite>Plates</cite> is a class that contains data, geometries and methods for working with tectonic plates.
+In the <cite>PlateTorques</cite> module, the <cite>Plates</cite> class is used to store the plates of the model and to store the torques acting on the plates.</p>
+<dl class="py class" id="module-plato.plates">
 <dt class="sig sig-object py" id="plato.plates.Plates">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">plato.plates.</span></span><span class="sig-name descname"><span class="pre">Plates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconstruction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">topology_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">polygon_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconstruction_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases_sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Sheet1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PARALLEL_MODE</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">DEBUG_MODE</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
@@ -445,8 +448,6 @@ The user can specify the directory to store the files using the <cite>file_dir</
 
 </dd></dl>
 
-<p><cite>Plates</cite> is a class that contains data, geometries and methods for working with tectonic plates.
-In the <cite>PlateTorques</cite> module, the <cite>Plates</cite> class is used to store the plates of the model and to store the torques acting on the plates.</p>
 </section>
 
         </article>
@@ -454,12 +455,12 @@ In the <cite>PlateTorques</cite> module, the <cite>Plates</cite> class is used t
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../plot/index.html">
+          <a class="next-page" href="../plate_torques/index.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">PlotReconstruction</div>
+                <div class="title">PlateTorques</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -527,7 +528,7 @@ In the <cite>PlateTorques</cite> module, the <cite>Plates</cite> class is used t
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=6b897a61"></script>
+</div><script src="../../_static/documentation_options.js?v=37d4c247"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

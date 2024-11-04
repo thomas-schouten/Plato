@@ -12,6 +12,45 @@ from . import utils_data, utils_calc, utils_init
 from .settings import Settings
 
 class Points:
+    """
+    Class that contains all information for the points in a reconstruction.
+    A `Slabs` object can be initialised in multiple ways:
+
+    1.  The user can initialise a `Points` object from scratch by providing the reconstruction and the ages of interest.
+        The reconstruction can be provided as a file with rotation poles, a file with topologies, and a file with polygons, or as one of the model name string identifiers for the models available on the GPlately DataServer (https://gplates.github.io/gplately/v1.3.0/#dataserver).
+        
+        Additionally, the user may specify the excel file with a number of different cases (combinations of options) to be considered.
+
+    2.  Alternatively, the user can initialise a `Points` object by providing a `Settings` object and a `Reconstruction` object from a `Globe`, `Grids`, `Plates`, `Points` or `Slabs` object.
+        Providing the settings from a `Points` object will allow the user to initialise a new `Points` object with the same settings as the original object.
+
+    :param settings:            `Settings` object (default: None)
+    :type settings:             plato.settings.Settings
+    :param reconstruction:      `Reconstruction` object (default: None)
+    :type reconstruction:       gplately.PlateReconstruction
+    :param rotation_file:       filepath to .rot file with rotation poles (default: None)
+    :type rotation_file:        str
+    :param topology_file:       filepath to .gpml file with topologies (default: None)
+    :type topology_file:        str
+    :param polygon_file:        filepath to .gpml file with polygons (default: None)
+    :type polygon_file:         str
+    :param reconstruction_name: model name string identifiers for the GPlately DataServer (default: None)
+    :type reconstruction_name:  str
+    :param ages:                ages of interest (default: None)
+    :type ages:                 float, int, list, numpy.ndarray
+    :param cases_file:          filepath to excel file with cases (default: None)
+    :type cases_file:           str
+    :param cases_sheet:         name of the sheet in the excel file with cases (default: "Sheet1")
+    :type cases_sheet:          str
+    :param files_dir:           directory to store files (default: None)
+    :type files_dir:            str
+    :param PARALLEL_MODE:       flag to enable parallel mode (default: False)
+    :type PARALLEL_MODE:        bool
+    :param DEBUG_MODE:          flag to enable debug mode (default: False)
+    :type DEBUG_MODE:           bool
+    :param CALCULATE_VELOCITIES: flag to calculate velocities (default: True)
+    :type CALCULATE_VELOCITIES: bool
+    """
     def __init__(
             self,
             settings: Optional[Settings] = None,
@@ -30,16 +69,7 @@ class Points:
             CALCULATE_VELOCITIES: Optional[bool] = True,
         ):
         """
-        Class to store and manipulate point data.
-
-        :param settings: Simulation parameters.
-        :type settings: Settings object
-        :param reconstruction: Plate reconstruction.
-        :type reconstruction: Reconstruction object
-        :param plates: Optional dictionary of plate data (default: None).
-        :type plates: Optional[Dict]
-        :param data: Optional dictionary of point data structured by age and case (default: None).
-        :type data: Optional[Dict]
+        Constructor for the 'Points' object.
         """
         # Store settings object
         self.settings = utils_init.get_settings(

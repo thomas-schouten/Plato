@@ -68,6 +68,9 @@ class Slabs:
             DEBUG_MODE = False,
             CALCULATE_VELOCITIES = True,
         ):
+        """
+        Constructor for the `Slabs` class.
+        """
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
@@ -232,7 +235,8 @@ class Slabs:
         ):
         """
         Samples seafloor age at slabs.
-        This is a special case of the sample_grid function, where the variable to sample from the grid is set to "seafloor_age" and the column to store the sampled values is set to "slab_seafloor_age".
+        This is a special case of the sample_grid function, 
+        where the variable to sample from the grid is set to "seafloor_age" and the column to store the sampled values is set to "slab_seafloor_age".
 
         :param ages:            ages of interest (default: None)
         :type ages:             float, int, list, numpy.ndarray
@@ -266,7 +270,8 @@ class Slabs:
         ):
         """
         Samples seafloor age at arcs.
-        This is a special case of the sample_grid function, where the variable to sample from the grid is set to "seafloor_age" and the column to store the sampled values is set to "arc_seafloor_age".
+        This is a special case of the sample_grid function, 
+        where the variable to sample from the grid is set to "seafloor_age" and the column to store the sampled values is set to "arc_seafloor_age".
 
         :param ages:            ages of interest (default: None)
         :type ages:             float, int, list, numpy.ndarray

@@ -202,21 +202,20 @@
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
-  <p class="caption" role="heading"><span class="caption-text">Overview of submodules</span></p>
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/globe/index.html">Globe</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Globe</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/globe/_autosummary/plato.globe.Globe.html">plato.globe.Globe</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Plato</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../setup.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/plot/index.html">Plot</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Plot</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/plot/_autosummary/plato.plot.PlotReconstruction.html">plato.plot.PlotReconstruction</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/settings/index.html">Settings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../genindex.html">Index</a></li>
 </ul>
 
 </div>
@@ -279,6 +278,20 @@
 <span class="k">class</span> <span class="nc">PlotReconstruction</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to make standardised plots of reconstructions.</span>
+
+<span class="sd">    :param settings:        settings object</span>
+<span class="sd">    :type settings:         Settings</span>
+<span class="sd">    :param plates:          plates object</span>
+<span class="sd">    :type plates:           Plates</span>
+<span class="sd">    :param slabs:           slabs object</span>
+<span class="sd">    :type slabs:            Slabs</span>
+<span class="sd">    :param points:          points object</span>
+<span class="sd">    :type points:           Points</span>
+<span class="sd">    :param grids:           grids object</span>
+<span class="sd">    :type grids:            Grids</span>
+<span class="sd">    :param globe:           globe object</span>
+<span class="sd">    :type globe:            Globe</span>
+<span class="sd">    :param plate_torques:   plate torques object</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
@@ -295,19 +308,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructor for the Plot class.</span>
 
-<span class="sd">        :param settings:        settings object</span>
-<span class="sd">        :type settings:         Settings</span>
-<span class="sd">        :param plates:          plates object</span>
-<span class="sd">        :type plates:           Plates</span>
-<span class="sd">        :param slabs:           slabs object</span>
-<span class="sd">        :type slabs:            Slabs</span>
-<span class="sd">        :param points:          points object</span>
-<span class="sd">        :type points:           Points</span>
-<span class="sd">        :param grids:           grids object</span>
-<span class="sd">        :type grids:            Grids</span>
-<span class="sd">        :param globe:           globe object</span>
-<span class="sd">        :type globe:            Globe</span>
-<span class="sd">        :param plate_torques:   plate torques object</span>
+<span class="sd">        </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Store the input data, if provided</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">Settings</span><span class="p">):</span>
@@ -383,11 +384,11 @@
             <span class="n">plate_boundaries_linewidth</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">integer</span><span class="p">,</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">floating</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to create subplot with global seafloor age.</span>
+<span class="sd">        Function to create subplot of the reconstruction with global seafloor age.</span>
 
 <span class="sd">        :param ax:                      axes object</span>
 <span class="sd">        :type ax:                       matplotlib.axes.Axes</span>
-<span class="sd">        :param age:                     the time for which to display the map</span>
+<span class="sd">        :param age:                     the age for which to display the map</span>
 <span class="sd">        :type age:                      int</span>
 <span class="sd">        :param cmap:                    colormap to use</span>
 <span class="sd">        :type cmap:                     str</span>
@@ -471,7 +472,37 @@
             <span class="n">marker_size</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to create subplot with global sediment thicknesses.</span>
+<span class="sd">        Function to create subplot of the reconstruction with global sediment thicknesses.</span>
+<span class="sd">        Seafloor sediments are plotted as the grid stored in the sediment grid with the key corresponding to the &#39;Sample sediment grid&#39; option for the given case.</span>
+<span class="sd">        Active margin sediments are plotted as scatter points if the &#39;Active margin sediments&#39; option is activated.</span>
+
+<span class="sd">        :param ax:                      axes object</span>
+<span class="sd">        :type ax:                       matplotlib.axes.Axes</span>
+<span class="sd">        :param age:                     the age for which to display the map</span>
+<span class="sd">        :type age:                      int</span>
+<span class="sd">        :param case:                    case for which to plot the sediments</span>
+<span class="sd">        :type case:                     str</span>
+<span class="sd">        :param cmap:                    colormap to use</span>
+<span class="sd">        :type cmap:                     str</span>
+<span class="sd">        :param vmin:                    minimum value for colormap</span>
+<span class="sd">        :type vmin:                     int, float</span>
+<span class="sd">        :param vmax:                    maximum value for colormap</span>
+<span class="sd">        :type vmax:                     int, float</span>
+<span class="sd">        :param log_scale:               whether or not to use log scale</span>
+<span class="sd">        :type log_scale:                bool</span>
+<span class="sd">        :param coastlines_facecolour:   facecolour for coastlines</span>
+<span class="sd">        :type coastlines_facecolour:    str</span>
+<span class="sd">        :param coastlines_edgecolour:   edgecolour for coastlines</span>
+<span class="sd">        :type coastlines_edgecolour:    str</span>
+<span class="sd">        :param coastlines_linewidth:    linewidth for coastlines</span>
+<span class="sd">        :type coastlines_linewidth:     int, float</span>
+<span class="sd">        :param plate_boundaries_linewidth: linewidth for plate boundaries</span>
+<span class="sd">        :type plate_boundaries_linewidth: int, float</span>
+<span class="sd">        :param marker_size:             size of the markers</span>
+<span class="sd">        :type marker_size:              int, float</span>
+
+<span class="sd">        :return:                        image object and scatter object</span>
+<span class="sd">        :rtype:                         matplotlib.image.AxesImage and matplotlib.collections.PathCollection</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set age to first in list if not provided</span>
         <span class="k">if</span> <span class="n">age</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">age</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">:</span>
@@ -570,9 +601,34 @@
             <span class="n">plate_boundaries_linewidth</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to create subplot with global sediment thicknesses</span>
-<span class="sd">            case:               case for which to plot the sediments</span>
-<span class="sd">            plotting_options:   dictionary with options for plotting</span>
+<span class="sd">        Function to create subplot of the reconstruction with global erosion rates.</span>
+<span class="sd">        Erosion rates are plotted as the grid stored in the continent grid with the key corresponding to the &#39;Sample erosion rate&#39; option.</span>
+
+<span class="sd">        :param ax:                      axes object</span>
+<span class="sd">        :type ax:                       matplotlib.axes.Axes</span>
+<span class="sd">        :param age:                     the age for which to display the map</span>
+<span class="sd">        :type age:                      int</span>
+<span class="sd">        :param case:                    case for which to plot the sediments</span>
+<span class="sd">        :type case:                     str</span>
+<span class="sd">        :param cmap:                    colormap to use</span>
+<span class="sd">        :type cmap:                     str</span>
+<span class="sd">        :param vmin:                    minimum value for colormap</span>
+<span class="sd">        :type vmin:                     int, float</span>
+<span class="sd">        :param vmax:                    maximum value for colormap</span>
+<span class="sd">        :type vmax:                     int, float</span>
+<span class="sd">        :param log_scale:               whether or not to use log scale</span>
+<span class="sd">        :type log_scale:                bool</span>
+<span class="sd">        :param coastlines_facecolour:   facecolour for coastlines</span>
+<span class="sd">        :type coastlines_facecolour:    str</span>
+<span class="sd">        :param coastlines_edgecolour:   edgecolour for coastlines</span>
+<span class="sd">        :type coastlines_edgecolour:    str</span>
+<span class="sd">        :param coastlines_linewidth:    linewidth for coastlines</span>
+<span class="sd">        :type coastlines_linewidth:     int, float</span>
+<span class="sd">        :param plate_boundaries_linewidth: linewidth for plate boundaries</span>
+<span class="sd">        :type plate_boundaries_linewidth: int, float</span>
+
+<span class="sd">        :return:                        image object</span>
+<span class="sd">        :rtype:                         matplotlib.image.AxesImage</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set age to first in list if not provided</span>
         <span class="k">if</span> <span class="n">age</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">age</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">:</span>
@@ -645,7 +701,40 @@
             <span class="n">vector_alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to plot plate velocities on an axes object</span>
+<span class="sd">        Function to create subplot of the reconstruction with global plate velocities.</span>
+<span class="sd">        The plate velocities are plotted by the combination of a grid showing the magnitude of a velocity component and a set of vectors showing the direction of the velocity.</span>
+<span class="sd">        The velocity component can be either the magnitude of the translational component (i.e. the velocity magnitude) or </span>
+<span class="sd">        one of the two components of the velocity vector (i.e. the latitude or longitude component) or the rotational component (i.e. the spin rate).</span>
+
+<span class="sd">        :param ax:                      axes object</span>
+<span class="sd">        :type ax:                       matplotlib.axes.Axes</span>
+<span class="sd">        :param age:                     the age for which to display the map</span>
+<span class="sd">        :type age:                      int</span>
+<span class="sd">        :param case:                    case for which to use the velocities</span>
+<span class="sd">        :type case:                     str</span>
+<span class="sd">        :param velocity_component:      velocity component to plot</span>
+<span class="sd">        :type velocity_component:       str</span>
+<span class="sd">        :param cmap:                    colormap to use</span>
+<span class="sd">        :type cmap:                     str</span>
+<span class="sd">        :param vmin:                    minimum value for colormap</span>
+<span class="sd">        :type vmin:                     int, float</span>
+<span class="sd">        :param vmax:                    maximum value for colormap</span>
+<span class="sd">        :type vmax:                     int, float</span>
+<span class="sd">        :param normalise_vectors:       whether or not to normalise the vectors</span>
+<span class="sd">        :type normalise_vectors:        bool</span>
+<span class="sd">        :param log_scale:               whether or not to use log scale</span>
+<span class="sd">        :type log_scale:                bool</span>
+<span class="sd">        :param coastlines_facecolour:   facecolour for coastlines</span>
+<span class="sd">        :type coastlines_facecolour:    str</span>
+<span class="sd">        :param coastlines_edgecolour:   edgecolour for coastlines</span>
+<span class="sd">        :type coastlines_edgecolour:    str</span>
+<span class="sd">        :param coastlines_linewidth:    linewidth for coastlines</span>
+<span class="sd">        :type coastlines_linewidth:     int, float</span>
+<span class="sd">        :param plate_boundaries_linewidth: linewidth for plate boundaries</span>
+<span class="sd">        :type plate_boundaries_linewidth: int, float</span>
+
+<span class="sd">        :return:                        image object and quiver object</span>
+<span class="sd">        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set age to first in list if not provided</span>
         <span class="k">if</span> <span class="n">age</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">age</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">:</span>
@@ -743,23 +832,38 @@
             <span class="n">vector_alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to create subplot with difference between plate velocity at trenches between two cases</span>
-<span class="sd">        </span>
-<span class="sd">        :param ax:                  axes object</span>
-<span class="sd">        :type ax:                   matplotlib.axes.Axes</span>
-<span class="sd">        :param fig:                 figure</span>
-<span class="sd">        :type fig:                  matplotlib.figure.Figure</span>
-<span class="sd">        :param _age: the time for which to display the map</span>
-<span class="sd">        :type _age:  int</span>
-<span class="sd">        :param case1:               case 1 for which to use the velocities</span>
-<span class="sd">        :type case1:                str</span>
-<span class="sd">        :param case2:               case 2 to subtract from case 1</span>
-<span class="sd">        :type case2:                str</span>
-<span class="sd">        :param plotting_options:    dictionary with options for plotting</span>
-<span class="sd">        :type plotting_options:     dict</span>
+<span class="sd">        Function to create subplot of the reconstruction with the difference in global plate velocities for two cases.</span>
+<span class="sd">        The difference in plate velocities is plotted by subtracting the velocity vectors of case 2 from the velocity vectors of case 1.</span>
+<span class="sd">        The plate velocities are plotted by the combination of a grid showing the magnitude of a velocity component and a set of vectors showing the direction of the velocity.</span>
+<span class="sd">        The velocity component can be either the magnitude of the translational component (i.e. the velocity magnitude) or</span>
+<span class="sd">        one of the two components of the velocity vector (i.e. the latitude or longitude component) or the rotational component (i.e. the spin rate).</span>
+<span class="sd">    </span>
+<span class="sd">        :param ax:                      axes object</span>
+<span class="sd">        :type ax:                       matplotlib.axes.Axes</span>
+<span class="sd">        :param age:                     the age for which to display the map</span>
+<span class="sd">        :type age:                      int</span>
+<span class="sd">        :param case1:                   case for which to use the velocities</span>
+<span class="sd">        :type case1:                    str</span>
+<span class="sd">        :param case2:                   case for which to use the velocities</span>
+<span class="sd">        :type case2:                    str</span>
+<span class="sd">        :param velocity_component:      velocity component to plot</span>
+<span class="sd">        :type velocity_component:       str</span>
+<span class="sd">        :param cmap:                    colormap to use</span>
+<span class="sd">        :type cmap:                     str</span>
+<span class="sd">        :param vmin:                    minimum value for colormap</span>
+<span class="sd">        :type vmin:                     int, float</span>
+<span class="sd">        :param vmax:                    maximum value for colormap</span>
+<span class="sd">        :type vmax:                     int, float</span>
+<span class="sd">        :param normalise_vectors:       whether or not to normalise the vectors</span>
+<span class="sd">        :type normalise_vectors:        bool</span>
+<span class="sd">        :param log_scale:               whether or not to use log scale</span>
+<span class="sd">        :type log_scale:                bool</span>
+<span class="sd">        :param coastlines_facecolour:   facecolour for coastlines</span>
+<span class="sd">        :type coastlines_facecolour:    str</span>
+<span class="sd">        :param coastlines_edgecolour:   edgecolour for coastlines</span>
 
-<span class="sd">        :return:                    image object and quiver object</span>
-<span class="sd">        :rtype:                     matplotlib.image.AxesImage and matplotlib.quiver.Quiver</span>
+<span class="sd">        :return:                        image object and quiver object</span>
+<span class="sd">        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set age to first in list if not provided</span>
         <span class="k">if</span> <span class="n">age</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">age</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">:</span>
@@ -870,9 +974,38 @@
             <span class="n">vector_alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to create subplot with difference between plate velocity at trenches between two cases</span>
-<span class="sd">            case:               case for which to plot the sediments</span>
-<span class="sd">            plotting_options:   dictionary with options for plotting</span>
+<span class="sd">        Function to create subplot of the reconstruction with the relative difference in global plate velocities for two cases.</span>
+<span class="sd">        The difference in plate velocities is plotted by dividing the velocity vectors of case 2 from the velocity vectors of case 1.</span>
+<span class="sd">        The plate velocities are plotted by the combination of a grid showing the magnitude of a velocity component and a set of vectors showing the direction of the velocity.</span>
+<span class="sd">        The velocity component can be either the magnitude of the translational component (i.e. the velocity magnitude) or</span>
+<span class="sd">        one of the two components of the velocity vector (i.e. the latitude or longitude component) or the rotational component (i.e. the spin rate).</span>
+<span class="sd">    </span>
+<span class="sd">        :param ax:                      axes object</span>
+<span class="sd">        :type ax:                       matplotlib.axes.Axes</span>
+<span class="sd">        :param age:                     the age for which to display the map</span>
+<span class="sd">        :type age:                      int</span>
+<span class="sd">        :param case1:                   case for which to use the velocities</span>
+<span class="sd">        :type case1:                    str</span>
+<span class="sd">        :param case2:                   case for which to use the velocities</span>
+<span class="sd">        :type case2:                    str</span>
+<span class="sd">        :param velocity_component:      velocity component to plot</span>
+<span class="sd">        :type velocity_component:       str</span>
+<span class="sd">        :param cmap:                    colormap to use</span>
+<span class="sd">        :type cmap:                     str</span>
+<span class="sd">        :param vmin:                    minimum value for colormap</span>
+<span class="sd">        :type vmin:                     int, float</span>
+<span class="sd">        :param vmax:                    maximum value for colormap</span>
+<span class="sd">        :type vmax:                     int, float</span>
+<span class="sd">        :param normalise_vectors:       whether or not to normalise the vectors</span>
+<span class="sd">        :type normalise_vectors:        bool</span>
+<span class="sd">        :param log_scale:               whether or not to use log scale</span>
+<span class="sd">        :type log_scale:                bool</span>
+<span class="sd">        :param coastlines_facecolour:   facecolour for coastlines</span>
+<span class="sd">        :type coastlines_facecolour:    str</span>
+<span class="sd">        :param coastlines_edgecolour:   edgecolour for coastlines</span>
+
+<span class="sd">        :return:                        image object and quiver object</span>
+<span class="sd">        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set age to first in list if not provided</span>
         <span class="k">if</span> <span class="n">age</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">age</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">:</span>
@@ -1011,12 +1144,35 @@
             <span class="n">plate_vector_alpha</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to plot plate velocities on an axes object</span>
-<span class="sd">            ax:                     axes object</span>
-<span class="sd">            fig:                    figure</span>
-<span class="sd">            _age:    the time for which to display the map</span>
-<span class="sd">            case:                   case for which to plot the sediments</span>
-<span class="sd">            plotting_options:       dictionary with options for plotting</span>
+<span class="sd">        Function to create subplot of the reconstruction with the residual force acting on the plates.</span>
+<span class="sd">        The residual force is displayed as a vector component (latitudinal, longitudinal, or magnitude), which can be plotted as a grid of the force acting on the points or as scatter points showing the force acting on the slabs.</span>
+<span class="sd">            </span>
+<span class="sd">        :param ax:                      axes object</span>
+<span class="sd">        :type ax:                       matplotlib.axes.Axes</span>
+<span class="sd">        :param age:                     the age for which to display the map</span>
+<span class="sd">        :type age:                      int</span>
+<span class="sd">        :param case1:                   case for which to use the velocities</span>
+<span class="sd">        :type case1:                    str</span>
+<span class="sd">        :param case2:                   case for which to use the velocities</span>
+<span class="sd">        :type case2:                    str</span>
+<span class="sd">        :param velocity_component:      velocity component to plot</span>
+<span class="sd">        :type velocity_component:       str</span>
+<span class="sd">        :param cmap:                    colormap to use</span>
+<span class="sd">        :type cmap:                     str</span>
+<span class="sd">        :param vmin:                    minimum value for colormap</span>
+<span class="sd">        :type vmin:                     int, float</span>
+<span class="sd">        :param vmax:                    maximum value for colormap</span>
+<span class="sd">        :type vmax:                     int, float</span>
+<span class="sd">        :param normalise_vectors:       whether or not to normalise the vectors</span>
+<span class="sd">        :type normalise_vectors:        bool</span>
+<span class="sd">        :param log_scale:               whether or not to use log scale</span>
+<span class="sd">        :type log_scale:                bool</span>
+<span class="sd">        :param coastlines_facecolour:   facecolour for coastlines</span>
+<span class="sd">        :type coastlines_facecolour:    str</span>
+<span class="sd">        :param coastlines_edgecolour:   edgecolour for coastlines</span>
+
+<span class="sd">        :return:                        image object and quiver object</span>
+<span class="sd">        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set age to first in list if not provided</span>
         <span class="k">if</span> <span class="n">age</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">age</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">:</span>
@@ -1455,7 +1611,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=9993f566"></script>
+</div><script src="../../_static/documentation_options.js?v=37d4c247"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

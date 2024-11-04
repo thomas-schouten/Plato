@@ -127,7 +127,7 @@ class PlotReconstruction():
             plate_boundaries_linewidth: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0.5,
         ) -> object:
         """
-        Function to create subplot with global seafloor age.
+        Function to create subplot of the reconstruction with global seafloor age.
 
         :param ax:                      axes object
         :type ax:                       matplotlib.axes.Axes
@@ -212,9 +212,37 @@ class PlotReconstruction():
             marker_size = 20,
         ):
         """
-        Function to create subplot with global sediment thicknesses.
+        Function to create subplot of the reconstruction with global sediment thicknesses.
+        Seafloor sediments are plotted as the grid stored in the sediment grid with the key corresponding to the 'Sample sediment grid' option for the given case.
+        Active margin sediments are plotted as scatter points if the 'Active margin sediments' option is activated.
 
         :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param age:                     the age for which to display the map
+        :type age:                      int
+        :param case:                    case for which to plot the sediments
+        :type case:                     str
+        :param cmap:                    colormap to use
+        :type cmap:                     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param log_scale:               whether or not to use log scale
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
+        :type coastlines_edgecolour:    str
+        :param coastlines_linewidth:    linewidth for coastlines
+        :type coastlines_linewidth:     int, float
+        :param plate_boundaries_linewidth: linewidth for plate boundaries
+        :type plate_boundaries_linewidth: int, float
+        :param marker_size:             size of the markers
+        :type marker_size:              int, float
+
+        :return:                        image object and scatter object
+        :rtype:                         matplotlib.image.AxesImage and matplotlib.collections.PathCollection
         """
         # Set age to first in list if not provided
         if age is None or age not in self.settings.ages:
@@ -310,9 +338,34 @@ class PlotReconstruction():
             plate_boundaries_linewidth = 0.5,
         ):
         """
-        Function to create subplot with global sediment thicknesses
-            case:               case for which to plot the sediments
-            plotting_options:   dictionary with options for plotting
+        Function to create subplot of the reconstruction with global erosion rates.
+        Erosion rates are plotted as the grid stored in the continent grid with the key corresponding to the 'Sample erosion rate' option.
+
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param age:                     the age for which to display the map
+        :type age:                      int
+        :param case:                    case for which to plot the sediments
+        :type case:                     str
+        :param cmap:                    colormap to use
+        :type cmap:                     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param log_scale:               whether or not to use log scale
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
+        :type coastlines_edgecolour:    str
+        :param coastlines_linewidth:    linewidth for coastlines
+        :type coastlines_linewidth:     int, float
+        :param plate_boundaries_linewidth: linewidth for plate boundaries
+        :type plate_boundaries_linewidth: int, float
+
+        :return:                        image object
+        :rtype:                         matplotlib.image.AxesImage
         """
         # Set age to first in list if not provided
         if age is None or age not in self.settings.ages:
@@ -382,7 +435,40 @@ class PlotReconstruction():
             vector_alpha = 0.5,
         ):
         """
-        Function to plot plate velocities on an axes object
+        Function to create subplot of the reconstruction with global plate velocities.
+        The plate velocities are plotted by the combination of a grid showing the magnitude of a velocity component and a set of vectors showing the direction of the velocity.
+        The velocity component can be either the magnitude of the translational component (i.e. the velocity magnitude) or 
+        one of the two components of the velocity vector (i.e. the latitude or longitude component) or the rotational component (i.e. the spin rate).
+
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param age:                     the age for which to display the map
+        :type age:                      int
+        :param case:                    case for which to use the velocities
+        :type case:                     str
+        :param velocity_component:      velocity component to plot
+        :type velocity_component:       str
+        :param cmap:                    colormap to use
+        :type cmap:                     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param normalise_vectors:       whether or not to normalise the vectors
+        :type normalise_vectors:        bool
+        :param log_scale:               whether or not to use log scale
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
+        :type coastlines_edgecolour:    str
+        :param coastlines_linewidth:    linewidth for coastlines
+        :type coastlines_linewidth:     int, float
+        :param plate_boundaries_linewidth: linewidth for plate boundaries
+        :type plate_boundaries_linewidth: int, float
+
+        :return:                        image object and quiver object
+        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver
         """
         # Set age to first in list if not provided
         if age is None or age not in self.settings.ages:
@@ -477,23 +563,38 @@ class PlotReconstruction():
             vector_alpha = 0.5,
         ):
         """
-        Function to create subplot with difference between plate velocity at trenches between two cases
-        
-        :param ax:                  axes object
-        :type ax:                   matplotlib.axes.Axes
-        :param fig:                 figure
-        :type fig:                  matplotlib.figure.Figure
-        :param _age: the time for which to display the map
-        :type _age:  int
-        :param case1:               case 1 for which to use the velocities
-        :type case1:                str
-        :param case2:               case 2 to subtract from case 1
-        :type case2:                str
-        :param plotting_options:    dictionary with options for plotting
-        :type plotting_options:     dict
+        Function to create subplot of the reconstruction with the difference in global plate velocities for two cases.
+        The difference in plate velocities is plotted by subtracting the velocity vectors of case 2 from the velocity vectors of case 1.
+        The plate velocities are plotted by the combination of a grid showing the magnitude of a velocity component and a set of vectors showing the direction of the velocity.
+        The velocity component can be either the magnitude of the translational component (i.e. the velocity magnitude) or
+        one of the two components of the velocity vector (i.e. the latitude or longitude component) or the rotational component (i.e. the spin rate).
+    
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param age:                     the age for which to display the map
+        :type age:                      int
+        :param case1:                   case for which to use the velocities
+        :type case1:                    str
+        :param case2:                   case for which to use the velocities
+        :type case2:                    str
+        :param velocity_component:      velocity component to plot
+        :type velocity_component:       str
+        :param cmap:                    colormap to use
+        :type cmap:                     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param normalise_vectors:       whether or not to normalise the vectors
+        :type normalise_vectors:        bool
+        :param log_scale:               whether or not to use log scale
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
 
-        :return:                    image object and quiver object
-        :rtype:                     matplotlib.image.AxesImage and matplotlib.quiver.Quiver
+        :return:                        image object and quiver object
+        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver
         """
         # Set age to first in list if not provided
         if age is None or age not in self.settings.ages:
@@ -601,9 +702,38 @@ class PlotReconstruction():
             vector_alpha = 0.5,
         ):
         """
-        Function to create subplot with difference between plate velocity at trenches between two cases
-            case:               case for which to plot the sediments
-            plotting_options:   dictionary with options for plotting
+        Function to create subplot of the reconstruction with the relative difference in global plate velocities for two cases.
+        The difference in plate velocities is plotted by dividing the velocity vectors of case 2 from the velocity vectors of case 1.
+        The plate velocities are plotted by the combination of a grid showing the magnitude of a velocity component and a set of vectors showing the direction of the velocity.
+        The velocity component can be either the magnitude of the translational component (i.e. the velocity magnitude) or
+        one of the two components of the velocity vector (i.e. the latitude or longitude component) or the rotational component (i.e. the spin rate).
+    
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param age:                     the age for which to display the map
+        :type age:                      int
+        :param case1:                   case for which to use the velocities
+        :type case1:                    str
+        :param case2:                   case for which to use the velocities
+        :type case2:                    str
+        :param velocity_component:      velocity component to plot
+        :type velocity_component:       str
+        :param cmap:                    colormap to use
+        :type cmap:                     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param normalise_vectors:       whether or not to normalise the vectors
+        :type normalise_vectors:        bool
+        :param log_scale:               whether or not to use log scale
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
+
+        :return:                        image object and quiver object
+        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver
         """
         # Set age to first in list if not provided
         if age is None or age not in self.settings.ages:
@@ -739,12 +869,35 @@ class PlotReconstruction():
             plate_vector_alpha = 1,
         ):
         """
-        Function to plot plate velocities on an axes object
-            ax:                     axes object
-            fig:                    figure
-            _age:    the time for which to display the map
-            case:                   case for which to plot the sediments
-            plotting_options:       dictionary with options for plotting
+        Function to create subplot of the reconstruction with the residual force acting on the plates.
+        The residual force is displayed as a vector component (latitudinal, longitudinal, or magnitude), which can be plotted as a grid of the force acting on the points or as scatter points showing the force acting on the slabs.
+            
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param age:                     the age for which to display the map
+        :type age:                      int
+        :param case1:                   case for which to use the velocities
+        :type case1:                    str
+        :param case2:                   case for which to use the velocities
+        :type case2:                    str
+        :param velocity_component:      velocity component to plot
+        :type velocity_component:       str
+        :param cmap:                    colormap to use
+        :type cmap:                     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param normalise_vectors:       whether or not to normalise the vectors
+        :type normalise_vectors:        bool
+        :param log_scale:               whether or not to use log scale
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
+
+        :return:                        image object and quiver object
+        :rtype:                         matplotlib.image.AxesImage and matplotlib.quiver.Quiver
         """
         # Set age to first in list if not provided
         if age is None or age not in self.settings.ages:

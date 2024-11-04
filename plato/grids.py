@@ -11,6 +11,13 @@ from . import utils_data, utils_init
 from .settings import Settings
 
 class Grids():
+    """
+    Class to hold gridded data.
+    
+    Seafloor grids contain lithospheric age and, optionally, sediment thickness.
+    Continental grids contain lithospheric thickness and, optionally, crustal thickness.
+    Velocity grids contain plate velocity data.
+    """
     def __init__(
             self,
             settings: Optional[Settings] = None,
@@ -30,12 +37,6 @@ class Grids():
             DEBUG_MODE: Optional[bool] = False,
             PARALLEL_MODE: Optional[bool] = False,
         ):
-        """
-        Object to hold gridded data.
-        Seafloor grids contain lithospheric age and, optionally, sediment thickness.
-        Continental grids contain lithospheric thickness and, optionally, crustal thickness.
-        Velocity grids contain plate velocity data.
-        """
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
