@@ -3,8 +3,76 @@ requires = [
     "setuptools>=42",
     "wheel",
     "versioneer-518",
-    "gplately",
-    "xarray",
+    "numpy>=1.16.0",
+    "scipy>=1.0.0",
+    "shapely",
     "matplotlib=3.5.2",
+    "cartopy",
+    "pooch",
+    "tqdm",
+    "netcdf4",
+    "rasterio",
+    "geopandas",
+    "stripy",
+    "plate-model-manager>=1.2.1",
+    "pyyaml",
+    "pygmt",
+    "rioxarray",
+    "xarray",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "plato"
+dynamic = ["version"]
+description = "Object-orientated Python interface for efficient geodynamic characterisation of plate tectonic reconstructions in GPlates"
+readme = "README.md"
+authors = [{ name = "Thomas Schouten", email = "thomas.schouten.work@gmail.com" }]
+license = { file = "LICENSE" }
+requires-python = ">= 3.8" # At least Python 3.8
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
+]
+keywords = ["Tectonics", "Earth"]
+dependencies = [
+    "numpy>=1.16.0",
+    "scipy>=1.0.0",
+    "shapely",
+    "matplotlib=3.5.2",
+    "cartopy",
+    "pooch",
+    "tqdm",
+    "netcdf4",
+    "rasterio",
+    "geopandas",
+    "stripy",
+    "plate-model-manager>=1.2.1",
+    "pyyaml",
+    "pygmt",
+    "rioxarray",
+    "xarray",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ['*.examples*','*.notebooks*','tests*','notebooks*', 'scripts*']
+namespaces = true
+
+#[tool.setuptools.dynamic]
+#version = {attr = "plato.__version__"}
+
+[project.optional-dependencies]
+dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/thomas-schouten/plato"
+
+[project.scripts]
+plato = "plato.__main__:main"
