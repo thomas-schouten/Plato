@@ -96,7 +96,7 @@ class Slabs:
         self.data = {age: {} for age in self.settings.ages}
 
         # Loop through times
-        for _age in _tqdm(self.settings.ages, desc="Loading data", disable=self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(self.settings.ages, desc="Loading slab data", disable=self.settings.logger.level == logging.INFO):
             # Load available data
             for key, entries in self.settings.slab_cases.items():
                 # Make list to store available cases
@@ -690,48 +690,47 @@ class Slabs:
         # Order of loops is flipped to skip cases where no slab bend torque needs to be sampled
         for key, entries in _tqdm(_iterable.items(), desc="Computing slab bend forces", disable=(self.settings.logger.level==logging.INFO)):
             # Skip if slab pull torque is not sampled
-            if not self.settings.options[key]["Slab bend torque"]:
-                continue
+            if self.settings.options[key]["Slab bend torque"]:
+                # Loop through ages
+                for _age in _ages:
+                    # Select points
+                    _data = self.data[_age][key]
 
-            # Loop through ages
-            for _age in _ages:
-                # Select points
-                _data = self.data[_age][key]
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
 
-                # Define plateIDs if not provided
-                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
+                    # Select points
+                    if plateIDs is not None:
+                        _data = _data[_data.lower_plateID.isin(_plateIDs)]
+                        
+                    # Calculate slab pull force
+                    _data = utils_calc.compute_slab_bend_force(
+                        _data,
+                        self.settings.options[key],
+                        self.settings.mech,
+                    )
 
-                # Select points
-                if plateIDs is not None:
-                    _data = _data[_data.lower_plateID.isin(_plateIDs)]
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index] = _data
                     
-                # Calculate slab pull force
-                _data = utils_calc.compute_slab_bend_force(
-                    _data,
-                    self.settings.options[key],
-                    self.settings.mech,
-                )
-
-                # Enter sampled data back into the DataFrame
-                self.data[_age][key].loc[_data.index] = _data
-                
-                # Copy to other entries
-                cols = [
-                    "slab_lithospheric_thickness",
-                    "slab_crustal_thickness",
-                    "slab_water_depth",
-                    "slab_bend_force_lat",
-                    "slab_bend_force_lon",
-                ]
-                self.data[_age] = utils_data.copy_values(
-                    self.data[_age], 
-                    key, 
-                    entries,
-                    cols,
-                )
+                    # Copy to other entries
+                    if len(entries) > 1:
+                        cols = [
+                            "slab_lithospheric_thickness",
+                            "slab_crustal_thickness",
+                            "slab_water_depth",
+                            "slab_bend_force_lat",
+                            "slab_bend_force_lon",
+                        ]
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries,
+                            cols,
+                        )
             
             # Inform the user that the slab bend forces have been calculated
-            logging.info(f"Calculated slab bend forces for case {key} Ma.")
+            logging.info(f"Calculated slab bend forces for case {key}.")
 
     def calculate_residual_force(
             self,

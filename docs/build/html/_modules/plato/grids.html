@@ -209,7 +209,9 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/optimise/index.html">Optimisation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plate_torques/index.html">PlateTorques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
@@ -275,22 +277,22 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
-            <span class="n">settings</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Settings</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">reconstruction</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_gplately</span><span class="o">.</span><span class="n">PlateReconstruction</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">rotation_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">topology_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">polygon_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">reconstruction_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">cases_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">cases_sheet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span><span class="p">,</span>
-            <span class="n">files_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">seafloor_age_grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">sediment_grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">continental_grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">velocity_grids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">DEBUG_MODE</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="n">PARALLEL_MODE</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">settings</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">rotation_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">topology_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">polygon_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction_name</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_sheet</span> <span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span><span class="p">,</span>
+            <span class="n">files_dir</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">seafloor_age_grids</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">sediment_grids</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">continental_grids</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">velocity_grids</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">DEBUG_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">PARALLEL_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="p">):</span>
         <span class="c1"># Store settings object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">utils_init</span><span class="o">.</span><span class="n">get_settings</span><span class="p">(</span>
@@ -745,7 +747,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=37d4c247"></script>
+</div><script src="../../_static/documentation_options.js?v=02880162"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

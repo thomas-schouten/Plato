@@ -355,21 +355,22 @@ class Points:
                     self.data[_age][key].loc[_data.index] = computed_data.copy()
                     
                     # Copy to other entries
-                    cols = [
-                        "lithospheric_mantle_thickness",
-                        "crustal_thickness",
-                        "water_depth",
-                        "U",
-                        "GPE_force_lat",
-                        "GPE_force_lon",
-                        "GPE_force_mag",
-                    ]
-                    self.data[_age] = utils_data.copy_values(
-                        self.data[_age], 
-                        key, 
-                        entries,
-                        cols,
-                    )
+                    if len(entries) > 1:
+                        cols = [
+                            "lithospheric_mantle_thickness",
+                            "crustal_thickness",
+                            "water_depth",
+                            "U",
+                            "GPE_force_lat",
+                            "GPE_force_lon",
+                            "GPE_force_mag",
+                        ]
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries,
+                            cols,
+                        )
 
     def calculate_mantle_drag_force(
             self,

@@ -17,26 +17,62 @@ class Grids():
     Seafloor grids contain lithospheric age and, optionally, sediment thickness.
     Continental grids contain lithospheric thickness and, optionally, crustal thickness.
     Velocity grids contain plate velocity data.
+
+    :param settings:            `Settings` object (default: None)
+    :type settings:             plato.settings.Settings
+    :param reconstruction:      `Reconstruction` object (default: None)
+    :type reconstruction:       gplately.PlateReconstruction
+    :param rotation_file:       filepath to .rot file with rotation poles (default: None)
+    :type rotation_file:        str
+    :param topology_file:       filepath to .gpml file with topologies (default: None)
+    :type topology_file:        str
+    :param polygon_file:        filepath to .gpml file with polygons (default: None)
+    :type polygon_file:         str
+    :param reconstruction_name: model name string identifiers for the GPlately DataServer (default: None)
+    :type reconstruction_name:  str
+    :param ages:                ages of interest (default: None)
+    :type ages:                 float, int, list, numpy.ndarray
+    :param cases_file:          filepath to excel file with cases (default: None)
+    :type cases_file:           str
+    :param cases_sheet:         name of the sheet in the excel file with cases (default: "Sheet1")
+    :type cases_sheet:          str
+    :param files_dir:           directory to store files (default: None)
+    :type files_dir:            str
+    :param seafloor_age_grids:  seafloor age grids (default: None)
+    :type seafloor_age_grids:   dict, xarray.Dataset
+    :param sediment_grids:      sediment thickness grids (default: None)
+    :type sediment_grids:       dict, xarray.Dataset
+    :param continental_grids:   continental crust thickness grids (default: None)
+    :type continental_grids:    dict, xarray.Dataset
+    :param velocity_grids:      velocity grids (default: None)
+    :type velocity_grids:       dict, xarray.Dataset
+    :param DEBUG_MODE:          flag to enable debug mode (default: False)
+    :type DEBUG_MODE:           bool
+    :param PARALLEL_MODE:       flag to enable parallel mode (default: False)
+    :type PARALLEL_MODE:        bool
     """
     def __init__(
             self,
-            settings: Optional[Settings] = None,
-            reconstruction: Optional[_gplately.PlateReconstruction]= None,
-            rotation_file: Optional[str]= None,
-            topology_file: Optional[str]= None,
-            polygon_file: Optional[str]= None,
-            reconstruction_name: Optional[str] = None,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases_file: Optional[list[str]]= None,
-            cases_sheet: Optional[str]= "Sheet1",
-            files_dir: Optional[str]= None,
-            seafloor_age_grids: Optional[Dict] = None,
-            sediment_grids: Optional[Dict] = None,
-            continental_grids: Optional[Dict] = None,
-            velocity_grids: Optional[Dict] = None,
-            DEBUG_MODE: Optional[bool] = False,
-            PARALLEL_MODE: Optional[bool] = False,
+            settings = None,
+            reconstruction = None,
+            rotation_file = None,
+            topology_file = None,
+            polygon_file = None,
+            reconstruction_name = None,
+            ages = None,
+            cases_file = None,
+            cases_sheet = "Sheet1",
+            files_dir = None,
+            seafloor_age_grids = None,
+            sediment_grids = None,
+            continental_grids = None,
+            velocity_grids = None,
+            DEBUG_MODE = False,
+            PARALLEL_MODE = False,
         ):
+        """
+        Constructor for the `Grids` class.
+        """
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 

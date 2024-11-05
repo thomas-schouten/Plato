@@ -17,37 +17,40 @@ from . import utils_data, utils_calc
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class Settings:
+    """
+    Object to store the settings of a plato simulation.
+
+    :param name: Reconstruction name.
+    :type name: str
+    :param ages: List of valid reconstruction times.
+    :type ages: List[float]
+    :param cases_file: Path to the cases file.
+    :type cases_file: str
+    :param cases_sheet: Sheet name in the cases file (default: "Sheet1").
+    :type cases_sheet: str
+    :param files_dir: Directory path for output files (default: None, current working directory will be used).
+    :type files_dir: Optional[str]
+    :param PARALLEL_MODE: Flag to enable parallel computation mode (default: False).
+    :type PARALLEL_MODE: bool
+    :param DEBUG_MODE: Flag to enable debugging mode (default: False).
+    :type DEBUG_MODE: bool
+
+    :raises ValueError: If the ages list is empty.
+    :raises FileNotFoundError: If the cases file is not found.
+    :raises Exception: If an error occurs during cases loading.
+    """
     def __init__(
-        self,
-        name: str,
-        ages: List[float],
-        cases_file: Optional[str] = None,
-        cases_sheet: Optional[str] = "Sheet1",
-        files_dir: Optional[str] = None,
-        PARALLEL_MODE: bool = False,
-        DEBUG_MODE: bool = False,
+            self,
+            name,
+            ages,
+            cases_file = None,
+            cases_sheet = "Sheet1",
+            files_dir = None,
+            PARALLEL_MODE = False,
+            DEBUG_MODE = False,
         ):
         """
-        Object to store the settings of a plato simulation.
-
-        :param name: Reconstruction name.
-        :type name: str
-        :param ages: List of valid reconstruction times.
-        :type ages: List[float]
-        :param cases_file: Path to the cases file.
-        :type cases_file: str
-        :param cases_sheet: Sheet name in the cases file (default: "Sheet1").
-        :type cases_sheet: str
-        :param files_dir: Directory path for output files (default: None, current working directory will be used).
-        :type files_dir: Optional[str]
-        :param PARALLEL_MODE: Flag to enable parallel computation mode (default: False).
-        :type PARALLEL_MODE: bool
-        :param DEBUG_MODE: Flag to enable debugging mode (default: False).
-        :type DEBUG_MODE: bool
-
-        :raises ValueError: If the ages list is empty.
-        :raises FileNotFoundError: If the cases file is not found.
-        :raises Exception: If an error occurs during cases loading.
+        Constructor for the Settings object.
         """
         # Set up logging configuration
         self.configure_logger(DEBUG_MODE)
@@ -164,7 +167,7 @@ class Settings:
 
     def configure_logger(
             self,
-            DEBUG_MODE: bool = False
+            DEBUG_MODE = False
         ):
         """
         Configures the logger for a module.
@@ -179,7 +182,7 @@ class Settings:
         if DEBUG_MODE:
             self.logger.setLevel(logging.DEBUG)
         else:
-            self.logger.setLevel(logging.INFO)
+            self.logger.setLevel(logging.CRITICAL)
 
         # Add a console handler if no handlers exist
         if not self.logger.hasHandlers():

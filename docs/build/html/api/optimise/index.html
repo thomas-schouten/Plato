@@ -3,7 +3,7 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Plates" href="../plates/index.html" /><link rel="prev" title="Grids" href="../grids/index.html" />
 
     <!-- Generated with Sphinx 8.0.2 and Furo 2024.08.06 -->
         <title>Optimisation - Version v0.0.1</title>
@@ -179,7 +179,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -204,12 +204,13 @@
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">Plato</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../setup.html">Installation</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../globe/index.html">Globe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../grids/index.html">Grids</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Optimisation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../plates/index.html">Plates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../plate_torques/index.html">PlateTorques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../plot/index.html">PlotReconstruction</a></li>
@@ -252,7 +253,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -260,7 +261,64 @@
         <article role="main" id="furo-main-content">
           <section id="optimisation">
 <h1>Optimisation<a class="headerlink" href="#optimisation" title="Link to this heading">¶</a></h1>
-<p><cite>Optimisation</cite> is a class that contains methods for to optimise the plate torques provided in the <cite>PlateTorques</cite> class.</p>
+<p><cite>Optimisation</cite> is a class that contains methods to optimise the free parameters in the plate torques calculations in the <cite>PlateTorques</cite> class.</p>
+<dl class="py class" id="module-plato.optimisation">
+<dt class="sig sig-object py" id="plato.optimisation.Optimisation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">plato.optimisation.</span></span><span class="sig-name descname"><span class="pre">Optimisation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plate_torques</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../plate_torques/index.html#plato.plate_torques.PlateTorques" title="plato.plate_torques.PlateTorques"><span class="pre">PlateTorques</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class to optimise the slab pull coefficient and mantle viscosity to match plate motions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>plate_torques</strong> (<a class="reference internal" href="../plate_torques/index.html#plato.plate_torques.PlateTorques" title="plato.plate_torques.PlateTorques"><em>PlateTorques</em></a>) – plate torques object</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.optimisation.Optimisation.minimise_residual_torque">
+<span class="sig-name descname"><span class="pre">minimise_residual_torque</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opt_time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt_case</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plates_of_interest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visc_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[5e+18,</span> <span class="pre">5e+20]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_by_area</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minimum_plate_area</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation.minimise_residual_torque"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation.minimise_residual_torque" title="Link to this definition">¶</a></dt>
+<dd><p>Function to find optimised coefficients to match plate motions using a grid search</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>opt_time</strong> (<em>int</em>) – reconstruction time to optimise</p></li>
+<li><p><strong>opt_case</strong> (<em>str</em>) – case to optimise</p></li>
+<li><p><strong>plates_of_interest</strong> (<em>list</em><em> of </em><em>integers</em><em> or </em><em>None</em>) – plate IDs to include in optimisation</p></li>
+<li><p><strong>grid_size</strong> (<em>int</em>) – size of the grid to find optimal viscosity and slab pull coefficient</p></li>
+<li><p><strong>plot</strong> (<em>boolean</em>) – whether or not to plot the grid</p></li>
+<li><p><strong>weight_by_area</strong> (<em>boolean</em>) – whether or not to weight the residual torque by plate area</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.optimisation.Optimisation.find_slab_pull_coefficient">
+<span class="sig-name descname"><span class="pre">find_slab_pull_coefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">case</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">viscosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e+19</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation.find_slab_pull_coefficient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation.find_slab_pull_coefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Function to find optimised slab pull coefficient for a given (set of) plates using a grid search.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>age</strong> (<em>int</em><em>, </em><em>float</em>) – reconstruction age to optimise</p></li>
+<li><p><strong>case</strong> (<em>str</em>) – case to optimise</p></li>
+<li><p><strong>plates_of_interest</strong> (<em>list</em><em> of </em><em>integers</em><em> or </em><em>None</em>) – plate IDs to include in optimisation</p></li>
+<li><p><strong>grid_size</strong> (<em>int</em>) – size of the grid to find optimal slab pull coefficient</p></li>
+<li><p><strong>plot</strong> (<em>boolean</em>) – whether or not to plot the grid</p></li>
+<li><p><strong>weight_by_area</strong> (<em>boolean</em>) – whether or not to weight the residual torque by plate area</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The optimal slab pull coefficient</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
         </article>
@@ -268,8 +326,26 @@
       <footer>
         
         <div class="related-pages">
-          
-          
+          <a class="next-page" href="../plates/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Plates</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../grids/index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Grids</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -288,13 +364,36 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Optimisation</a><ul>
+<li><a class="reference internal" href="#plato.optimisation.Optimisation"><code class="docutils literal notranslate"><span class="pre">Optimisation</span></code></a><ul>
+<li><a class="reference internal" href="#plato.optimisation.Optimisation.minimise_residual_torque"><code class="docutils literal notranslate"><span class="pre">Optimisation.minimise_residual_torque()</span></code></a></li>
+<li><a class="reference internal" href="#plato.optimisation.Optimisation.find_slab_pull_coefficient"><code class="docutils literal notranslate"><span class="pre">Optimisation.find_slab_pull_coefficient()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=f52f8786"></script>
+</div><script src="../../_static/documentation_options.js?v=02880162"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

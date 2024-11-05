@@ -202,21 +202,22 @@
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
-  <p class="caption" role="heading"><span class="caption-text">Overview of submodules</span></p>
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/globe/index.html">Globe</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Globe</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/globe/_autosummary/plato.globe.Globe.html">plato.globe.Globe</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Plato</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../setup.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/optimise/index.html">Optimisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plate_torques/index.html">PlateTorques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/plot/index.html">Plot</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Plot</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../api/plot/_autosummary/plato.plot.PlotReconstruction.html">plato.plot.PlotReconstruction</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/settings/index.html">Settings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../genindex.html">Index</a></li>
 </ul>
 
 </div>
@@ -268,29 +269,29 @@
 <span class="kn">from</span> <span class="nn">.slabs</span> <span class="kn">import</span> <span class="n">Slabs</span>
 
 <div class="viewcode-block" id="Globe">
-<a class="viewcode-back" href="../../api/globe/_autosummary/plato.globe.Globe.html#plato.globe.Globe">[docs]</a>
+<a class="viewcode-back" href="../../api/globe/index.html#plato.globe.Globe">[docs]</a>
 <span class="k">class</span> <span class="nc">Globe</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class to store information on global plate tectonic properties of the Earth.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
-            <span class="n">settings</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Settings</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">reconstruction</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_gplately</span><span class="o">.</span><span class="n">PlateReconstruction</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">rotation_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">topology_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">polygon_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">reconstruction_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">cases_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">cases_sheet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span><span class="p">,</span>
-            <span class="n">files_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">resolved_geometries</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">settings</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">rotation_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">topology_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">polygon_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction_name</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_sheet</span> <span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span><span class="p">,</span>
+            <span class="n">files_dir</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">plates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Plates</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">points</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Points</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">slabs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Slabs</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">DEBUG_MODE</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="n">PARALLEL_MODE</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">PARALLEL_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">DEBUG_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">CALCULATE_VELOCITIES</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialie the Globe class with the required objects.</span>
@@ -348,8 +349,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">calculate_world_uncertainty</span><span class="p">()</span>
 
         <span class="c1"># Get the net rotation</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">calculate_net_rotation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">CALCULATE_VELOCITIES</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">calculate_net_rotation</span><span class="p">()</span>
 
+<div class="viewcode-block" id="Globe.calculate_number_of_plates">
+<a class="viewcode-back" href="../../api/globe/index.html#plato.globe.Globe.calculate_number_of_plates">[docs]</a>
     <span class="k">def</span> <span class="nf">calculate_number_of_plates</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">plates</span><span class="p">:</span> <span class="n">Plates</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -377,8 +381,11 @@
                         <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction</span><span class="p">,</span>
                         <span class="n">_age</span><span class="p">,</span>
                     <span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;number_of_plates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">resolved_topologies</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;number_of_plates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">resolved_topologies</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Globe.calculate_subduction_length">
+<a class="viewcode-back" href="../../api/globe/index.html#plato.globe.Globe.calculate_subduction_length">[docs]</a>
     <span class="k">def</span> <span class="nf">calculate_subduction_length</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">slabs</span><span class="p">:</span> <span class="s1">&#39;Slabs&#39;</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -426,8 +433,11 @@
                     <span class="n">slab_data</span><span class="o">.</span><span class="n">trench_segment_length</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">equatorial_Earth_circumference</span> <span class="o">/</span> <span class="mi">360</span>
 
                 <span class="c1"># Store subduction length</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;subduction_length&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">slab_data</span><span class="o">.</span><span class="n">trench_segment_length</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;subduction_length&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">slab_data</span><span class="o">.</span><span class="n">trench_segment_length</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span></div>
 
+
+<div class="viewcode-block" id="Globe.calculate_net_rotation">
+<a class="viewcode-back" href="../../api/globe/index.html#plato.globe.Globe.calculate_net_rotation">[docs]</a>
     <span class="k">def</span> <span class="nf">calculate_net_rotation</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">plates</span><span class="p">:</span> <span class="n">Plates</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -502,8 +512,11 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;net_rotation_pole_lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">net_rotation_pole</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;net_rotation_rate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">net_rotation_pole</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 
-                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Net rotation for case </span><span class="si">{</span><span class="n">_case</span><span class="si">}</span><span class="s2"> at age </span><span class="si">{</span><span class="n">_age</span><span class="si">}</span><span class="s2"> has been calculated!&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Net rotation for case </span><span class="si">{</span><span class="n">_case</span><span class="si">}</span><span class="s2"> at age </span><span class="si">{</span><span class="n">_age</span><span class="si">}</span><span class="s2"> has been calculated!&quot;</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Globe.calculate_world_uncertainty">
+<a class="viewcode-back" href="../../api/globe/index.html#plato.globe.Globe.calculate_world_uncertainty">[docs]</a>
     <span class="k">def</span> <span class="nf">calculate_world_uncertainty</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -553,8 +566,11 @@
 
             <span class="c1"># Copy values to other cases</span>
             <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span></div>
 
+
+<div class="viewcode-block" id="Globe.save">
+<a class="viewcode-back" href="../../api/globe/index.html#plato.globe.Globe.save">[docs]</a>
     <span class="k">def</span> <span class="nf">save</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -579,8 +595,11 @@
                 <span class="kc">None</span><span class="p">,</span>
                 <span class="n">_case</span><span class="p">,</span>
                 <span class="n">_file_dir</span><span class="p">,</span>
-                <span class="p">)</span>
+                <span class="p">)</span></div>
+
             
+<div class="viewcode-block" id="Globe.export">
+<a class="viewcode-back" href="../../api/globe/index.html#plato.globe.Globe.export">[docs]</a>
     <span class="k">def</span> <span class="nf">export</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -606,6 +625,7 @@
                 <span class="n">_case</span><span class="p">,</span>
                 <span class="n">_file_dir</span><span class="p">,</span>
                 <span class="p">)</span>        </div>
+</div>
 
 </pre></div>
         </article>
@@ -639,7 +659,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=9993f566"></script>
+</div><script src="../../_static/documentation_options.js?v=02880162"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

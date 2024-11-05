@@ -90,7 +90,7 @@ class Plates:
         self.resolved_geometries = {_age: {} for _age in self.settings.ages}
 
         # Load or initialise plate geometries
-        for _age in _tqdm(self.settings.ages, desc="Loading geometries", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(self.settings.ages, desc="Loading plate geometries", disable=self.settings.logger.level==logging.INFO):
             # Load available data
             for key, entries in self.settings.plate_cases.items():
                 # Make list to store available cases
@@ -268,12 +268,13 @@ class Plates:
                         self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "velocity_rms_azi"] = rms_velocity[1]
                         self.data[_age][key].loc[self.data[_age][key].plateID == _plateID, "spin_rate_rms_mag"] = rms_velocity[2]
 
-                    self.data[_age] = utils_data.copy_values(
-                        self.data[_age], 
-                        key, 
-                        entries, 
-                        ["velocity_rms_mag", "velocity_rms_azi", "spin_rate_rms_mag"], 
-                    )
+                    if len(entries) > 1:
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries, 
+                            ["velocity_rms_mag", "velocity_rms_azi", "spin_rate_rms_mag"], 
+                        )
 
     def calculate_torque_on_plates(
             self,
@@ -572,7 +573,7 @@ class Plates:
         )
 
         # Initialise dictionary to store results
-        extracted_data = {case: None for case in _cases}
+        extracted_data = {_case: None for _case in _cases}
 
         # Loop through valid cases
         for _case in _cases:
@@ -589,13 +590,18 @@ class Plates:
                 _data = self.data[_age][_case]
 
                 # Loop through plateIDs
-                for _plateID in enumerate(_plateIDs):
+                for _plateID in _plateIDs:
                     if _data.plateID.isin([_plateID]).any():
                         # Hard-coded exception for the Indo-Australian plate for 20-43 Ma (which is defined as 801 in the Müller et al. (2016) reconstruction)
                         _plateID = 801 if _plateID == 501 and _age >= 20 and _age <= 43 else _plateID
 
                         # Extract data
-                        extracted_data[_case].loc[i, _plateID] = _data[_data.plateID == _plateID][var].values[0]
+                        value = _data[_data.plateID == _plateID][var].values[0]
+
+                        # Assign value to DataFrame if not zero
+                        # This assumes that any of the variables of interest are never zero
+                        if value != 0:
+                            extracted_data[_case].loc[i, _plateID] = value
 
         # Return extracted data
         if len(_cases) == 1:

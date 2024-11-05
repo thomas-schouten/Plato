@@ -417,6 +417,10 @@
         <span class="c1"># Calculate RMS plate velocities</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">calculate_rms_velocity</span><span class="p">()</span>
 
+        <span class="c1"># Set shortcuts</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span>
+
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;PlateTorques object successfully instantiated!&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="PlateTorques.add_grid">
@@ -1024,13 +1028,13 @@
 <span class="sd">        :type plateIDs:     int, float, list, numpy.ndarray</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;plates&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">plates</span><span class="o">.</span><span class="n">extract_data_through_time</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">plateIDs</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plates</span><span class="o">.</span><span class="n">extract_data_through_time</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">plateIDs</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
 
         <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;points&quot;</span><span class="p">:</span>  
-            <span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="o">.</span><span class="n">extract_data_through_time</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">plateIDs</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="o">.</span><span class="n">extract_data_through_time</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">plateIDs</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
 
         <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;slabs&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">extract_data_through_time</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">plateIDs</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">extract_data_through_time</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">plateIDs</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Invalid type provided! Please choose from &#39;plates&#39;, &#39;points&#39;, or &#39;slabs&#39;.&quot;</span><span class="p">)</span></div>
@@ -1380,7 +1384,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=37d4c247"></script>
+</div><script src="../../_static/documentation_options.js?v=02880162"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

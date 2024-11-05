@@ -27,7 +27,7 @@ def get_settings(
     if settings:
             _settings = settings
     else:
-        if ages is not None and cases_file is not None:
+        if ages is not None:
             if reconstruction_name:
                 name = reconstruction_name
             else:

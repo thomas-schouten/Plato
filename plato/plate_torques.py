@@ -83,6 +83,9 @@ class PlateTorques():
             DEBUG_MODE = False,
             PARALLEL_MODE = False
         ):
+        """
+        Constructor for the PlateTorques class.
+        """
         # Store settings object
         self.settings = utils_init.get_settings(
             settings, 
@@ -160,6 +163,10 @@ class PlateTorques():
 
         # Calculate RMS plate velocities
         self.calculate_rms_velocity()
+
+        # Set shortcuts
+        self.ages = self.settings.ages
+        self.cases = self.settings.cases
 
         logging.info("PlateTorques object successfully instantiated!")
 
@@ -712,13 +719,13 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         """
         if type == "plates":
-            self.plates.extract_data_through_time(ages, cases, plateIDs, var)
+            return self.plates.extract_data_through_time(ages, cases, plateIDs, var)
 
         elif type == "points":  
-            self.points.extract_data_through_time(ages, cases, plateIDs, var)
+            return self.points.extract_data_through_time(ages, cases, plateIDs, var)
 
         elif type == "slabs":
-            self.slabs.extract_data_through_time(ages, cases, plateIDs, var)
+            return self.slabs.extract_data_through_time(ages, cases, plateIDs, var)
 
         else:
             logging.error("Invalid type provided! Please choose from 'plates', 'points', or 'slabs'.")

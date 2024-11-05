@@ -1128,6 +1128,12 @@ def rename_coordinates_and_variables(
     if var_old_name in grid.data_vars:
         grid = grid.rename({"z": var_new_name})
 
+    if "lat" in grid.coords:
+        grid = grid.rename({"lat": "latitude"})
+
+    if "lon" in grid.coords:
+        grid = grid.rename({"lon": "longitude"})
+
     return grid
 
 def array2data_array(

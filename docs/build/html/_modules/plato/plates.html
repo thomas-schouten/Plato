@@ -202,14 +202,21 @@
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
-  <p class="caption" role="heading"><span class="caption-text">Overview of submodules</span></p>
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Plato</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../setup.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plate_torques/index.html">PlateTorques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/points/index.html">Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/slabs/index.html">Slabs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../genindex.html">Index</a></li>
 </ul>
 
 </div>
@@ -339,7 +346,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">resolved_geometries</span> <span class="o">=</span> <span class="p">{</span><span class="n">_age</span><span class="p">:</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">}</span>
 
         <span class="c1"># Load or initialise plate geometries</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Loading geometries&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Loading plate geometries&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
             <span class="c1"># Load available data</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">plate_cases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="c1"># Make list to store available cases</span>
@@ -838,7 +845,7 @@
         <span class="p">)</span>
 
         <span class="c1"># Initialise dictionary to store results</span>
-        <span class="n">extracted_data</span> <span class="o">=</span> <span class="p">{</span><span class="n">case</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">}</span>
+        <span class="n">extracted_data</span> <span class="o">=</span> <span class="p">{</span><span class="n">_case</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">}</span>
 
         <span class="c1"># Loop through valid cases</span>
         <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
@@ -855,13 +862,18 @@
                 <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span>
 
                 <span class="c1"># Loop through plateIDs</span>
-                <span class="k">for</span> <span class="n">_plateID</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_plateID</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">_data</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="n">_plateID</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
                         <span class="c1"># Hard-coded exception for the Indo-Australian plate for 20-43 Ma (which is defined as 801 in the Müller et al. (2016) reconstruction)</span>
                         <span class="n">_plateID</span> <span class="o">=</span> <span class="mi">801</span> <span class="k">if</span> <span class="n">_plateID</span> <span class="o">==</span> <span class="mi">501</span> <span class="ow">and</span> <span class="n">_age</span> <span class="o">&gt;=</span> <span class="mi">20</span> <span class="ow">and</span> <span class="n">_age</span> <span class="o">&lt;=</span> <span class="mi">43</span> <span class="k">else</span> <span class="n">_plateID</span>
 
                         <span class="c1"># Extract data</span>
-                        <span class="n">extracted_data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">_plateID</span><span class="p">]</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">][</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">][</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                        <span class="c1"># Assign value to DataFrame if not zero</span>
+                        <span class="c1"># This assumes that any of the variables of interest are never zero</span>
+                        <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">extracted_data</span><span class="p">[</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">_plateID</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 
         <span class="c1"># Return extracted data</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_cases</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -1042,7 +1054,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=6b897a61"></script>
+</div><script src="../../_static/documentation_options.js?v=02880162"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

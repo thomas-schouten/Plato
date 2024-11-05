@@ -21,7 +21,7 @@ components work together.
 
    globe/index
    grids/index
-   optimse/index
+   optimise/index
    plates/index
    plate_torques/index
    plot/index

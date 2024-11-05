@@ -1,5 +1,4 @@
 # Standard libraries
-import logging
 import warnings
 from typing import Optional, Union
 
@@ -9,6 +8,7 @@ from gplately import pygplates as _pygplates
 import cartopy.crs as ccrs
 import numpy as _numpy
 import xarray as _xarray
+import cmcrameri
 
 # Plato libraries
 from . import utils_init
@@ -47,13 +47,11 @@ class PlotReconstruction():
             slabs: Optional[Slabs] = None,
             points: Optional[Points] = None,
             grids: Optional[Grids] = None,
-            globe: Optional[Globe] = None,
-            coastlines: Optional[_pygplates.FeatureCollection] = None,
+            globe = None,
+            coastline_file = None,
         ):
         """
         Constructor for the Plot class.
-
-        
         """
         # Store the input data, if provided
         if isinstance(settings, Settings):
@@ -111,20 +109,20 @@ class PlotReconstruction():
             self.globe = plate_torques.globe
 
         # Get coastlines if not provided
-        self.coastlines = utils_init.get_coastlines(coastlines, self.settings)
+        self.coastlines = utils_init.get_coastlines(coastline_file, self.settings)
 
     def plot_seafloor_age_map(
             self,
             ax: object,
             age: int,
             cmap = "cmc.lajolla_r",
-            vmin: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0,
-            vmax: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 250,
-            log_scale: bool = False,
-            coastlines_facecolour: Optional[str] = "lightgrey",
-            coastlines_edgecolour: Optional[str] = "lightgrey",
-            coastlines_linewidth: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0,
-            plate_boundaries_linewidth: Optional[Union[int, float, _numpy.integer, _numpy.floating]] = 0.5,
+            vmin  = 0,
+            vmax  = 250,
+            log_scale = False,
+            coastlines_facecolour = "lightgrey",
+            coastlines_edgecolour = "lightgrey",
+            coastlines_linewidth = 0,
+            plate_boundaries_linewidth = 1,
         ) -> object:
         """
         Function to create subplot of the reconstruction with global seafloor age.
@@ -154,11 +152,6 @@ class PlotReconstruction():
         if age is None or age not in self.settings.ages:
             warnings.warn("Invalid reconstruction age, using youngest age.")
             age = self.settings.ages[0]
-        
-        # Set case to first in list if not provided
-        if case is None or case not in self.settings.cases:
-            warnings.warn("Invalid case, using first case.")
-            case = self.settings.cases[0]
         
         # Set basemap
         gl = self.plot_basemap(ax)
@@ -208,7 +201,7 @@ class PlotReconstruction():
             coastlines_facecolour = "lightgrey",
             coastlines_edgecolour = "lightgrey",
             coastlines_linewidth = 0,
-            plate_boundaries_linewidth = 0.5,
+            plate_boundaries_linewidth = 1,
             marker_size = 20,
         ):
         """
@@ -335,7 +328,7 @@ class PlotReconstruction():
             coastlines_facecolour = "none",
             coastlines_edgecolour = "none",
             coastlines_linewidth = 0,
-            plate_boundaries_linewidth = 0.5,
+            plate_boundaries_linewidth = 1,
         ):
         """
         Function to create subplot of the reconstruction with global erosion rates.
@@ -422,12 +415,12 @@ class PlotReconstruction():
             cmap = "cmc.bilbao_r",
             vmin = 0,
             vmax = 25,
-            normalise_vectors = True,
+            normalise_vectors = False,
             log_scale = False,
             coastlines_facecolour = "none",
             coastlines_edgecolour = "black",
             coastlines_linewidth = 0.1,
-            plate_boundaries_linewidth = 0.5,
+            plate_boundaries_linewidth = 1,
             vector_width = 4e-3,
             vector_scale = 3e2,
             vector_scale_units = "width",
@@ -556,7 +549,7 @@ class PlotReconstruction():
             coastlines_facecolour = "none",
             coastlines_edgecolour = "black",
             coastlines_linewidth = 0.1,
-            plate_boundaries_linewidth = 0.5,
+            plate_boundaries_linewidth = 1,
             vector_width = 4e-3,
             vector_scale = 3e2,
             vector_color = "k",
@@ -695,7 +688,7 @@ class PlotReconstruction():
             coastlines_facecolour = "none",
             coastlines_edgecolour = "black",
             coastlines_linewidth = 0.1,
-            plate_boundaries_linewidth = 0.5,
+            plate_boundaries_linewidth = 1,
             vector_width = 4e-3,
             vector_scale = 3e2,
             vector_color = "k",
@@ -856,7 +849,7 @@ class PlotReconstruction():
             coastlines_facecolour = "lightgrey",
             coastlines_edgecolour = "lightgrey",
             coastlines_linewidth = 0,
-            plate_boundaries_linewidth = 0.5,
+            plate_boundaries_linewidth = 1,
             slab_vector_width = 2e-3,
             slab_vector_scale = 3e2,
             slab_vector_colour = "k",

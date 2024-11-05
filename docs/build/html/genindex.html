@@ -208,6 +208,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/globe/index.html">Globe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/optimise/index.html">Optimisation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/plates/index.html">Plates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/plate_torques/index.html">PlateTorques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/plot/index.html">PlotReconstruction</a></li>
@@ -253,7 +254,7 @@
           
 <section class="genindex-section">
   <h1 id="index">Index</h1>
-  <div class="genindex-jumpbox"><a href="#A"><strong>A</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#S"><strong>S</strong></a></div>
+  <div class="genindex-jumpbox"><a href="#A"><strong>A</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#S"><strong>S</strong></a></div>
 </section>
 <section id="A" class="genindex-section">
   <h2>A</h2>
@@ -289,7 +290,13 @@
 </li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.calculate_mantle_drag_torque">calculate_mantle_drag_torque() (plato.plate_torques.PlateTorques method)</a>
 </li>
-        <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.calculate_net_rotation">calculate_net_rotation() (plato.plate_torques.PlateTorques method)</a>
+        <li><a href="api/globe/index.html#plato.globe.Globe.calculate_net_rotation">calculate_net_rotation() (plato.globe.Globe method)</a>
+
+        <ul>
+          <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.calculate_net_rotation">(plato.plate_torques.PlateTorques method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/globe/index.html#plato.globe.Globe.calculate_number_of_plates">calculate_number_of_plates() (plato.globe.Globe method)</a>
 </li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.calculate_residual_force">calculate_residual_force() (plato.plate_torques.PlateTorques method)</a>
 
@@ -321,6 +328,8 @@
 </li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.calculate_slab_pull_torque">calculate_slab_pull_torque() (plato.plate_torques.PlateTorques method)</a>
 </li>
+        <li><a href="api/globe/index.html#plato.globe.Globe.calculate_subduction_length">calculate_subduction_length() (plato.globe.Globe method)</a>
+</li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.calculate_synthetic_velocity">calculate_synthetic_velocity() (plato.plate_torques.PlateTorques method)</a>
 
         <ul>
@@ -335,6 +344,8 @@
           <li><a href="api/slabs/index.html#plato.slabs.Slabs.calculate_velocities">(plato.slabs.Slabs method)</a>
 </li>
         </ul></li>
+        <li><a href="api/globe/index.html#plato.globe.Globe.calculate_world_uncertainty">calculate_world_uncertainty() (plato.globe.Globe method)</a>
+</li>
     </ul></td>
   </tr></table>
 </section>
@@ -343,9 +354,11 @@
   <h2>E</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/plates/index.html#plato.plates.Plates.export">export() (plato.plates.Plates method)</a>
+        <li><a href="api/globe/index.html#plato.globe.Globe.export">export() (plato.globe.Globe method)</a>
 
         <ul>
+          <li><a href="api/plates/index.html#plato.plates.Plates.export">(plato.plates.Plates method)</a>
+</li>
           <li><a href="api/points/index.html#plato.points.Points.export">(plato.points.Points method)</a>
 </li>
           <li><a href="api/slabs/index.html#plato.slabs.Slabs.export">(plato.slabs.Slabs method)</a>
@@ -355,10 +368,10 @@
 </li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.export_globe">export_globe() (plato.plate_torques.PlateTorques method)</a>
 </li>
-        <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.export_grids">export_grids() (plato.plate_torques.PlateTorques method)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.export_grids">export_grids() (plato.plate_torques.PlateTorques method)</a>
+</li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.export_plates">export_plates() (plato.plate_torques.PlateTorques method)</a>
 </li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.export_points">export_points() (plato.plate_torques.PlateTorques method)</a>
@@ -377,6 +390,16 @@
   </tr></table>
 </section>
 
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/optimise/index.html#plato.optimisation.Optimisation.find_slab_pull_coefficient">find_slab_pull_coefficient() (plato.optimisation.Optimisation method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
 <section id="G" class="genindex-section">
   <h2>G</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
@@ -385,7 +408,7 @@
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/globe/index.html#plato.globe">globe (in module plato)</a>
+        <li><a href="api/globe/index.html#plato.globe.Globe">Globe (class in plato.globe)</a>
 </li>
         <li><a href="api/grids/index.html#plato.grids.Grids">Grids (class in plato.grids)</a>
 </li>
@@ -407,15 +430,19 @@
   <h2>M</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/optimise/index.html#plato.optimisation.Optimisation.minimise_residual_torque">minimise_residual_torque() (plato.optimisation.Optimisation method)</a>
+</li>
         <li>
     module
 
         <ul>
           <li><a href="api/index.html#module-plato">plato</a>
 </li>
-          <li><a href="api/generated/plato.globe.html#module-plato.globe">plato.globe</a>
+          <li><a href="api/generated/plato.globe.html#module-plato.globe">plato.globe</a>, <a href="api/globe/index.html#module-plato.globe">[1]</a>
 </li>
           <li><a href="api/generated/plato.grids.html#module-plato.grids">plato.grids</a>, <a href="api/grids/index.html#module-plato.grids">[1]</a>
+</li>
+          <li><a href="api/optimise/index.html#module-plato.optimisation">plato.optimisation</a>
 </li>
           <li><a href="api/plate_torques/index.html#module-plato.plate_torques">plato.plate_torques</a>
 </li>
@@ -428,6 +455,16 @@
           <li><a href="api/generated/plato.slabs.html#module-plato.slabs">plato.slabs</a>, <a href="api/slabs/index.html#module-plato.slabs">[1]</a>
 </li>
         </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/optimise/index.html#plato.optimisation.Optimisation">Optimisation (class in plato.optimisation)</a>
+</li>
     </ul></td>
   </tr></table>
 </section>
@@ -451,7 +488,7 @@
     plato.globe
 
         <ul>
-          <li><a href="api/generated/plato.globe.html#module-plato.globe">module</a>
+          <li><a href="api/generated/plato.globe.html#module-plato.globe">module</a>, <a href="api/globe/index.html#module-plato.globe">[1]</a>
 </li>
         </ul></li>
         <li>
@@ -459,6 +496,13 @@
 
         <ul>
           <li><a href="api/generated/plato.grids.html#module-plato.grids">module</a>, <a href="api/grids/index.html#module-plato.grids">[1]</a>
+</li>
+        </ul></li>
+        <li>
+    plato.optimisation
+
+        <ul>
+          <li><a href="api/optimise/index.html#module-plato.optimisation">module</a>
 </li>
         </ul></li>
         <li>
@@ -482,6 +526,8 @@
           <li><a href="api/generated/plato.plot.html#module-plato.plot">module</a>, <a href="api/plot/index.html#module-plato.plot">[1]</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     plato.points
 
@@ -489,8 +535,6 @@
           <li><a href="api/generated/plato.points.html#module-plato.points">module</a>, <a href="api/points/index.html#module-plato.points">[1]</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     plato.slabs
 
@@ -564,9 +608,11 @@
 </li>
         <li><a href="api/plate_torques/index.html#plato.plate_torques.PlateTorques.sample_slab_sediment_thicknesses">sample_slab_sediment_thicknesses() (plato.plate_torques.PlateTorques method)</a>
 </li>
-        <li><a href="api/plates/index.html#plato.plates.Plates.save">save() (plato.plates.Plates method)</a>
+        <li><a href="api/globe/index.html#plato.globe.Globe.save">save() (plato.globe.Globe method)</a>
 
         <ul>
+          <li><a href="api/plates/index.html#plato.plates.Plates.save">(plato.plates.Plates method)</a>
+</li>
           <li><a href="api/points/index.html#plato.points.Points.save">(plato.points.Points method)</a>
 </li>
           <li><a href="api/slabs/index.html#plato.slabs.Slabs.save">(plato.slabs.Slabs method)</a>
@@ -642,7 +688,7 @@
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=f52f8786"></script>
+</div><script src="_static/documentation_options.js?v=02880162"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>

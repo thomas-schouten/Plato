@@ -190,7 +190,7 @@ def sample_slabs_from_seafloor(
         options, 
         plate, 
         age_variable="seafloor_age", 
-        coords=["lat", "lon"], 
+        coords=["latitude", "longitude"], 
         continental_arc=None, 
         sediment_thickness=None, 
     ):
@@ -498,7 +498,7 @@ def sample_grid(
         lat: _numpy.ndarray,
         lon: _numpy.ndarray,
         grid: _xarray.Dataset,
-        coords = ["lat", "lon"],
+        coords = ["latitude", "longitude"],
     ):
     """
     Function to sample a grid
@@ -651,8 +651,11 @@ def compute_rms_velocity(
     sin_azi = _numpy.sum(_numpy.sin(v_azi) * segment_areas) / total_area
     cos_azi = _numpy.sum(_numpy.cos(v_azi) * segment_areas) / total_area
 
+    # v_rms_azi = _numpy.rad2deg(
+    #     -1 * (_numpy.arctan2(sin_azi, cos_azi) + 0.5 * _numpy.pi)
+    # )
     v_rms_azi = _numpy.rad2deg(
-        -1 * (_numpy.arctan2(sin_azi, cos_azi) + 0.5 * _numpy.pi)
+        _numpy.arctan2(sin_azi, cos_azi)
     )
     # Ensure azimuth is within the range [0, 360]
     v_rms_azi = _numpy.where(v_rms_azi < 0, v_rms_azi + 360, v_rms_azi)
