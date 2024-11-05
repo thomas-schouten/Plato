@@ -110,7 +110,184 @@ def optimise_torques(self, sediments=True):
 
         self.optimised_torques = True
 
+def minimise_residual_velocity(self, opt_time, opt_case, plates_of_interest=None, grid_size=10, visc_range=[1e19, 5e20], plot=True, weight_by_area=True, ref_case=None):
+        """
+        Function to find optimised coefficients to match plate motions using a grid search.
 
+        :param opt_time:                reconstruction time to optimise
+        :type opt_time:                 int
+        :param opt_case:                case to optimise
+        :type opt_case:                 str
+        :param plates_of_interest:      plate IDs to include in optimisation
+        :type plates_of_interest:       list of integers or None
+        :param grid_size:               size of the grid to find optimal viscosity and slab pull coefficient
+        :type grid_size:                int
+        :param plot:                    whether or not to plot the grid
+        :type plot:                     boolean
+        :param weight_by_area:          whether or not to weight the residual torque by plate area
+        :type weight_by_area:           boolean
+        
+        :return:                        The optimal slab pull coefficient, the optimal viscosity, the residual plate velocity, and the residual slab velocity.
+        :rtype:                         float, float, float, float
+        """
+        if self.options[opt_case]["Reconstructed motions"]:
+            print("Optimisation method designed for synthetic plate velocities only!")
+            return
+        
+        # Get "true" plate velocities
+        true_slabs = self.slabs[opt_time][ref_case].copy()
+
+        # Generate grid
+        viscs = _numpy.linspace(visc_range[0],visc_range[1],grid_size)
+        sp_consts = _numpy.linspace(1e-4,1,grid_size)
+        v_upper_plate_residual = _numpy.zeros((grid_size, grid_size))
+        v_lower_plate_residual = _numpy.zeros((grid_size, grid_size))
+        v_convergence_residual = _numpy.zeros((grid_size, grid_size))
+
+        # Filter plates and slabs
+        selected_plates = self.plates[opt_time][opt_case].copy()
+        selected_slabs = self.slabs[opt_time][opt_case].copy()
+        selected_points = self.points[opt_time][opt_case].copy()
+
+        if plates_of_interest:
+            selected_plates = selected_plates[selected_plates["plateID"].isin(plates_of_interest)]
+            selected_plates = selected_plates.reset_index(drop=True)
+            selected_slabs = selected_slabs[selected_slabs["lower_plateID"].isin(plates_of_interest)]
+            selected_slabs = selected_slabs.reset_index(drop=True)
+            selected_points = selected_points[selected_points["plateID"].isin(plates_of_interest)]
+            selected_points = selected_points.reset_index(drop=True)
+            selected_options = self.options[opt_case].copy()
+        else:
+            plates_of_interest = selected_plates["plateID"]
+
+        # Initialise starting old_plates, old_points, old_slabs by copying self.plates[reconstruction_time][key], self.points[reconstruction_time][key], self.slabs[reconstruction_time][key]
+        old_plates = selected_plates.copy(); old_points = selected_points.copy(); old_slabs = selected_slabs.copy()
+
+        # Delete self.slabs[reconstruction_time][key], self.points[reconstruction_time][key], self.plates[reconstruction_time][key]
+        del selected_plates, selected_points, selected_slabs
+        
+        # Loop through plates and slabs and calculate residual velocity
+        for i, visc in enumerate(viscs):
+            for j, sp_const in enumerate(sp_consts):
+                print(i, j)
+                # Assign current visc and sp_const to options
+                selected_options["Mantle viscosity"] = visc
+                selected_options["Slab pull constant"] = sp_const
+
+                # Optimise slab pull force
+                [old_plates.update({"slab_pull_torque_opt_" + axis: old_plates["slab_pull_torque_" + axis] * selected_options["Slab pull constant"]}) for axis in ["x", "y", "z"]]
+
+                for k in range(100):
+                    # Delete new DataFrames
+                    if k != 0:
+                        del new_slabs, new_points, new_plates
+                    else:
+                        old_slabs["v_convergence_mag"] = 0
+
+                    print(_numpy.mean(old_slabs["v_convergence_mag"].values))
+                    # Compute interface shear force
+                    if self.options[opt_case]["Interface shear torque"]:
+                        new_slabs = utils_calc.compute_interface_shear_force(old_slabs, self.options[opt_case], self.mech, self.constants)
+                    else:
+                        new_slabs = old_slabs.copy()
+
+                    # Compute interface shear torque
+                    new_plates = utils_calc.compute_torque_on_plates(
+                        old_plates,
+                        new_slabs.lat,
+                        new_slabs.lon,
+                        new_slabs.lower_plateID,
+                        new_slabs.interface_shear_force_lat,
+                        new_slabs.interface_shear_force_lon,
+                        new_slabs.trench_segment_length,
+                        1,
+                        self.constants,
+                        torque_variable="interface_shear_torque"
+                    )
+
+                    # Compute mantle drag force
+                    new_plates, new_points, new_slabs = utils_calc.compute_mantle_drag_force(old_plates, old_points, new_slabs, self.options[opt_case], self.mech, self.constants)
+
+                    # Compute mantle drag torque
+                    new_plates = utils_calc.compute_torque_on_plates(
+                        new_plates, 
+                        new_points.lat, 
+                        new_points.lon, 
+                        new_points.plateID, 
+                        new_points.mantle_drag_force_lat, 
+                        new_points.mantle_drag_force_lon,
+                        new_points.segment_length_lat,
+                        new_points.segment_length_lon,
+                        self.constants,
+                        torque_variable="mantle_drag_torque"
+                    )
+
+                    # Calculate convergence rates
+                    v_convergence_lat = new_slabs["v_lower_plate_lat"].values - new_slabs["v_upper_plate_lat"].values
+                    v_convergence_lon = new_slabs["v_lower_plate_lon"].values - new_slabs["v_upper_plate_lon"].values
+                    v_convergence_mag = _numpy.sqrt(v_convergence_lat**2 + v_convergence_lon**2)
+
+                    # Calculate convergence rates
+                    v_convergence_lat = new_slabs["v_lower_plate_lat"].values - new_slabs["v_upper_plate_lat"].values
+                    v_convergence_lon = new_slabs["v_lower_plate_lon"].values - new_slabs["v_upper_plate_lon"].values
+                    v_convergence_mag = _numpy.sqrt(v_convergence_lat**2 + v_convergence_lon**2)
+
+                    # Check convergence rates
+                    if _numpy.max(abs(v_convergence_mag - old_slabs["v_convergence_mag"].values)) < 1e-2: # and _numpy.max(v_convergence_mag) < 25:
+                        print(f"Convergence rates converged after {k} iterations")
+                        break
+                    else:
+                        # Assign new values to latest slabs DataFrame
+                        new_slabs["v_convergence_lat"], new_slabs["v_convergence_lon"] = utils_calc.mag_azi2lat_lon(v_convergence_mag, new_slabs.trench_normal_azimuth); new_slabs["v_convergence_mag"] = v_convergence_mag
+                        
+                        # Delecte old DataFrames
+                        del old_plates, old_points, old_slabs
+                        
+                        # Overwrite DataFrames
+                        old_plates = new_plates.copy(); old_points = new_points.copy(); old_slabs = new_slabs.copy()
+
+                # Calculate residual of plate velocities
+                v_upper_plate_residual[i,j] = _numpy.max(abs(new_slabs.v_upper_plate_mag - true_slabs.v_upper_plate_mag))
+                print("upper_plate_residual: ", v_upper_plate_residual[i,j])
+                v_lower_plate_residual[i,j] = _numpy.max(abs(new_slabs.v_lower_plate_mag - true_slabs.v_lower_plate_mag))
+                print("lower_plate_residual: ", v_lower_plate_residual[i,j])
+                v_convergence_residual[i,j] = _numpy.max(abs(new_slabs.v_convergence_mag - true_slabs.v_convergence_mag))
+                print("convergence_rate_residual: ", v_convergence_residual[i,j])
+
+        # Find the indices of the minimum value directly using _numpy.argmin
+        opt_upper_plate_i, opt_upper_plate_j = _numpy.unravel_index(_numpy.argmin(v_upper_plate_residual), v_upper_plate_residual.shape)
+        opt_upper_plate_visc = viscs[opt_upper_plate_i]
+        opt_upper_plate_sp_const = sp_consts[opt_upper_plate_j]
+
+        opt_lower_plate_i, opt_lower_plate_j = _numpy.unravel_index(_numpy.argmin(v_lower_plate_residual), v_lower_plate_residual.shape)
+        opt_lower_plate_visc = viscs[opt_lower_plate_i]
+        opt_lower_plate_sp_const = sp_consts[opt_lower_plate_j]
+
+        opt_convergence_i, opt_convergence_j = _numpy.unravel_index(_numpy.argmin(v_convergence_residual), v_convergence_residual.shape)
+        opt_convergence_visc = viscs[opt_convergence_i]
+        opt_convergence_sp_const = sp_consts[opt_convergence_j]
+
+        # Plot
+        for i, j, visc, sp_const, residual in zip([opt_upper_plate_i, opt_lower_plate_i, opt_convergence_i], [opt_upper_plate_j, opt_lower_plate_j, opt_convergence_j], [opt_upper_plate_visc, opt_lower_plate_visc, opt_convergence_visc], [opt_upper_plate_sp_const, opt_lower_plate_sp_const, opt_convergence_sp_const], [v_upper_plate_residual, v_lower_plate_residual, v_convergence_residual]):
+            if plot == True:
+                fig, ax = plt.subplots(figsize=(15*self.constants.cm2in, 12*self.constants.cm2in))
+                im = ax.imshow(residual, cmap="cmc.davos_r")#, vmin=-1.5, vmax=1.5)
+                ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
+                ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
+                ax.set_xticklabels(["{:.2e}".format(visc) for visc in _numpy.linspace(visc_range[0], visc_range[1], 5)])
+                ax.set_yticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
+                ax.set_xlabel("Mantle viscosity [Pa s]")
+                ax.set_ylabel("Slab pull reduction factor")
+                ax.scatter(j, i, marker="*", facecolor="none", edgecolor="k", s=30)
+                fig.colorbar(im, label = "Residual velocity magnitude [cm/a]")
+                plt.show()
+
+            print(f"Optimal coefficients for ", ", ".join(new_plates.name.astype(str)), " plate(s), (PlateIDs: ", ", ".join(new_plates.plateID.astype(str)), ")")
+            print("Minimum residual torque: {:.2e} cm/a".format(_numpy.amin(residual)))
+            print("Optimum viscosity [Pa s]: {:.2e}".format(visc))
+            print("Optimum Drag Coefficient [Pa s/m]: {:.2e}".format(visc / self.mech.La))
+            print("Optimum Slab Pull constant: {:.2%}".format(sp_const))
+            
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PLATO
 # Algorithm to calculate plate forces from tectonic reconstructions

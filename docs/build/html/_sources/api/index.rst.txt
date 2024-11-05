@@ -21,6 +21,7 @@ components work together.
 
    globe/index
    grids/index
+   optimse/index
    plates/index
    plate_torques/index
    plot/index
@@ -31,6 +32,7 @@ components work together.
 
     globe.Globe
     grids.Grids
+    optimise.Optimisation
     plates.Plates
     plate_torques.PlateTorques
     plot.PlotReconstruction

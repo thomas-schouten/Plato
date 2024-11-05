@@ -19,22 +19,22 @@ class Globe:
     """
     def __init__(
             self,
-            settings: Optional[Settings] = None,
-            reconstruction: Optional[_gplately.PlateReconstruction]= None,
-            rotation_file: Optional[str]= None,
-            topology_file: Optional[str]= None,
-            polygon_file: Optional[str]= None,
-            reconstruction_name: Optional[str] = None,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases_file: Optional[list[str]]= None,
-            cases_sheet: Optional[str]= "Sheet1",
-            files_dir: Optional[str]= None,
-            resolved_geometries: Optional[Dict] = None,
+            settings = None,
+            reconstruction = None,
+            rotation_file = None,
+            topology_file = None,
+            polygon_file = None,
+            reconstruction_name = None,
+            ages = None,
+            cases_file = None,
+            cases_sheet = "Sheet1",
+            files_dir = None,
             plates: Optional[Plates] = None,
             points: Optional[Points] = None,
             slabs: Optional[Slabs] = None,
-            DEBUG_MODE: Optional[bool] = False,
-            PARALLEL_MODE: Optional[bool] = False,
+            PARALLEL_MODE = False,
+            DEBUG_MODE = False,
+            CALCULATE_VELOCITIES = True,
         ):
         """
         Initialie the Globe class with the required objects.
@@ -92,7 +92,8 @@ class Globe:
         self.calculate_world_uncertainty()
 
         # Get the net rotation
-        self.calculate_net_rotation()
+        if CALCULATE_VELOCITIES:
+            self.calculate_net_rotation()
 
     def calculate_number_of_plates(
             self,
