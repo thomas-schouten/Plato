@@ -209,6 +209,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/optimise/index.html">Optimisation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plate_torques/index.html">PlateTorques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
@@ -410,6 +411,12 @@
         <span class="c1"># Set flag for sampling slabs and upper plates</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sampled_slabs</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sampled_arcs</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Slabs is a class that contains data and methods for working with (reconstructed) subduction zones.&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
 
 <div class="viewcode-block" id="Slabs.calculate_velocities">
 <a class="viewcode-back" href="../../api/slabs/index.html#plato.slabs.Slabs.calculate_velocities">[docs]</a>
@@ -972,48 +979,47 @@
         <span class="c1"># Order of loops is flipped to skip cases where no slab bend torque needs to be sampled</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_iterable</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Computing slab bend forces&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)):</span>
             <span class="c1"># Skip if slab pull torque is not sampled</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Slab bend torque&quot;</span><span class="p">]:</span>
-                <span class="k">continue</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;Slab bend torque&quot;</span><span class="p">]:</span>
+                <span class="c1"># Loop through ages</span>
+                <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
+                    <span class="c1"># Select points</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
 
-            <span class="c1"># Loop through ages</span>
-            <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_ages</span><span class="p">:</span>
-                <span class="c1"># Select points</span>
-                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+                    <span class="c1"># Define plateIDs if not provided</span>
+                    <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
 
-                <span class="c1"># Define plateIDs if not provided</span>
-                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+                    <span class="c1"># Select points</span>
+                    <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+                        
+                    <span class="c1"># Calculate slab pull force</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">compute_slab_bend_force</span><span class="p">(</span>
+                        <span class="n">_data</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">mech</span><span class="p">,</span>
+                    <span class="p">)</span>
 
-                <span class="c1"># Select points</span>
-                <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">lower_plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+                    <span class="c1"># Enter sampled data back into the DataFrame</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_data</span>
                     
-                <span class="c1"># Calculate slab pull force</span>
-                <span class="n">_data</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">compute_slab_bend_force</span><span class="p">(</span>
-                    <span class="n">_data</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">mech</span><span class="p">,</span>
-                <span class="p">)</span>
-
-                <span class="c1"># Enter sampled data back into the DataFrame</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_data</span>
-                
-                <span class="c1"># Copy to other entries</span>
-                <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="s2">&quot;slab_lithospheric_thickness&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;slab_crustal_thickness&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;slab_water_depth&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;slab_bend_force_lat&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;slab_bend_force_lon&quot;</span><span class="p">,</span>
-                <span class="p">]</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
-                    <span class="n">key</span><span class="p">,</span> 
-                    <span class="n">entries</span><span class="p">,</span>
-                    <span class="n">cols</span><span class="p">,</span>
-                <span class="p">)</span>
+                    <span class="c1"># Copy to other entries</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="s2">&quot;slab_lithospheric_thickness&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_crustal_thickness&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_water_depth&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_bend_force_lat&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;slab_bend_force_lon&quot;</span><span class="p">,</span>
+                        <span class="p">]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
+                            <span class="n">key</span><span class="p">,</span> 
+                            <span class="n">entries</span><span class="p">,</span>
+                            <span class="n">cols</span><span class="p">,</span>
+                        <span class="p">)</span>
             
             <span class="c1"># Inform the user that the slab bend forces have been calculated</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculated slab bend forces for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> Ma.&quot;</span><span class="p">)</span></div>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculated slab bend forces for case </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Slabs.calculate_residual_force">
@@ -1252,7 +1258,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=02880162"></script>
+</div><script src="../../_static/documentation_options.js?v=144e73cd"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

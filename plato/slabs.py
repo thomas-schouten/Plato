@@ -155,6 +155,12 @@ class Slabs:
         self.sampled_slabs = False
         self.sampled_arcs = False
 
+    def __str__(self):
+        return f"Slabs is a class that contains data and methods for working with (reconstructed) subduction zones."
+    
+    def __repr__(self):
+        return self.__str__()
+
     def calculate_velocities(
             self,
             ages = None,

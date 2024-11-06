@@ -209,6 +209,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/optimise/index.html">Optimisation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plate_torques/index.html">PlateTorques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
@@ -408,6 +409,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">computed_gpe_torque</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">computed_mantle_drag_torque</span> <span class="o">=</span> <span class="kc">False</span>
 
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Points is a class that contains data and methods for working with grid points.&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+
 <div class="viewcode-block" id="Points.calculate_velocities">
 <a class="viewcode-back" href="../../api/points/index.html#plato.points.Points.calculate_velocities">[docs]</a>
     <span class="k">def</span> <span class="nf">calculate_velocities</span><span class="p">(</span>
@@ -418,6 +425,13 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to compute velocities at points.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param stage_rotation:  stage rotation poles (default: None)</span>
+<span class="sd">        :type stage_rotation:   dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -485,6 +499,15 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Samples seafloor age at points.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         list, numpy.ndarray</span>
+<span class="sd">        :param seafloor_grids:  seafloor age grids (default: None)</span>
+<span class="sd">        :type seafloor_grids:   dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Sample grid</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sample_grid</span><span class="p">(</span>
@@ -513,6 +536,21 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Samples any grid at points.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         list, numpy.ndarray</span>
+<span class="sd">        :param grids:           grids to sample (default: None)</span>
+<span class="sd">        :type grids:            dict</span>
+<span class="sd">        :param vars:            variables to sample (default: [&quot;seafloor_age&quot;])</span>
+<span class="sd">        :type vars:             str, list</span>
+<span class="sd">        :param sampling_coords: coordinates to sample (default: [&quot;lat&quot;, &quot;lon&quot;])</span>
+<span class="sd">        :type sampling_coords:  list</span>
+<span class="sd">        :param cols:            columns to store sampled data (default: [&quot;seafloor_age&quot;])</span>
+<span class="sd">        :type cols:             str, list</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -588,6 +626,15 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to compute gravitational potential energy (GPE) force acting at points.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         list, numpy.ndarray</span>
+<span class="sd">        :param seafloor_grid:   seafloor age grid (default: None)</span>
+<span class="sd">        :type seafloor_grid:    dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -622,21 +669,22 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">computed_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
                     
                     <span class="c1"># Copy to other entries</span>
-                    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
-                        <span class="s2">&quot;lithospheric_mantle_thickness&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;crustal_thickness&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;water_depth&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;U&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;GPE_force_lat&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;GPE_force_lon&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;GPE_force_mag&quot;</span><span class="p">,</span>
-                    <span class="p">]</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
-                        <span class="n">key</span><span class="p">,</span> 
-                        <span class="n">entries</span><span class="p">,</span>
-                        <span class="n">cols</span><span class="p">,</span>
-                    <span class="p">)</span></div>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="s2">&quot;lithospheric_mantle_thickness&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;crustal_thickness&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;water_depth&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;U&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;GPE_force_lat&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;GPE_force_lon&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;GPE_force_mag&quot;</span><span class="p">,</span>
+                        <span class="p">]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">copy_values</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">],</span> 
+                            <span class="n">key</span><span class="p">,</span> 
+                            <span class="n">entries</span><span class="p">,</span>
+                            <span class="n">cols</span><span class="p">,</span>
+                        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Points.calculate_mantle_drag_force">
@@ -649,6 +697,13 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to compute mantle drag force acting at points.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         list, numpy.ndarray</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -705,6 +760,15 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to calculate residual torque along trenches.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         list, numpy.ndarray</span>
+<span class="sd">        :param residual_torque: residual torque along trenches (default: None)</span>
+<span class="sd">        :type residual_torque:  dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -757,6 +821,16 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to save the &#39;Points&#39; object.</span>
+<span class="sd">        Data of the points object is saved to .parquet files.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         list, numpy.ndarray</span>
+<span class="sd">        :param file_dir:        directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:         str</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -771,8 +845,15 @@
         <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Saving Points&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
             <span class="c1"># Loop through cases</span>
             <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+                <span class="c1"># Define plateIDs if not provided</span>
+                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                <span class="c1"># Select data</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+
+                <span class="c1"># Save data</span>
                 <span class="n">utils_data</span><span class="o">.</span><span class="n">DataFrame_to_parquet</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">],</span>
+                    <span class="n">_data</span><span class="p">,</span>
                     <span class="s2">&quot;Points&quot;</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                     <span class="n">_age</span><span class="p">,</span>
@@ -795,6 +876,15 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to export the &#39;Points&#39; object.</span>
 <span class="sd">        Data of the points object is saved to .csv files.</span>
+
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         list, numpy.ndarray</span>
+<span class="sd">        :param file_dir:        directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:         str</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -809,8 +899,15 @@
         <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Exporting Points&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
             <span class="c1"># Loop through cases</span>
             <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+                <span class="c1"># Define plateIDs if not provided</span>
+                <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+
+                <span class="c1"># Select data</span>
+                <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+
+                <span class="c1"># Export data</span>
                 <span class="n">utils_data</span><span class="o">.</span><span class="n">DataFrame_to_csv</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">],</span>
+                    <span class="n">_data</span><span class="p">,</span>
                     <span class="s2">&quot;Points&quot;</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                     <span class="n">_age</span><span class="p">,</span>
@@ -853,7 +950,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=02880162"></script>
+</div><script src="../../_static/documentation_options.js?v=144e73cd"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

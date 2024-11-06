@@ -1,4 +1,5 @@
-"""Plato.
+"""
+Plato (PLAte TOrque algorithm).
 Copyright 2023-2024 Thomas Schouten
 """
 from plato import (
@@ -21,6 +22,8 @@ del get_versions
 name = "plato"
 __all__ = [
     "globe",
+    "grids",
+    "optimisation",
     "plates",
     "points",
     "plot",

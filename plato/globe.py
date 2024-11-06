@@ -94,6 +94,13 @@ class Globe:
         # Get the net rotation
         if CALCULATE_VELOCITIES:
             self.calculate_net_rotation()
+    
+    def __str__(self):
+        return f"Globe is a class that contains data and methods for to characterise the global geodynamic state of a reconstruction."
+    
+    def __repr__(self):
+        return self.__str__()
+    
 
     def calculate_number_of_plates(
             self,

@@ -529,9 +529,9 @@ def compute_mantle_drag_force(
     # Get velocities at points
     if options["Reconstructed motions"]:
         # Calculate mantle drag force
-        points["mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
-        points["mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
-        points["mantle_drag_force_mag"] = _numpy.linalg.norm([points["mantle_drag_force_lat"], points["mantle_drag_force_lon"]], axis=0)
+        points.loc[:, "mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        points.loc[:, "mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        points.loc[:, "mantle_drag_force_mag"] = _numpy.linalg.norm([points["mantle_drag_force_lat"], points["mantle_drag_force_lon"]], axis=0)
 
     return points
 
@@ -740,7 +740,7 @@ def sum_torque(
 
     # Calculate torque in Cartesian coordinates
     for axis in ["_x", "_y", "_z"]:
-        plates[f"{torque_type}_torque{axis}"] = _numpy.sum(
+        plates.loc[:, f"{torque_type}_torque{axis}"] = _numpy.sum(
             [_numpy.nan_to_num(plates[component + axis]) for component in torque_components], axis=0
         )
     
@@ -748,7 +748,7 @@ def sum_torque(
         for axis in ["_x", "_y", "_z"]:
             torque_values = plates[f"{torque_type}_torque{axis}"].values
             if not _numpy.allclose(torque_values, 0):  # Only flip if non-zero
-                plates[f"{torque_type}_torque{axis}"] *= -1
+                plates.loc[:, f"{torque_type}_torque{axis}"] *= -1
     
     # Organise torque in an array
     summed_torques_cartesian = _numpy.asarray([
@@ -758,7 +758,7 @@ def sum_torque(
     ])
 
     # Calculate torque magnitude
-    plates[f"{torque_type}_torque_mag"] = _numpy.linalg.norm(summed_torques_cartesian, axis=0)
+    plates.loc[:, f"{torque_type}_torque_mag"] = _numpy.linalg.norm(summed_torques_cartesian, axis=0)
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
     centroid_position = geocentric_spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants.mean_Earth_radius_m)
@@ -767,7 +767,7 @@ def sum_torque(
     force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
 
     # Compute force magnitude at centroid
-    plates[f"{torque_type}_force_lat"], plates[f"{torque_type}_force_lon"], plates[f"{torque_type}_force_mag"], plates[f"{torque_type}_force_azi"] = geocentric_cartesian2spherical(
+    plates.loc[:, f"{torque_type}_force_lat"], plates.loc[:, f"{torque_type}_force_lon"], plates.loc[:, f"{torque_type}_force_mag"], plates.loc[:, f"{torque_type}_force_azi"] = geocentric_cartesian2spherical(
         force_at_centroid[0], force_at_centroid[1], force_at_centroid[2]
     )
 

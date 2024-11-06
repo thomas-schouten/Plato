@@ -817,11 +817,15 @@ def copy_values(
     """
     Function to copy values from one dataframe in a dictionary to another.
     """
+    # Ensure cols is a list for easier iteration
+    if isinstance(cols, str):
+        cols = [cols]
+
     for entry in entries[1:]:
         # Loop through columns
         for col in cols:
-            # Copy column
-            data[entry][col] = data[key][col].copy()
+            # Copy column data as a deep copy
+            data[entry].loc[:, col] = data[key][col].copy(deep=True)
 
     return data
 
@@ -893,6 +897,14 @@ def DataFrame_to_parquet(
     # Get the file path
     file_path = get_file_path(data_name, "parquet", reconstruction_name, age, case, folder)
 
+    # Delete the old file if it exists
+    try:
+        _os.remove(file_path)
+        logging.info(f"Deleted old file {file_path}")
+        
+    except FileNotFoundError:
+        pass
+
     # Save the data to Parquet
     data.to_parquet(file_path, index=False)
 
@@ -909,6 +921,14 @@ def DataFrame_to_csv(
     """
     # Get the file path
     file_path = get_file_path(data_name, "csv", reconstruction_name, age, case, folder)
+
+    # Delete the old file if it exists
+    try:
+        _os.remove(file_path)
+        logging.info(f"Deleted old file {file_path}")
+        
+    except FileNotFoundError:
+        pass
 
     # Save the data to CSV
     data.to_csv(file_path, index=False)
@@ -927,6 +947,14 @@ def GeoDataFrame_to_geoparquet(
     # Get the file path
     file_path = get_file_path(data_name, "parquet", reconstruction_name, age, case, folder)
 
+    # Delete the old file if it exists
+    try:
+        _os.remove(file_path)
+        logging.info(f"Deleted old file {file_path}")
+        
+    except FileNotFoundError:
+        pass
+
     # Save the data to a GeoParquet file
     data.to_parquet(file_path)
 
@@ -944,6 +972,14 @@ def GeoDataFrame_to_shapefile(
     # Get the file path
     file_path = get_file_path(data_name, "shp", reconstruction_name, age, case, folder)
 
+    # Delete the old file if it exists
+    try:
+        _os.remove(file_path)
+        logging.info(f"Deleted old file {file_path}")
+        
+    except FileNotFoundError:
+        pass
+
     # Save the data to a shapefile
     data.to_file(file_path)
 
@@ -960,6 +996,14 @@ def Dataset_to_netcdf(
     """
     # Get the file path
     file_path = get_file_path(data_name, "nc", reconstruction_name, age, case, folder)
+
+    # Delete the old file if it exists
+    try:
+        _os.remove(file_path)
+        logging.info(f"Deleted old file {file_path}")
+        
+    except FileNotFoundError:
+        pass
 
     # Save the data to a NetCDF file
     data.to_netcdf(file_path)
@@ -1095,14 +1139,6 @@ def get_file_path(
     # Ensure the directory exists
     _os.makedirs(_os.path.join(target_dir, data_name), exist_ok=True)
     
-    # Delete old file if it exists
-    try:
-        _os.remove(file_path)
-        logging.info(f"Deleted old file {file_path}")
-        
-    except FileNotFoundError:
-        pass
-
     return file_path
     
 def get_variable_name(

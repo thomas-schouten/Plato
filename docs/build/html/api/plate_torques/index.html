@@ -318,8 +318,17 @@ This class uses several other classes to calculate the torques, such as the <cit
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plato.plate_torques.PlateTorques.calculate_rms_velocity">
-<span class="sig-name descname"><span class="pre">calculate_rms_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plate_torques.html#PlateTorques.calculate_rms_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plate_torques.PlateTorques.calculate_rms_velocity" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">calculate_rms_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plate_torques.html#PlateTorques.calculate_rms_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plate_torques.PlateTorques.calculate_rms_velocity" title="Link to this definition">¶</a></dt>
 <dd><p>Function to calculate root mean square velocities for plates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -557,6 +566,24 @@ This calls the sample_seafloor_ages method for the Points and Slabs class.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.plate_torques.PlateTorques.rotate_torque">
+<span class="sig-name descname"><span class="pre">rotate_torque</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_rotations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_plates</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torque</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'slab_pull_torque'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plate_torques.html#PlateTorques.rotate_torque"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plate_torques.PlateTorques.rotate_torque" title="Link to this definition">¶</a></dt>
+<dd><p>Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reference_rotations</strong> (<em>dict</em><em>, </em><em>xarray.Dataset</em>) – reference rotations to use for rotation</p></li>
+<li><p><strong>reference_plates</strong> (<em>dict</em><em>, </em><em>xarray.Dataset</em>) – reference plates to use for rotation</p></li>
+<li><p><strong>torque</strong> (<em>str</em>) – torque to rotate (default: “slab_pull_torque”)</p></li>
 <li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
 <li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em>) – cases of interest (default: None)</p></li>
 <li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
@@ -848,6 +875,7 @@ This calls the sample_seafloor_ages method for the Points and Slabs class.</p>
 <li><a class="reference internal" href="#plato.plate_torques.PlateTorques.calculate_residual_torque"><code class="docutils literal notranslate"><span class="pre">PlateTorques.calculate_residual_torque()</span></code></a></li>
 <li><a class="reference internal" href="#plato.plate_torques.PlateTorques.calculate_residual_force"><code class="docutils literal notranslate"><span class="pre">PlateTorques.calculate_residual_force()</span></code></a></li>
 <li><a class="reference internal" href="#plato.plate_torques.PlateTorques.calculate_synthetic_velocity"><code class="docutils literal notranslate"><span class="pre">PlateTorques.calculate_synthetic_velocity()</span></code></a></li>
+<li><a class="reference internal" href="#plato.plate_torques.PlateTorques.rotate_torque"><code class="docutils literal notranslate"><span class="pre">PlateTorques.rotate_torque()</span></code></a></li>
 <li><a class="reference internal" href="#plato.plate_torques.PlateTorques.extract_data_through_time"><code class="docutils literal notranslate"><span class="pre">PlateTorques.extract_data_through_time()</span></code></a></li>
 <li><a class="reference internal" href="#plato.plate_torques.PlateTorques.save_all"><code class="docutils literal notranslate"><span class="pre">PlateTorques.save_all()</span></code></a></li>
 <li><a class="reference internal" href="#plato.plate_torques.PlateTorques.save_plates"><code class="docutils literal notranslate"><span class="pre">PlateTorques.save_plates()</span></code></a></li>
@@ -874,7 +902,7 @@ This calls the sample_seafloor_ages method for the Points and Slabs class.</p>
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=02880162"></script>
+</div><script src="../../_static/documentation_options.js?v=144e73cd"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

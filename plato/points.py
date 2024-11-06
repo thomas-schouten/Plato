@@ -1,15 +1,15 @@
+# Standard libraries
 import logging
-from typing import Dict, List, Optional, Union
 
+# Third-party libraries
 import geopandas as _geopandas
-import gplately as _gplately
-import numpy as _numpy
 import pandas as _pandas
 import xarray as _xarray
+
 from tqdm import tqdm as _tqdm
 
+# Local libraries
 from . import utils_data, utils_calc, utils_init
-from .settings import Settings
 
 class Points:
     """
@@ -123,7 +123,7 @@ class Points:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
                     # Initialise missing data
-                    if not isinstance(resolved_geometries, Dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
+                    if not isinstance(resolved_geometries, dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
                         resolved_geometries = utils_data.get_resolved_geometries(
                             self.reconstruction,
                             _age,
@@ -152,14 +152,27 @@ class Points:
         self.computed_gpe_torque = False
         self.computed_mantle_drag_torque = False
 
+    def __str__(self):
+        return f"Points is a class that contains data and methods for working with grid points."
+    
+    def __repr__(self):
+        return self.__str__()
+
     def calculate_velocities(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            stage_rotation: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            stage_rotation = None,
         ):
         """
         Function to compute velocities at points.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param stage_rotation:  stage rotation poles (default: None)
+        :type stage_rotation:   dict
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -173,7 +186,7 @@ class Points:
                 for plateID in self.data[_age][_case].plateID.unique():
                     # Get stage rotation, if not provided
                     if (
-                        isinstance(stage_rotation, Dict)
+                        isinstance(stage_rotation, dict)
                         and _age in stage_rotation.keys()
                         and _case in stage_rotation[_age].keys()
                         and isinstance(stage_rotation[_age][_case], _pandas.DataFrame)
@@ -217,13 +230,22 @@ class Points:
 
     def sample_seafloor_ages(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            seafloor_grids: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            seafloor_grids = None,
         ):
         """
         Samples seafloor age at points.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param seafloor_grids:  seafloor age grids (default: None)
+        :type seafloor_grids:   dict
         """
         # Sample grid
         self.sample_grid(
@@ -239,16 +261,31 @@ class Points:
 
     def sample_grid(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            grids: Optional[Dict] = None,
-            vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
-            sampling_coords: Optional[List[str]] = ["lat", "lon"],
-            cols: Optional[Union[str, List[str]]] = ["seafloor_age"],
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            grids = None,
+            vars = ["seafloor_age"],
+            sampling_coords = ["lat", "lon"],
+            cols = ["seafloor_age"],
         ):
         """
         Samples any grid at points.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param grids:           grids to sample (default: None)
+        :type grids:            dict
+        :param vars:            variables to sample (default: ["seafloor_age"])
+        :type vars:             str, list
+        :param sampling_coords: coordinates to sample (default: ["lat", "lon"])
+        :type sampling_coords:  list
+        :param cols:            columns to store sampled data (default: ["seafloor_age"])
+        :type cols:             str, list
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -314,13 +351,22 @@ class Points:
     
     def calculate_gpe_force(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            seafloor_grid: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            seafloor_grid = None,
         ):
         """
         Function to compute gravitational potential energy (GPE) force acting at points.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param seafloor_grid:   seafloor age grid (default: None)
+        :type seafloor_grid:    dict
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -374,12 +420,19 @@ class Points:
 
     def calculate_mantle_drag_force(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
         ):
         """
         Function to compute mantle drag force acting at points.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -426,13 +479,22 @@ class Points:
 
     def calculate_residual_force(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
-            residual_torque: Optional[Dict] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            residual_torque = None,
         ):
         """
         Function to calculate residual torque along trenches.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param residual_torque: residual torque along trenches (default: None)
+        :type residual_torque:  dict
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -448,7 +510,7 @@ class Points:
 
                 for _plateID in _plateIDs:
                     if (
-                        isinstance(residual_torque, Dict)
+                        isinstance(residual_torque, dict)
                         and _age in residual_torque.keys()
                         and _case in residual_torque[_age].keys()
                         and isinstance(residual_torque[_age][_case], _pandas.DataFrame)
@@ -475,13 +537,23 @@ class Points:
 
     def save(
             self,
-            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            cases: Union[None, str, List[str]] = None,
-            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            file_dir: Optional[str] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            file_dir = None,
         ):
         """
         Function to save the 'Points' object.
+        Data of the points object is saved to .parquet files.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param file_dir:        directory to store files (default: None)
+        :type file_dir:         str
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -496,8 +568,15 @@ class Points:
         for _age in _tqdm(_ages, desc="Saving Points", disable=self.settings.logger.level==logging.INFO):
             # Loop through cases
             for _case in _cases:
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case].plateID.unique())
+
+                # Select data
+                _data = self.data[_age][_case][self.data[_age][_case].plateID.isin(_plateIDs)]
+
+                # Save data
                 utils_data.DataFrame_to_parquet(
-                    self.data[_age][_case],
+                    _data,
                     "Points",
                     self.settings.name,
                     _age,
@@ -509,14 +588,23 @@ class Points:
 
     def export(
             self,
-            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            cases: Union[None, str, List[str]] = None,
-            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            file_dir: Optional[str] = None,
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            file_dir = None,
         ):
         """
         Function to export the 'Points' object.
         Data of the points object is saved to .csv files.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param file_dir:        directory to store files (default: None)
+        :type file_dir:         str
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -531,8 +619,15 @@ class Points:
         for _age in _tqdm(_ages, desc="Exporting Points", disable=self.settings.logger.level==logging.INFO):
             # Loop through cases
             for _case in _cases:
+                # Define plateIDs if not provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case].plateID.unique())
+
+                # Select data
+                _data = self.data[_age][_case][self.data[_age][_case].plateID.isin(_plateIDs)]
+
+                # Export data
                 utils_data.DataFrame_to_csv(
-                    self.data[_age][_case],
+                    _data,
                     "Points",
                     self.settings.name,
                     _age,

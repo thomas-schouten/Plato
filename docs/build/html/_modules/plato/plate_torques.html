@@ -209,6 +209,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/globe/index.html">Globe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/grids/index.html">Grids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/optimise/index.html">Optimisation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plates/index.html">Plates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plate_torques/index.html">PlateTorques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/plot/index.html">PlotReconstruction</a></li>
@@ -339,6 +340,9 @@
             <span class="n">DEBUG_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
             <span class="n">PARALLEL_MODE</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor for the PlateTorques class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Store settings object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">utils_init</span><span class="o">.</span><span class="n">get_settings</span><span class="p">(</span>
             <span class="n">settings</span><span class="p">,</span> 
@@ -423,6 +427,12 @@
 
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;PlateTorques object successfully instantiated!&quot;</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;PlateTorques is a class that contains data, geometries and methods for geodynamic characterisation and analysis of global plate reconstructions.&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+
 <div class="viewcode-block" id="PlateTorques.add_grid">
 <a class="viewcode-back" href="../../api/plate_torques/index.html#plato.plate_torques.PlateTorques.add_grid">[docs]</a>
     <span class="k">def</span> <span class="nf">add_grid</span><span class="p">(</span>
@@ -467,15 +477,24 @@
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to calculate root mean square velocities for plates.</span>
+
+<span class="sd">        :param ages:        ages of interest (default: None)</span>
+<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:       cases of interest (default: None)</span>
+<span class="sd">        :type cases:        str, list</span>
+<span class="sd">        :param plateIDs:    plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:     int, float, list, numpy.ndarray</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Calculate rms velocity</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">plates</span><span class="o">.</span><span class="n">calculate_rms_velocity</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">,</span>
             <span class="n">ages</span><span class="p">,</span>
             <span class="n">cases</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -1007,6 +1026,44 @@
         <span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="PlateTorques.rotate_torque">
+<a class="viewcode-back" href="../../api/plate_torques/index.html#plato.plate_torques.PlateTorques.rotate_torque">[docs]</a>
+    <span class="k">def</span> <span class="nf">rotate_torque</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">reference_rotations</span><span class="p">,</span>
+            <span class="n">reference_plates</span><span class="p">,</span>
+            <span class="n">torque</span> <span class="o">=</span> <span class="s2">&quot;slab_pull_torque&quot;</span><span class="p">,</span>
+            <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.</span>
+
+<span class="sd">        :param reference_rotations:     reference rotations to use for rotation</span>
+<span class="sd">        :type reference_rotations:      dict, xarray.Dataset</span>
+<span class="sd">        :param reference_plates:        reference plates to use for rotation</span>
+<span class="sd">        :type reference_plates:         dict, xarray.Dataset</span>
+<span class="sd">        :param torque:                  torque to rotate (default: &quot;slab_pull_torque&quot;)</span>
+<span class="sd">        :type torque:                   str</span>
+<span class="sd">        :param ages:                    ages of interest (default: None)</span>
+<span class="sd">        :type ages:                     float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:                   cases of interest (default: None)</span>
+<span class="sd">        :type cases:                    str, list</span>
+<span class="sd">        :param plateIDs:                plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:                 int, float, list, numpy.ndarray</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Rotate torque</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plates</span><span class="o">.</span><span class="n">rotate_torque</span><span class="p">(</span>
+            <span class="n">reference_rotations</span><span class="p">,</span>
+            <span class="n">reference_plates</span><span class="p">,</span>
+            <span class="n">torque</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">,</span>
+            <span class="n">plateIDs</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="PlateTorques.extract_data_through_time">
 <a class="viewcode-back" href="../../api/plate_torques/index.html#plato.plate_torques.PlateTorques.extract_data_through_time">[docs]</a>
     <span class="k">def</span> <span class="nf">extract_data_through_time</span><span class="p">(</span>
@@ -1384,7 +1441,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=02880162"></script>
+</div><script src="../../_static/documentation_options.js?v=144e73cd"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

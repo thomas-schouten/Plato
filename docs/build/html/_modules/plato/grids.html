@@ -274,6 +274,39 @@
 <span class="sd">    Seafloor grids contain lithospheric age and, optionally, sediment thickness.</span>
 <span class="sd">    Continental grids contain lithospheric thickness and, optionally, crustal thickness.</span>
 <span class="sd">    Velocity grids contain plate velocity data.</span>
+
+<span class="sd">    :param settings:            `Settings` object (default: None)</span>
+<span class="sd">    :type settings:             plato.settings.Settings</span>
+<span class="sd">    :param reconstruction:      `Reconstruction` object (default: None)</span>
+<span class="sd">    :type reconstruction:       gplately.PlateReconstruction</span>
+<span class="sd">    :param rotation_file:       filepath to .rot file with rotation poles (default: None)</span>
+<span class="sd">    :type rotation_file:        str</span>
+<span class="sd">    :param topology_file:       filepath to .gpml file with topologies (default: None)</span>
+<span class="sd">    :type topology_file:        str</span>
+<span class="sd">    :param polygon_file:        filepath to .gpml file with polygons (default: None)</span>
+<span class="sd">    :type polygon_file:         str</span>
+<span class="sd">    :param reconstruction_name: model name string identifiers for the GPlately DataServer (default: None)</span>
+<span class="sd">    :type reconstruction_name:  str</span>
+<span class="sd">    :param ages:                ages of interest (default: None)</span>
+<span class="sd">    :type ages:                 float, int, list, numpy.ndarray</span>
+<span class="sd">    :param cases_file:          filepath to excel file with cases (default: None)</span>
+<span class="sd">    :type cases_file:           str</span>
+<span class="sd">    :param cases_sheet:         name of the sheet in the excel file with cases (default: &quot;Sheet1&quot;)</span>
+<span class="sd">    :type cases_sheet:          str</span>
+<span class="sd">    :param files_dir:           directory to store files (default: None)</span>
+<span class="sd">    :type files_dir:            str</span>
+<span class="sd">    :param seafloor_age_grids:  seafloor age grids (default: None)</span>
+<span class="sd">    :type seafloor_age_grids:   dict, xarray.Dataset</span>
+<span class="sd">    :param sediment_grids:      sediment thickness grids (default: None)</span>
+<span class="sd">    :type sediment_grids:       dict, xarray.Dataset</span>
+<span class="sd">    :param continental_grids:   continental crust thickness grids (default: None)</span>
+<span class="sd">    :type continental_grids:    dict, xarray.Dataset</span>
+<span class="sd">    :param velocity_grids:      velocity grids (default: None)</span>
+<span class="sd">    :type velocity_grids:       dict, xarray.Dataset</span>
+<span class="sd">    :param DEBUG_MODE:          flag to enable debug mode (default: False)</span>
+<span class="sd">    :type DEBUG_MODE:           bool</span>
+<span class="sd">    :param PARALLEL_MODE:       flag to enable parallel mode (default: False)</span>
+<span class="sd">    :type PARALLEL_MODE:        bool</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
@@ -294,6 +327,9 @@
             <span class="n">DEBUG_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
             <span class="n">PARALLEL_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor for the `Grids` class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Store settings object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">utils_init</span><span class="o">.</span><span class="n">get_settings</span><span class="p">(</span>
             <span class="n">settings</span><span class="p">,</span> 
@@ -367,7 +403,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">velocity</span> <span class="o">=</span> <span class="p">{</span><span class="n">_age</span><span class="p">:</span> <span class="p">{</span><span class="n">_case</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">}</span> <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">}</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Plato grids object with global grids.&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Grids is a class that contains data and methods for working with (reconstructed) global grids.&quot;</span>
     
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
@@ -747,7 +783,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=02880162"></script>
+</div><script src="../../_static/documentation_options.js?v=144e73cd"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

@@ -1,13 +1,13 @@
+# Standard libraries
 import logging
-from typing import Dict, List, Optional, Union
 
-import gplately as _gplately
+# Third-party libraries
 import numpy as _numpy
 import pandas as _pandas
 from tqdm import tqdm as _tqdm
 
+# Local libraries
 from . import utils_data, utils_calc, utils_init
-from .settings import Settings
 from .points import Points
 
 class Plates:
@@ -181,6 +181,12 @@ class Plates:
                     if len(entries) > 1:
                         for entry in entries[1:]:
                             self.data[_age][entry] = self.data[_age][key].copy()
+
+    def __str__(self):
+        return f"Plates is a class that contains data, geometries and methods for working with (reconstructed) plates."
+    
+    def __repr__(self):
+        return self.__str__()
 
     def calculate_rms_velocity(
             self,
@@ -525,6 +531,73 @@ class Plates:
 
                     # Enter sampled data back into the DataFrame
                     self.data[_age][_case].loc[_data.index] = computed_data2.copy()
+
+    def rotate_torque(
+            self,
+            reference_rotations,
+            reference_plates,
+            torque = "slab_pull_torque",
+            ages = None,
+            cases = None,
+            plateIDs = None,
+            reference_case = None,
+        ):
+        """
+        Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.
+
+        :param reference_rotations:     reference rotations to use for rotation
+        :type reference_rotations:      dict, xarray.Dataset
+        :param reference_plates:        reference plates to use for rotation
+        :type reference_plates:         dict, xarray.Dataset
+        :param torque:                  torque to rotate (default: "slab_pull_torque")
+        :type torque:                   str
+        :param ages:                    ages of interest (default: None)
+        :type ages:                     float, int, list, numpy.ndarray
+        :param cases:                   cases of interest (default: None)
+        :type cases:                    str, list
+        :param plateIDs:                plateIDs of interest (default: None)
+        :type plateIDs:                 int, float, list, numpy.ndarray
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Check if reference case is provided, otherwise default to first case in list
+        if reference_case == None:
+            reference_case = list(reference_plates.data.keys())[0]
+
+        # Loop through all reconstruction times
+        for _age in _tqdm(_ages, desc="Rotating torques", disable=self.settings.logger.level==logging.INFO):
+            # Check if times in reference_plates dictionary
+            if reference_case in reference_plates.data[_age].keys():
+                # Loop through all cases
+                for _case in _cases:
+                    # Select cases that require rotation
+                    if self.settings.options[_case]["Reconstructed motions"] and self.settings.options[_case]["Mantle drag torque"]:
+                        # Select plates
+                        _data = self.data[_age][_case].copy()
+                        
+                        # Select plateIDs and mask
+                        _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
+                        
+                        if plateIDs is not None:
+                            _data = _data[_data.plateID.isin(_plateIDs)]
+
+                        for _plateID in _plateIDs:
+                            # Rotate x, y, and z components of torque
+                            _data.loc[_data.plateID == _plateID, [torque + "_x", torque + "_y", torque + "_z"]] = utils_calc.rotate_torque(
+                                _plateID,
+                                reference_plates[_age][_case].loc[reference_plates[_age][_case].plateID == _plateID, [torque + "_x", torque + "_y", torque + "_z"]].copy(),
+                                reference_rotations,
+                                self.reconstruction.rotation_model,
+                                _age,
+                                self.settings.constants,
+                            )
+
+                            # Copy magnitude of torque
+                            _data.loc[_data.plateID == _plateID, torque + "_mag"] = reference_plates[_age][_case].loc[reference_plates[_age][_case].plateID == _plateID, torque + "_mag"].values[0]
 
     def extract_data_through_time(
             self,

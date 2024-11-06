@@ -146,20 +146,20 @@ class Grids():
         self.velocity = {_age: {_case: None for _case in self.settings.cases} for _age in self.settings.ages}
 
     def __str__(self):
-        return f"Plato grids object with global grids."
+        return f"Grids is a class that contains data and methods for working with (reconstructed) global grids."
     
     def __repr__(self):
         return self.__str__()
 
     def add_grid(
             self,
-            input_grids: Union[Dict[Union[int, float, _numpy.integer, _numpy.floating], _xarray.Dataset], _xarray.Dataset],
-            variable_name: str = "new_grid",
-            grid_type: str = "seafloor_age",
-            target_variable: str = "z",
-            mask_continents: Optional[bool] = False,
-            interpolate: Optional[bool] = True,
-            prefactor: Optional[float] = 1.,
+            input_grids,
+            variable_name = "new_grid",
+            grid_type = "seafloor_age",
+            target_variable = "z",
+            mask_continents = False,
+            interpolate = True,
+            prefactor = 1.,
         ):
         """
         Function to add another grid of a variable to the seafloor grid.

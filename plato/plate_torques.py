@@ -1,7 +1,5 @@
 # Standard libraries
-import os
 import logging
-import sys
 
 # Local libraries
 from . import utils_data, utils_init
@@ -170,6 +168,12 @@ class PlateTorques():
 
         logging.info("PlateTorques object successfully instantiated!")
 
+    def __str__(self):
+        return f"PlateTorques is a class that contains data, geometries and methods for geodynamic characterisation and analysis of global plate reconstructions."
+    
+    def __repr__(self):
+        return self.__str__()
+
     def add_grid(
             self,
             input_grids,
@@ -209,15 +213,24 @@ class PlateTorques():
             self,
             ages = None,
             cases = None,
+            plateIDs = None,
         ):
         """
         Function to calculate root mean square velocities for plates.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list, numpy.ndarray
         """
         # Calculate rms velocity
         self.plates.calculate_rms_velocity(
             self.points,
             ages,
             cases,
+            plateIDs,
         )
 
     def calculate_net_rotation(
@@ -697,6 +710,41 @@ class PlateTorques():
             self.points,
             _ages,
             _cases,
+            plateIDs,
+        )
+
+    def rotate_torque(
+            self,
+            reference_rotations,
+            reference_plates,
+            torque = "slab_pull_torque",
+            ages = None,
+            cases = None,
+            plateIDs = None,
+        ):
+        """
+        Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.
+
+        :param reference_rotations:     reference rotations to use for rotation
+        :type reference_rotations:      dict, xarray.Dataset
+        :param reference_plates:        reference plates to use for rotation
+        :type reference_plates:         dict, xarray.Dataset
+        :param torque:                  torque to rotate (default: "slab_pull_torque")
+        :type torque:                   str
+        :param ages:                    ages of interest (default: None)
+        :type ages:                     float, int, list, numpy.ndarray
+        :param cases:                   cases of interest (default: None)
+        :type cases:                    str, list
+        :param plateIDs:                plateIDs of interest (default: None)
+        :type plateIDs:                 int, float, list, numpy.ndarray
+        """
+        # Rotate torque
+        self.plates.rotate_torque(
+            reference_rotations,
+            reference_plates,
+            torque,
+            ages,
+            cases,
             plateIDs,
         )
 
