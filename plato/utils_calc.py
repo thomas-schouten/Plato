@@ -764,12 +764,18 @@ def sum_torque(
     centroid_position = geocentric_spherical2cartesian(plates.centroid_lat, plates.centroid_lon, constants.mean_Earth_radius_m)
 
     # Calculate the torque vector as the cross product of the Cartesian torque vector (x, y, z) with the position vector of the centroid
-    force_at_centroid = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
+    force_at_centroid_xyz = _numpy.cross(summed_torques_cartesian, centroid_position, axis=0)
 
     # Compute force magnitude at centroid
-    plates.loc[:, f"{torque_type}_force_lat"], plates.loc[:, f"{torque_type}_force_lon"], plates.loc[:, f"{torque_type}_force_mag"], plates.loc[:, f"{torque_type}_force_azi"] = geocentric_cartesian2spherical(
-        force_at_centroid[0], force_at_centroid[1], force_at_centroid[2]
+    force_at_centroid_sph = tangent_cartesian2spherical(
+        force_at_centroid_xyz.T, plates.centroid_lat, plates.centroid_lon
     )
+
+    # Assign force components to DataFrame
+    plates.loc[:, f"{torque_type}_force_lat"] = force_at_centroid_sph[0]
+    plates.loc[:, f"{torque_type}_force_lon"] = force_at_centroid_sph[1]
+    plates.loc[:, f"{torque_type}_force_mag"] = force_at_centroid_sph[2]
+    plates.loc[:, f"{torque_type}_force_azi"] = force_at_centroid_sph[3]
 
     return plates
 
