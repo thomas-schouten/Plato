@@ -570,34 +570,38 @@ class Plates:
 
         # Loop through all reconstruction times
         for _age in _tqdm(_ages, desc="Rotating torques", disable=self.settings.logger.level==logging.INFO):
-            # Check if times in reference_plates dictionary
-            if reference_case in reference_plates.data[_age].keys():
-                # Loop through all cases
-                for _case in _cases:
-                    # Select cases that require rotation
-                    if self.settings.options[_case]["Reconstructed motions"] and self.settings.options[_case]["Mantle drag torque"]:
-                        # Select plates
-                        _data = self.data[_age][_case].copy()
-                        
-                        # Select plateIDs and mask
-                        _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
-                        
-                        if plateIDs is not None:
-                            _data = _data[_data.plateID.isin(_plateIDs)]
+            if reference_case == None:
+                reference_case = list(reference_plates.data[_age].keys())[0]
 
-                        for _plateID in _plateIDs:
-                            # Rotate x, y, and z components of torque
-                            _data.loc[_data.plateID == _plateID, [torque + "_x", torque + "_y", torque + "_z"]] = utils_calc.rotate_torque(
-                                _plateID,
-                                reference_plates[_age][_case].loc[reference_plates[_age][_case].plateID == _plateID, [torque + "_x", torque + "_y", torque + "_z"]].copy(),
-                                reference_rotations,
-                                self.reconstruction.rotation_model,
-                                _age,
-                                self.settings.constants,
-                            )
+            # Loop through all cases
+            for _case in _cases:
+                # Select cases that require rotation
+                if self.settings.options[_case]["Reconstructed motions"] and self.settings.options[_case]["Mantle drag torque"]:
+                    # Select plates
+                    _data = self.data[_age][_case].copy()
+                    
+                    # Select plateIDs and mask
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
+                    
+                    if plateIDs is not None:
+                        _data = _data[_data.plateID.isin(_plateIDs)]
 
-                            # Copy magnitude of torque
-                            _data.loc[_data.plateID == _plateID, torque + "_mag"] = reference_plates[_age][_case].loc[reference_plates[_age][_case].plateID == _plateID, torque + "_mag"].values[0]
+                    for _plateID in _plateIDs:
+                        # Rotate x, y, and z components of torque
+                        _data.loc[_data.plateID == _plateID, [torque + "_x", torque + "_y", torque + "_z"]] = utils_calc.rotate_torque(
+                            _plateID,
+                            reference_plates.data[_age][_case].loc[reference_plates.data[_age][_case].plateID == _plateID, [torque + "_x", torque + "_y", torque + "_z"]].copy(),
+                            reference_rotations,
+                            self.reconstruction.rotation_model,
+                            _age,
+                            self.settings.constants,
+                        )
+
+                        # Copy magnitude of torque
+                        _data.loc[_data.plateID == _plateID, torque + "_mag"] = reference_plates.data[_age][_case].loc[reference_plates.data[_age][_case].plateID == _plateID, torque + "_mag"].values[0]
+
+                        # Enter sampled data back into the DataFrame
+                        self.data[_age][_case].loc[_data.index] = _data.copy()
 
     def extract_data_through_time(
             self,

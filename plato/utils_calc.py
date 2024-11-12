@@ -1279,7 +1279,7 @@ def rotate_torque(plateID, torque, rotations_a, rotations_b, reconstruction_time
     relative_rotation_pole = get_relative_rotaton_pole(plateID, rotations_a, rotations_b, reconstruction_time)
 
     # Rotate torque vector
-    rotated_torque = rotate_vector(torque, relative_rotation_pole, constants)
+    rotated_torque = rotate_vector(torque, relative_rotation_pole)
 
     return rotated_torque
 

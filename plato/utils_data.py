@@ -201,6 +201,7 @@ def get_slab_data(
     forces = ["slab_pull", "slab_bend", "residual"]
     coords = ["mag", "lat", "lon"]
     slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(coords) * len(forces) for _ in range(len(slabs))]
+    slabs["slab_pull_constant"] = options["Slab pull constant"]
     slabs["residual_force_azi"] = 0.
     slabs["residual_alignment"] = 0.
 
@@ -271,6 +272,7 @@ def get_point_data(
     forces = ["GPE", "mantle_drag", "residual"]
     coords = ["lat", "lon", "mag", "azi"]
     points[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(forces) * len(coords) for _ in range(len(points))]
+    points["mantle_viscosity"] = options["Mantle viscosity"]
     
     return points
 
