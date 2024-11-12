@@ -297,8 +297,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="plato.optimisation.Optimisation.find_slab_pull_coefficient">
-<span class="sig-name descname"><span class="pre">find_slab_pull_coefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">case</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">viscosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e+19</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation.find_slab_pull_coefficient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation.find_slab_pull_coefficient" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="plato.optimisation.Optimisation.optimise_slab_pull_coefficient">
+<span class="sig-name descname"><span class="pre">optimise_slab_pull_coefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">case</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">viscosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.23e+20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation.optimise_slab_pull_coefficient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation.optimise_slab_pull_coefficient" title="Link to this definition">¶</a></dt>
 <dd><p>Function to find optimised slab pull coefficient for a given (set of) plates using a grid search.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -315,6 +315,63 @@
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.optimisation.Optimisation.invert_residual_torque">
+<span class="sig-name descname"><span class="pre">invert_residual_torque</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">case</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Slab</span> <span class="pre">pull</span> <span class="pre">constant'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">viscosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.23e+20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation.invert_residual_torque"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation.invert_residual_torque" title="Link to this definition">¶</a></dt>
+<dd><p>Function to find optimised slab pull coefficient or mantle viscosity by projecting the residual torque onto the subduction zones and grid points.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>age</strong> (<em>int</em><em>, </em><em>float</em>) – reconstruction age to optimise</p></li>
+<li><p><strong>case</strong> (<em>str</em>) – case to optimise</p></li>
+<li><p><strong>plateIDs</strong> (<em>list</em><em> of </em><em>integers</em><em> or </em><em>None</em>) – plate IDs to include in optimisation</p></li>
+<li><p><strong>grid_size</strong> (<em>int</em>) – size of the grid to find optimal slab pull coefficient</p></li>
+<li><p><strong>plot</strong> (<em>boolean</em>) – whether or not to plot the grid</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The optimal slab pull coefficient</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.optimisation.Optimisation.optimise_torques">
+<span class="sig-name descname"><span class="pre">optimise_torques</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimisation_age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimisation_case</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimisation_plateID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation.optimise_torques"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation.optimise_torques" title="Link to this definition">¶</a></dt>
+<dd><p>Function to optimsie the torques in the PlateTorques object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>list</em><em> of </em><em>int</em><em>, </em><em>float</em>) – ages to optimise (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>list</em><em> of </em><em>str</em>) – cases to optimise (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>list</em><em> of </em><em>int</em>) – plate IDs to optimise (default: None)</p></li>
+<li><p><strong>optimisation_age</strong> (<em>int</em><em>, </em><em>float</em>) – age to optimise (default: None)</p></li>
+<li><p><strong>optimisation_case</strong> (<em>str</em>) – case to optimise (default: None)</p></li>
+<li><p><strong>optimisation_plateID</strong> (<em>int</em>) – plate ID of plate to optimise (default: None)</p></li>
+</ul>
+</dd>
+</dl>
+<p>NOTE: This function is not written in the most efficient way and can be improved.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="plato.optimisation.Optimisation.extract_data_through_time">
+<span class="sig-name descname"><span class="pre">extract_data_through_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'plates'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'residual_torque_mag'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/optimisation.html#Optimisation.extract_data_through_time"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.optimisation.Optimisation.extract_data_through_time" title="Link to this definition">¶</a></dt>
+<dd><p>Function to extract data through time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ages</strong> (<em>float</em><em>, </em><em>int</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – ages of interest (default: None)</p></li>
+<li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em>) – cases of interest (default: None)</p></li>
+<li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -381,7 +438,10 @@
 <li><a class="reference internal" href="#">Optimisation</a><ul>
 <li><a class="reference internal" href="#plato.optimisation.Optimisation"><code class="docutils literal notranslate"><span class="pre">Optimisation</span></code></a><ul>
 <li><a class="reference internal" href="#plato.optimisation.Optimisation.minimise_residual_torque"><code class="docutils literal notranslate"><span class="pre">Optimisation.minimise_residual_torque()</span></code></a></li>
-<li><a class="reference internal" href="#plato.optimisation.Optimisation.find_slab_pull_coefficient"><code class="docutils literal notranslate"><span class="pre">Optimisation.find_slab_pull_coefficient()</span></code></a></li>
+<li><a class="reference internal" href="#plato.optimisation.Optimisation.optimise_slab_pull_coefficient"><code class="docutils literal notranslate"><span class="pre">Optimisation.optimise_slab_pull_coefficient()</span></code></a></li>
+<li><a class="reference internal" href="#plato.optimisation.Optimisation.invert_residual_torque"><code class="docutils literal notranslate"><span class="pre">Optimisation.invert_residual_torque()</span></code></a></li>
+<li><a class="reference internal" href="#plato.optimisation.Optimisation.optimise_torques"><code class="docutils literal notranslate"><span class="pre">Optimisation.optimise_torques()</span></code></a></li>
+<li><a class="reference internal" href="#plato.optimisation.Optimisation.extract_data_through_time"><code class="docutils literal notranslate"><span class="pre">Optimisation.extract_data_through_time()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -395,7 +455,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=144e73cd"></script>
+</div><script src="../../_static/documentation_options.js?v=86841498"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

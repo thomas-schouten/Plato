@@ -253,12 +253,15 @@
         </div>
         <article role="main" id="furo-main-content">
           <h1>Source code for plato.plates</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span></span><span class="c1"># Standard libraries</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 
+<span class="c1"># Third-party libraries</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_numpy</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">_pandas</span>
 <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span> <span class="k">as</span> <span class="n">_tqdm</span>
 
+<span class="c1"># Local libraries</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">utils_data</span><span class="p">,</span> <span class="n">utils_calc</span><span class="p">,</span> <span class="n">utils_init</span>
 <span class="kn">from</span> <span class="nn">.points</span> <span class="kn">import</span> <span class="n">Points</span>
 
@@ -841,34 +844,38 @@
 
         <span class="c1"># Loop through all reconstruction times</span>
         <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Rotating torques&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
-            <span class="c1"># Check if times in reference_plates dictionary</span>
-            <span class="k">if</span> <span class="n">reference_case</span> <span class="ow">in</span> <span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="c1"># Loop through all cases</span>
-                <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
-                    <span class="c1"># Select cases that require rotation</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Reconstructed motions&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Mantle drag torque&quot;</span><span class="p">]:</span>
-                        <span class="c1"># Select plates</span>
-                        <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-                        
-                        <span class="c1"># Select plateIDs and mask</span>
-                        <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="n">_data</span><span class="o">.</span><span class="n">plateID</span><span class="p">)</span>
-                        
-                        <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                            <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">reference_case</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">reference_case</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
 
-                        <span class="k">for</span> <span class="n">_plateID</span> <span class="ow">in</span> <span class="n">_plateIDs</span><span class="p">:</span>
-                            <span class="c1"># Rotate x, y, and z components of torque</span>
-                            <span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="p">[</span><span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_x&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_y&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_z&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">rotate_torque</span><span class="p">(</span>
-                                <span class="n">_plateID</span><span class="p">,</span>
-                                <span class="n">reference_plates</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">reference_plates</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="p">[</span><span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_x&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_y&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_z&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
-                                <span class="n">reference_rotations</span><span class="p">,</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction</span><span class="o">.</span><span class="n">rotation_model</span><span class="p">,</span>
-                                <span class="n">_age</span><span class="p">,</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">constants</span><span class="p">,</span>
-                            <span class="p">)</span>
+            <span class="c1"># Loop through all cases</span>
+            <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
+                <span class="c1"># Select cases that require rotation</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Reconstructed motions&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Mantle drag torque&quot;</span><span class="p">]:</span>
+                    <span class="c1"># Select plates</span>
+                    <span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    
+                    <span class="c1"># Select plateIDs and mask</span>
+                    <span class="n">_plateIDs</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_plateIDs</span><span class="p">(</span><span class="n">plateIDs</span><span class="p">,</span> <span class="n">_data</span><span class="o">.</span><span class="n">plateID</span><span class="p">)</span>
+                    
+                    <span class="k">if</span> <span class="n">plateIDs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">_data</span> <span class="o">=</span> <span class="n">_data</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_plateIDs</span><span class="p">)]</span>
 
-                            <span class="c1"># Copy magnitude of torque</span>
-                            <span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_mag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference_plates</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">reference_plates</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_mag&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+                    <span class="k">for</span> <span class="n">_plateID</span> <span class="ow">in</span> <span class="n">_plateIDs</span><span class="p">:</span>
+                        <span class="c1"># Rotate x, y, and z components of torque</span>
+                        <span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="p">[</span><span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_x&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_y&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_z&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">utils_calc</span><span class="o">.</span><span class="n">rotate_torque</span><span class="p">(</span>
+                            <span class="n">_plateID</span><span class="p">,</span>
+                            <span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="p">[</span><span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_x&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_y&quot;</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_z&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                            <span class="n">reference_rotations</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction</span><span class="o">.</span><span class="n">rotation_model</span><span class="p">,</span>
+                            <span class="n">_age</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">constants</span><span class="p">,</span>
+                        <span class="p">)</span>
+
+                        <span class="c1"># Copy magnitude of torque</span>
+                        <span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_mag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">plateID</span> <span class="o">==</span> <span class="n">_plateID</span><span class="p">,</span> <span class="n">torque</span> <span class="o">+</span> <span class="s2">&quot;_mag&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                        <span class="c1"># Enter sampled data back into the DataFrame</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">][</span><span class="n">_case</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">_data</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="Plates.extract_data_through_time">
@@ -1129,7 +1136,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=144e73cd"></script>
+</div><script src="../../_static/documentation_options.js?v=86841498"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
