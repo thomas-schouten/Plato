@@ -108,6 +108,11 @@ class PlotReconstruction():
             self.grids = plate_torques.grids
             self.globe = plate_torques.globe
 
+        # Set shortcut to ages, cases and options
+        self.ages = self.settings.ages
+        self.cases = self.settings.cases
+        self.options = self.settings.options
+
         # Get coastlines if not provided
         self.coastlines = utils_init.get_coastlines(coastline_file, self.settings)
 
@@ -256,9 +261,9 @@ class PlotReconstruction():
 
         # Get sediment thickness grid
         if age in self.grids.sediment and self.settings.options[case]["Sample sediment grid"] in self.grids.sediment[age].data_vars:           
-            grid = self.seafloor[age][self.options[case]["Sample sediment grid"]].values
+            grid = self.grids.sediment[age][self.settings.options[case]["Sample sediment grid"]].values
         else:
-            grid = _numpy.where(_numpy.isnan(self.seafloor[age].seafloor_age.values), _numpy.nan, vmin)
+            grid = _numpy.where(_numpy.isnan(self.grids.seafloor_age[age].seafloor_age.values), _numpy.nan, vmin)
 
         # Plot sediment thickness grid
         im = self.plot_grid(

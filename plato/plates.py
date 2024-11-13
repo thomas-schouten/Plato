@@ -83,6 +83,11 @@ class Plates:
             polygon_file,
             reconstruction_name,
         )
+
+        # Set shortcut to ages, cases and options
+        self.ages = self.settings.ages
+        self.cases = self.settings.cases
+        self.options = self.settings.options
         
         # GEOMETRIES
         # Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries

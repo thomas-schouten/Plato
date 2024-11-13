@@ -29,13 +29,18 @@ class Optimisation():
             # Store plate torques object
             self.plate_torques = plate_torques
 
-            # Create shortcuts to the settings, plates, slabs, points, grids, and globe objects
+            # Create shortcuts to the settings, plates, slabs, points, grids, and globe objects, and the ages and cases
             self.settings = plate_torques.settings
             self.plates = plate_torques.plates
             self.slabs = plate_torques.slabs
             self.points = plate_torques.points
             self.grids = plate_torques.grids
-            self.globe = plate_torques.globe      
+            self.globe = plate_torques.globe
+
+            # Set shortcut to ages, cases and options
+            self.ages = self.settings.ages
+            self.cases = self.settings.cases
+            self.options = self.settings.options
 
         # Organise dictionaries to store optimal values for slab pull coefficient, viscosity and normalised residual torque magnitude for each unique combination of age, case and plate
         # The index of each plate corresponds to the index in the plate data arrays.

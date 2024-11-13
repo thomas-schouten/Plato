@@ -92,6 +92,11 @@ class Slabs:
             reconstruction_name,
         )
 
+        # Set shortcut to ages, cases and options
+        self.ages = self.settings.ages
+        self.cases = self.settings.cases
+        self.options = self.settings.options
+
         # Initialise data dictionary
         self.data = {age: {} for age in self.settings.ages}
 
@@ -563,7 +568,7 @@ class Slabs:
                     continue
                 
                 _cols = [cols]
-                _vals = [self.settings.options[key]["Active margin sediments"]]
+                _vals = _numpy.float64([self.settings.options[key]["Active margin sediments"]])
                 logging.info(f"Setting active margin sediments for case {key}.")
 
             elif isinstance(cols, str) and isinstance(vals, float):
@@ -593,7 +598,7 @@ class Slabs:
                     _data = _data[_data.continental_arc == True]
 
                 for _col, _val in zip(_cols, _vals):
-                    _data[_col] = _val
+                    _data.loc[:, _col] = _val
 
                 # Enter sampled data back into the DataFrame
                 self.data[_age][key].loc[_data.index] = _data
