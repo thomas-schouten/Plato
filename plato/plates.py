@@ -1,7 +1,9 @@
 # Standard libraries
 import logging
+from typing import Dict, List, Optional, Union
 
 # Third-party libraries
+import gplately as _gplately
 import numpy as _numpy
 import pandas as _pandas
 from tqdm import tqdm as _tqdm
@@ -9,6 +11,7 @@ from tqdm import tqdm as _tqdm
 # Local libraries
 from . import utils_data, utils_calc, utils_init
 from .points import Points
+from .settings import Settings
 
 class Plates:
     """
@@ -47,21 +50,24 @@ class Plates:
     :type PARALLEL_MODE:        bool
     :param DEBUG_MODE:          flag to enable debug mode (default: False)
     :type DEBUG_MODE:           bool
+    :param PROGRESS_BAR:        flag to enable the tqdm progress bar (default: True)
+    :type PROGRESS_BAR:         bool
     """
     def __init__(
             self,
-            settings = None,
-            reconstruction = None,
-            rotation_file = None,
-            topology_file = None,
-            polygon_file = None,
-            reconstruction_name = None,
-            ages = None,
-            cases_file = None,
-            cases_sheet = "Sheet1",
-            files_dir = None,
-            PARALLEL_MODE = False,
-            DEBUG_MODE = False,
+            settings: Optional[Settings] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            rotation_file: Optional[str] = None,
+            topology_file: Optional[str] = None,
+            polygon_file: Optional[str] = None,
+            reconstruction_name: Optional[str] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases_file: Optional[str] = None,
+            cases_sheet: str = "Sheet1",
+            files_dir: Optional[str] = None,
+            PARALLEL_MODE: bool = False,
+            DEBUG_MODE: bool = False,
+            PROGRESS_BAR: bool = True,
         ):
         # Store settings object
         self.settings = utils_init.get_settings(
@@ -95,7 +101,11 @@ class Plates:
         self.resolved_geometries = {_age: {} for _age in self.settings.ages}
 
         # Load or initialise plate geometries
-        for _age in _tqdm(self.settings.ages, desc="Loading plate geometries", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                self.settings.ages,
+                desc="Loading plate geometries",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Load available data
             for key, entries in self.settings.plate_cases.items():
                 # Make list to store available cases
@@ -148,7 +158,11 @@ class Plates:
         self.data = {age: {} for age in self.settings.ages}
 
         # Loop through times
-        for _age in _tqdm(self.settings.ages, desc="Loading plate data", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                self.settings.ages,
+                desc="Loading plate data",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Load available data
             for key, entries in self.settings.plate_cases.items():
                 # Make list to store available cases
@@ -195,10 +209,11 @@ class Plates:
 
     def calculate_rms_velocity(
             self,
-            points = None,
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            points: Optional[Points] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the root mean square (RMS) velocity of the plates.
@@ -212,14 +227,16 @@ class Plates:
         3.  If ages, cases, and plateIDs are provided, the function will calculate the RMS velocity for the specified ages, cases, and plateIDs.
             Otherwise, the function will calculate the RMS velocity for all ages, cases, and plateIDs.
 
-        :param points:      `Points` object (default: None)
-        :type points:       plato.points.Points
-        :param ages:        ages of interest (default: None)
-        :type ages:         float, int, list, numpy.ndarray
-        :param cases:       cases of interest (default: None)
-        :type cases:        str, list
-        :param plateIDs:    plateIDs of interest (default: None)
-        :type plateIDs:     int, float, list, numpy.ndarray
+        :param points:          `Points` object (default: None)
+        :type points:           plato.points.Points
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list, numpy.ndarray
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -237,7 +254,11 @@ class Plates:
         _iterable = utils_data.select_iterable(cases, self.settings.cases)
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Calculating RMS velocities", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Calculating RMS velocities",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Check if age in point data
             if _age in points.data.keys():
                 # Loop through cases
@@ -289,11 +310,12 @@ class Plates:
 
     def calculate_torque_on_plates(
             self,
-            point_data,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            torque_var = "torque",
+            point_data: Dict[float, Dict[str, _pandas.DataFrame]],
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            torque_var: str = "torque",
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the torque on plates from the forces acting on a set of points on Earth.
@@ -301,16 +323,18 @@ class Plates:
         This function is used in the `PlateTorques` module to calculate the torque on plates arising from slab pull, slab bend, gravitational potential energy (GPE), and mantle drag.
         It can also be used directly if the user has a set of points on Earth with forces acting on them. Thes should be organised in a dictionary with the ages of interest as keys and the cases as subkeys.
 
-        :param point_data:  dictionary with point data
-        :type point_data:   dict
-        :param ages:        ages of interest (default: None)
-        :type ages:         float, int, list, numpy.ndarray
-        :param cases:       cases of interest (default: None)
-        :type cases:        str, list
-        :param plateIDs:    plateIDs of interest (default: None)
-        :type plateIDs:     int, float, list, numpy.ndarray
-        :param torque_var:  variable to calculate torque for (default: "torque")
-        :type torque_var:   str
+        :param point_data:      dictionary with point data
+        :type point_data:       dict
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list, numpy.ndarray
+        :param torque_var:      variable to calculate torque for (default: "torque")
+        :type torque_var:       str
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -337,7 +361,11 @@ class Plates:
         cols = torque_cols + force_cols 
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Calculating torque on plates", disable=(self.settings.logger.level==logging.INFO)):
+        for _age in _tqdm(
+                _ages,
+                desc="Calculating torque on plates", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             logging.info(f"Calculating torque on plates at {_age} Ma")
             for key, entries in _iterable.items():
                 # Select data
@@ -386,21 +414,26 @@ class Plates:
 
     def calculate_driving_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the driving torque acting on each plate.
 
         The driving torque is the sum of the torques arising from the slab pull and gravitational potential energy (GPE) force.
 
-        :param ages:        ages of interest (default: None)
-        :type ages:         float, int, list, numpy.ndarray
-        :param cases:       cases of interest (default: None)
-        :type cases:        str, list[str]
-        :param plateIDs:    plateIDs of interest (default: None)
-        :type plateIDs:     int, float, list[int, float], numpy.ndarray
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list, numpy.ndarray
+        :param torque_var:      variable to calculate torque for (default: "torque")
+        :type torque_var:       str
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -412,8 +445,11 @@ class Plates:
         logging.info("Computing driving torques...")
 
         # Loop through ages
-        for i, _age in _tqdm(enumerate(_ages), desc="Calculating driving torque", disable=self.settings.logger.level==logging.INFO):
-
+        for i, _age in _tqdm(
+                enumerate(_ages),
+                desc="Calculating driving torque",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Loop through cases
             for _case in _cases:
                 # Select plates
@@ -434,21 +470,26 @@ class Plates:
 
     def calculate_residual_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the residual torque acting on each plate.
 
         The residual torque is the sum of the torques arising from driving (slab pull and gravitational potential energy (GPE) force) and resistive forces (slab bend and mantle drag force).
 
-        :param ages:        ages of interest (default: None)
-        :type ages:         float, int, list, numpy.ndarray
-        :param cases:       cases of interest (default: None)
-        :type cases:        str, list[str]
-        :param plateIDs:    plateIDs of interest (default: None)
-        :type plateIDs:     int, float, list[int, float], numpy.ndarray
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list, numpy.ndarray
+        :param torque_var:      variable to calculate torque for (default: "torque")
+        :type torque_var:       str
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -461,7 +502,11 @@ class Plates:
         
         # Loop through cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
-        for _case in _tqdm(_cases, desc="Calculating residual torque", disable=self.settings.logger.level==logging.INFO):
+        for _case in _tqdm(
+                _cases,
+                desc="Calculating residual torque",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Skip if reconstructed motions are enabled
             if not self.settings.options[_case]["Reconstructed motions"]:
                 continue
@@ -486,21 +531,26 @@ class Plates:
                 
     def calculate_synthetic_velocity(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate synthetic velocity of plates.
 
         The synthetic velocity is calculated by summing all torques acting on a plate, except for the mantle drag torque.
 
-        :param ages:        ages of interest (default: None)
-        :type ages:         float, int, list, numpy.ndarray
-        :param cases:       cases of interest (default: None)
-        :type cases:        str, list[str]
-        :param plateIDs:    plateIDs of interest (default: None)
-        :type plateIDs:     int, float, list[int, float], numpy.ndarray
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list, numpy.ndarray
+        :param torque_var:      variable to calculate torque for (default: "torque")
+        :type torque_var:       str
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -510,7 +560,11 @@ class Plates:
 
         # Loop through cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
-        for _case in _tqdm(_cases, desc="Calculating synthetic velocity", disable=self.settings.logger.level==logging.INFO):
+        for _case in _tqdm(
+                _cases,
+                desc="Calculating synthetic velocity", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Skip if reconstructed motions are enabled
             if not self.settings.options[_case]["Reconstructed motions"]:
 
@@ -539,13 +593,14 @@ class Plates:
 
     def rotate_torque(
             self,
-            reference_rotations,
-            reference_plates,
+            reference_rotations: _gplately.pygplates.RotationModel,
+            reference_plates: Dict[str, Dict[str, _pandas.DataFrame]],
             torque = "slab_pull_torque",
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             reference_case = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.
@@ -562,6 +617,10 @@ class Plates:
         :type cases:                    str, list
         :param plateIDs:                plateIDs of interest (default: None)
         :type plateIDs:                 int, float, list, numpy.ndarray
+        :param torque_var:              variable to calculate torque for (default: "torque")
+        :type torque_var:               str
+        :param PROGRESS_BAR:            flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:             bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -574,7 +633,12 @@ class Plates:
             reference_case = list(reference_plates.data.keys())[0]
 
         # Loop through all reconstruction times
-        for _age in _tqdm(_ages, desc="Rotating torques", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages,
+                desc="Rotating torques",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            # If the case is not given, select the first one from the list in the provided reference plates.
             if reference_case == None:
                 reference_case = list(reference_plates.data[_age].keys())[0]
 
@@ -610,10 +674,10 @@ class Plates:
 
     def extract_data_through_time(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            var = "velocity_rms_mag",
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            var: str = "velocity_rms_mag",
         ):
         """
         Function to extract data on slabs through time as a pandas.DataFrame.
@@ -695,10 +759,11 @@ class Plates:
 
     def save(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to export the `Plates` object.
@@ -707,14 +772,16 @@ class Plates:
         By default, the files are saved to the directory specified in the settings object.
         The user can specify the directory to store the files using the `file_dir`.
 
-        :param ages:        ages of interest (default: None)
-        :type ages:         float, int, list, numpy.ndarray
-        :param cases:       cases of interest (default: None)
-        :type cases:        str, list[str]
-        :param plateIDs:    plateIDs of interest (default: None)
-        :type plateIDs:     int, float, list[int, float], numpy.ndarray
-        :param file_dir:    directory to store files (default: None)
-        :type file_dir:     str
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list[str]
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list[int, float], numpy.ndarray
+        :param file_dir:        directory to store files (default: None)
+        :type file_dir:         str
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -726,7 +793,11 @@ class Plates:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Saving Plates", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Saving Plates", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Loop through cases
             for _case in _cases:
                 # Select resolved geometries, if required
@@ -763,10 +834,11 @@ class Plates:
 
     def export(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to export the `Plates` object.
@@ -775,14 +847,16 @@ class Plates:
         By default, the files are saved to the directory specified in the settings object.
         The user can specify the directory to store the files using the `file_dir`.
 
-        :param ages:        ages of interest (default: None)
-        :type ages:         float, int, list, numpy.ndarray
-        :param cases:       cases of interest (default: None)
-        :type cases:        str, list[str]
-        :param plateIDs:    plateIDs of interest (default: None)
-        :type plateIDs:     int, float, list[int, float], numpy.ndarray
-        :param file_dir:    directory to store files (default: None)
-        :type file_dir:     str
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list[str]
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list[int, float], numpy.ndarray
+        :param file_dir:        directory to store files (default: None)
+        :type file_dir:         str
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -794,7 +868,11 @@ class Plates:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Exporting Plates", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Exporting Plates", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Loop through cases
             for _case in _cases:
                 # Select resolved geometries, if required
@@ -822,5 +900,3 @@ class Plates:
                 )
 
         logging.info(f"Plates exported to {self.settings.dir_path}")
-
-

@@ -255,8 +255,10 @@
           <h1>Source code for plato.plates</h1><div class="highlight"><pre>
 <span></span><span class="c1"># Standard libraries</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="c1"># Third-party libraries</span>
+<span class="kn">import</span> <span class="nn">gplately</span> <span class="k">as</span> <span class="nn">_gplately</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_numpy</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">_pandas</span>
 <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span> <span class="k">as</span> <span class="n">_tqdm</span>
@@ -264,6 +266,7 @@
 <span class="c1"># Local libraries</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">utils_data</span><span class="p">,</span> <span class="n">utils_calc</span><span class="p">,</span> <span class="n">utils_init</span>
 <span class="kn">from</span> <span class="nn">.points</span> <span class="kn">import</span> <span class="n">Points</span>
+<span class="kn">from</span> <span class="nn">.settings</span> <span class="kn">import</span> <span class="n">Settings</span>
 
 <div class="viewcode-block" id="Plates">
 <a class="viewcode-back" href="../../api/plates/index.html#plato.plates.Plates">[docs]</a>
@@ -304,21 +307,24 @@
 <span class="sd">    :type PARALLEL_MODE:        bool</span>
 <span class="sd">    :param DEBUG_MODE:          flag to enable debug mode (default: False)</span>
 <span class="sd">    :type DEBUG_MODE:           bool</span>
+<span class="sd">    :param PROGRESS_BAR:        flag to enable the tqdm progress bar (default: True)</span>
+<span class="sd">    :type PROGRESS_BAR:         bool</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
-            <span class="n">settings</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">reconstruction</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">rotation_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">topology_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">polygon_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">reconstruction_name</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">cases_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">cases_sheet</span> <span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span><span class="p">,</span>
-            <span class="n">files_dir</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="n">PARALLEL_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="n">DEBUG_MODE</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">settings</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Settings</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_gplately</span><span class="o">.</span><span class="n">PlateReconstruction</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">rotation_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">topology_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">polygon_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">reconstruction_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases_sheet</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span><span class="p">,</span>
+            <span class="n">files_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PARALLEL_MODE</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">DEBUG_MODE</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
         <span class="c1"># Store settings object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">utils_init</span><span class="o">.</span><span class="n">get_settings</span><span class="p">(</span>
@@ -340,6 +346,11 @@
             <span class="n">polygon_file</span><span class="p">,</span>
             <span class="n">reconstruction_name</span><span class="p">,</span>
         <span class="p">)</span>
+
+        <span class="c1"># Set shortcut to ages, cases and options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span>
         
         <span class="c1"># GEOMETRIES</span>
         <span class="c1"># Set up plate reconstruction object and initialise dictionaries to store resolved topologies and geometries</span>
@@ -347,7 +358,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">resolved_geometries</span> <span class="o">=</span> <span class="p">{</span><span class="n">_age</span><span class="p">:</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">}</span>
 
         <span class="c1"># Load or initialise plate geometries</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Loading plate geometries&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Loading plate geometries&quot;</span><span class="p">,</span>
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="c1"># Load available data</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">plate_cases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="c1"># Make list to store available cases</span>
@@ -400,7 +415,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">age</span><span class="p">:</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">age</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">}</span>
 
         <span class="c1"># Loop through times</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Loading plate data&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Loading plate data&quot;</span><span class="p">,</span>
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="c1"># Load available data</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">plate_cases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="c1"># Make list to store available cases</span>
@@ -453,6 +472,7 @@
             <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to calculate the root mean square (RMS) velocity of the plates.</span>
@@ -466,14 +486,16 @@
 <span class="sd">        3.  If ages, cases, and plateIDs are provided, the function will calculate the RMS velocity for the specified ages, cases, and plateIDs.</span>
 <span class="sd">            Otherwise, the function will calculate the RMS velocity for all ages, cases, and plateIDs.</span>
 
-<span class="sd">        :param points:      `Points` object (default: None)</span>
-<span class="sd">        :type points:       plato.points.Points</span>
-<span class="sd">        :param ages:        ages of interest (default: None)</span>
-<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
-<span class="sd">        :param cases:       cases of interest (default: None)</span>
-<span class="sd">        :type cases:        str, list</span>
-<span class="sd">        :param plateIDs:    plateIDs of interest (default: None)</span>
-<span class="sd">        :type plateIDs:     int, float, list, numpy.ndarray</span>
+<span class="sd">        :param points:          `Points` object (default: None)</span>
+<span class="sd">        :type points:           plato.points.Points</span>
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         int, float, list, numpy.ndarray</span>
+<span class="sd">        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR:     bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -491,7 +513,11 @@
         <span class="n">_iterable</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_iterable</span><span class="p">(</span><span class="n">cases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">cases</span><span class="p">)</span>
 
         <span class="c1"># Loop through ages</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating RMS velocities&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="n">_ages</span><span class="p">,</span> 
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating RMS velocities&quot;</span><span class="p">,</span>
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="c1"># Check if age in point data</span>
             <span class="k">if</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">points</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                 <span class="c1"># Loop through cases</span>
@@ -551,6 +577,7 @@
             <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">torque_var</span> <span class="o">=</span> <span class="s2">&quot;torque&quot;</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to calculate the torque on plates from the forces acting on a set of points on Earth.</span>
@@ -558,16 +585,18 @@
 <span class="sd">        This function is used in the `PlateTorques` module to calculate the torque on plates arising from slab pull, slab bend, gravitational potential energy (GPE), and mantle drag.</span>
 <span class="sd">        It can also be used directly if the user has a set of points on Earth with forces acting on them. Thes should be organised in a dictionary with the ages of interest as keys and the cases as subkeys.</span>
 
-<span class="sd">        :param point_data:  dictionary with point data</span>
-<span class="sd">        :type point_data:   dict</span>
-<span class="sd">        :param ages:        ages of interest (default: None)</span>
-<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
-<span class="sd">        :param cases:       cases of interest (default: None)</span>
-<span class="sd">        :type cases:        str, list</span>
-<span class="sd">        :param plateIDs:    plateIDs of interest (default: None)</span>
-<span class="sd">        :type plateIDs:     int, float, list, numpy.ndarray</span>
-<span class="sd">        :param torque_var:  variable to calculate torque for (default: &quot;torque&quot;)</span>
-<span class="sd">        :type torque_var:   str</span>
+<span class="sd">        :param point_data:      dictionary with point data</span>
+<span class="sd">        :type point_data:       dict</span>
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         int, float, list, numpy.ndarray</span>
+<span class="sd">        :param torque_var:      variable to calculate torque for (default: &quot;torque&quot;)</span>
+<span class="sd">        :type torque_var:       str</span>
+<span class="sd">        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR:     bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -594,7 +623,11 @@
         <span class="n">cols</span> <span class="o">=</span> <span class="n">torque_cols</span> <span class="o">+</span> <span class="n">force_cols</span> 
 
         <span class="c1"># Loop through ages</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating torque on plates&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="n">_ages</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating torque on plates&quot;</span><span class="p">,</span> 
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculating torque on plates at </span><span class="si">{</span><span class="n">_age</span><span class="si">}</span><span class="s2"> Ma&quot;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">_iterable</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="c1"># Select data</span>
@@ -649,18 +682,23 @@
             <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to calculate the driving torque acting on each plate.</span>
 
 <span class="sd">        The driving torque is the sum of the torques arising from the slab pull and gravitational potential energy (GPE) force.</span>
 
-<span class="sd">        :param ages:        ages of interest (default: None)</span>
-<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
-<span class="sd">        :param cases:       cases of interest (default: None)</span>
-<span class="sd">        :type cases:        str, list[str]</span>
-<span class="sd">        :param plateIDs:    plateIDs of interest (default: None)</span>
-<span class="sd">        :type plateIDs:     int, float, list[int, float], numpy.ndarray</span>
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         int, float, list, numpy.ndarray</span>
+<span class="sd">        :param torque_var:      variable to calculate torque for (default: &quot;torque&quot;)</span>
+<span class="sd">        :type torque_var:       str</span>
+<span class="sd">        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR:     bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -672,8 +710,11 @@
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Computing driving torques...&quot;</span><span class="p">)</span>
 
         <span class="c1"># Loop through ages</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">_ages</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating driving torque&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
-
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="nb">enumerate</span><span class="p">(</span><span class="n">_ages</span><span class="p">),</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating driving torque&quot;</span><span class="p">,</span>
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="c1"># Loop through cases</span>
             <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
                 <span class="c1"># Select plates</span>
@@ -700,18 +741,23 @@
             <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to calculate the residual torque acting on each plate.</span>
 
 <span class="sd">        The residual torque is the sum of the torques arising from driving (slab pull and gravitational potential energy (GPE) force) and resistive forces (slab bend and mantle drag force).</span>
 
-<span class="sd">        :param ages:        ages of interest (default: None)</span>
-<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
-<span class="sd">        :param cases:       cases of interest (default: None)</span>
-<span class="sd">        :type cases:        str, list[str]</span>
-<span class="sd">        :param plateIDs:    plateIDs of interest (default: None)</span>
-<span class="sd">        :type plateIDs:     int, float, list[int, float], numpy.ndarray</span>
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         int, float, list, numpy.ndarray</span>
+<span class="sd">        :param torque_var:      variable to calculate torque for (default: &quot;torque&quot;)</span>
+<span class="sd">        :type torque_var:       str</span>
+<span class="sd">        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR:     bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -724,7 +770,11 @@
         
         <span class="c1"># Loop through cases</span>
         <span class="c1"># Order of loops is flipped to skip cases where no slab pull torque needs to be sampled</span>
-        <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_cases</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating residual torque&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="n">_cases</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating residual torque&quot;</span><span class="p">,</span>
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="c1"># Skip if reconstructed motions are enabled</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Reconstructed motions&quot;</span><span class="p">]:</span>
                 <span class="k">continue</span>
@@ -755,18 +805,23 @@
             <span class="n">ages</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to calculate synthetic velocity of plates.</span>
 
 <span class="sd">        The synthetic velocity is calculated by summing all torques acting on a plate, except for the mantle drag torque.</span>
 
-<span class="sd">        :param ages:        ages of interest (default: None)</span>
-<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
-<span class="sd">        :param cases:       cases of interest (default: None)</span>
-<span class="sd">        :type cases:        str, list[str]</span>
-<span class="sd">        :param plateIDs:    plateIDs of interest (default: None)</span>
-<span class="sd">        :type plateIDs:     int, float, list[int, float], numpy.ndarray</span>
+<span class="sd">        :param ages:            ages of interest (default: None)</span>
+<span class="sd">        :type ages:             float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:           cases of interest (default: None)</span>
+<span class="sd">        :type cases:            str, list</span>
+<span class="sd">        :param plateIDs:        plateIDs of interest (default: None)</span>
+<span class="sd">        :type plateIDs:         int, float, list, numpy.ndarray</span>
+<span class="sd">        :param torque_var:      variable to calculate torque for (default: &quot;torque&quot;)</span>
+<span class="sd">        :type torque_var:       str</span>
+<span class="sd">        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR:     bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -776,7 +831,11 @@
 
         <span class="c1"># Loop through cases</span>
         <span class="c1"># Order of loops is flipped to skip cases where no slab pull torque needs to be sampled</span>
-        <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_cases</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating synthetic velocity&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="n">_cases</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculating synthetic velocity&quot;</span><span class="p">,</span> 
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="c1"># Skip if reconstructed motions are enabled</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="n">_case</span><span class="p">][</span><span class="s2">&quot;Reconstructed motions&quot;</span><span class="p">]:</span>
 
@@ -815,6 +874,7 @@
             <span class="n">cases</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">plateIDs</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">reference_case</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.</span>
@@ -831,6 +891,10 @@
 <span class="sd">        :type cases:                    str, list</span>
 <span class="sd">        :param plateIDs:                plateIDs of interest (default: None)</span>
 <span class="sd">        :type plateIDs:                 int, float, list, numpy.ndarray</span>
+<span class="sd">        :param torque_var:              variable to calculate torque for (default: &quot;torque&quot;)</span>
+<span class="sd">        :type torque_var:               str</span>
+<span class="sd">        :param PROGRESS_BAR:            flag to enable the tqdm progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR:             bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -843,7 +907,12 @@
             <span class="n">reference_case</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="c1"># Loop through all reconstruction times</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Rotating torques&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="n">_ages</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Rotating torques&quot;</span><span class="p">,</span>
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
+            <span class="c1"># If the case is not given, select the first one from the list in the provided reference plates.</span>
             <span class="k">if</span> <span class="n">reference_case</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">reference_case</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_plates</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
 
@@ -1136,7 +1205,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=86841498"></script>
+</div><script src="../../_static/documentation_options.js?v=ad0b566d"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

@@ -53,20 +53,21 @@ class Slabs:
     """
     def __init__(
             self,
-            settings = None,
-            reconstruction = None,
-            rotation_file = None,
-            topology_file = None,
-            polygon_file = None,
-            reconstruction_name = None,
-            ages = None,
-            cases_file = None,
-            cases_sheet = "Sheet1",
-            files_dir = None,
-            resolved_geometries = None,
-            PARALLEL_MODE = False,
-            DEBUG_MODE = False,
-            CALCULATE_VELOCITIES = True,
+            settings: Optional[Settings] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            rotation_file: Optional[str] = None,
+            topology_file: Optional[str] = None,
+            polygon_file: Optional[str] = None,
+            reconstruction_name: Optional[str] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases_file: Optional[str] = None,
+            cases_sheet: str = "Sheet1",
+            files_dir: Optional[str] = None,
+            resolved_geometries: Dict[float, Dict[str, _geopandas.GeoDataFrame]] = None,
+            PARALLEL_MODE: bool = False,
+            DEBUG_MODE: bool = False,
+            CALCULATE_VELOCITIES: bool = True,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Constructor for the `Slabs` class.
@@ -101,7 +102,11 @@ class Slabs:
         self.data = {age: {} for age in self.settings.ages}
 
         # Loop through times
-        for _age in _tqdm(self.settings.ages, desc="Loading slab data", disable=self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(
+                self.settings.ages, 
+                desc="Loading slab data", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Load available data
             for key, entries in self.settings.slab_cases.items():
                 # Make list to store available cases
@@ -148,7 +153,7 @@ class Slabs:
 
         # Calculate velocities along slabs
         if CALCULATE_VELOCITIES:
-            self.calculate_velocities()
+            self.calculate_velocities(PROGRESS_BAR = PROGRESS_BAR)
 
         # Calculate total slab length as a function of age and case
         self.total_slab_length = _numpy.zeros((len(self.settings.ages), len(self.settings.slab_pull_cases)))
@@ -168,9 +173,11 @@ class Slabs:
 
     def calculate_velocities(
             self,
-            ages = None,
-            cases = None,
-            stage_rotation = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            stage_rotation: Dict[float, Dict[str, _pandas.DataFrame]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to compute velocities at slabs.
@@ -181,6 +188,8 @@ class Slabs:
         :type cases:            str, list
         :param stage_rotation:  stage rotation model (default: None)
         :type stage_rotation:   dict
+
+        TODO: Implement selection of entries by plateID
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -190,9 +199,9 @@ class Slabs:
 
         # Loop through ages and cases
         for _age in _ages:
-            for plate in ["upper_plate", "lower_plate", "trench"]:
-                plateID_col = f"{plate}ID" if plate != "trench" else "trench_plateID"
-                for _case in _cases:
+            for _case in _cases:
+                for plate in ["upper_plate", "lower_plate", "trench"]:
+                    plateID_col = f"{plate}ID" if plate != "trench" else "trench_plateID"
                     for plateID in self.data[_age][_case][plateID_col].unique():
                         if (
                             isinstance(stage_rotation, Dict)
@@ -237,11 +246,15 @@ class Slabs:
                         self.data[_age][_case].loc[mask, f"{plate}_velocity_mag"] = velocities[2]
                         self.data[_age][_case].loc[mask, f"{plate}_spin_rate_mag"] = velocities[4]
 
+                # Get convergence rates
+                self.data[_age][_case].loc[:, f"convergence_velocity_lat"] = self.data[_age][_case]["upper_plate_velocity_lat"]
+                self.data[_age][_case].loc[:, f"convergence_velocity_lon"] = self.data[_age][_case]["upper_plate_velocity_lon"]
+
     def sample_slab_seafloor_ages(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             grids = None,
         ):
         """
@@ -309,9 +322,9 @@ class Slabs:
 
     def sample_slab_sediment_thickness(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             grids = None,
         ):
         """
@@ -366,9 +379,9 @@ class Slabs:
 
     def set_continental_arc(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
         ):
         """
         Function to set whether a trench has a continental arc.
@@ -421,9 +434,9 @@ class Slabs:
 
     def sample_grid(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             grids: Optional[Dict] = None,
             plate: Optional[str] = "lower",
             vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
@@ -540,9 +553,9 @@ class Slabs:
 
     def set_values(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             plate: Optional[str] = "lower",
             cols: Optional[Union[List[str], str]] = None,
             vals: Optional[Union[List[float], float]] = None,
@@ -614,9 +627,9 @@ class Slabs:
 
     def calculate_slab_pull_force(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
         ):
         """
         Function to compute slab pull force along trenches.
@@ -684,9 +697,9 @@ class Slabs:
 
     def calculate_slab_bend_force(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
         ):
         """
         Function to compute slab bend force along trenches.
@@ -745,9 +758,9 @@ class Slabs:
 
     def calculate_residual_force(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             residual_torque: Optional[Dict] = None,
         ):
         """
@@ -794,9 +807,9 @@ class Slabs:
 
     def extract_data_through_time(
             self,
-            ages: Optional[Union[_numpy.ndarray, List, float, int]] = None,
-            cases: Optional[Union[List[str], str]] = None,
-            plateIDs: Optional[Union[List[int], List[float], _numpy.ndarray]] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             var: Optional[Union[List[str], str]] = "None",
         ):
         """
@@ -867,14 +880,16 @@ class Slabs:
         
     def save(
             self,
-            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            cases: Union[None, str, List[str]] = None,
-            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             file_dir: Optional[str] = None,
         ):
         """
         Function to save the 'Slabs' object.
         Data of the 'Slabs' object is saved to .parquet files.
+
+
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -902,14 +917,16 @@ class Slabs:
 
     def export(
             self,
-            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
-            cases: Union[None, str, List[str]] = None,
-            plateIDs: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             file_dir: Optional[str] = None,
         ):
         """
         Function to export the 'Slabs' object.
         Data of the 'Slabs' object is exported to .csv files.
+
+
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)

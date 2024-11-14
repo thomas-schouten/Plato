@@ -105,6 +105,7 @@ def compute_slab_pull_force(
     slabs["slab_lithospheric_thickness"], slabs["slab_crustal_thickness"], slabs["slab_water_depth"] = compute_thicknesses(slabs.slab_seafloor_age, options)
 
     # Calculate length of slab
+    # TODO: Implement variable slab length based on some proxy?
     slabs["slab_length"] = options["Slab length"]
 
     # Calculate slab pull force acting on point along subduction zone where there is a seafloor age, and set to 0 where there is no seafloor age
@@ -155,9 +156,10 @@ def compute_interface_term(slabs, options):
         interface_term = 11 - 10**(1-slabs["sediment_fraction"])
         logging.info(f"Mean, min and max of interface terms: {interface_term.mean()}, {interface_term.min()}, {interface_term.max()}")
     else:
-        interface_term = 1
-
-    interface_term *= options["Slab pull constant"]
+        interface_term = 1.
+    
+    # Multiply by slab pull constant
+    interface_term *= slabs["slab_pull_constant"]
 
     # Apply interface term to slab pull force
     slabs["slab_pull_force_mag"] *= interface_term

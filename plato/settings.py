@@ -4,9 +4,9 @@
 # Thomas Schouten, 2024
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-import os
 import logging
 from typing import List, Optional
+from pathlib import Path
 
 import numpy as _numpy
 
@@ -41,8 +41,8 @@ class Settings:
     """
     def __init__(
             self,
-            name,
-            ages,
+            name = None,
+            ages = 0,
             cases_file = None,
             cases_sheet = "Sheet1",
             files_dir = None,
@@ -57,7 +57,10 @@ class Settings:
 
         logging.info(f"Initialising settings for simulation: {name}")
 
-        # Store reconstruction name and valid reconstruction times
+        # Store reconstruction name and valid reconstruction ages
+        if not name or not isinstance(name, str):
+            name = "Reconstruction"
+
         self.name = name
         self.ages = _numpy.array(ages)
 
@@ -67,7 +70,7 @@ class Settings:
             raise ValueError("Ages list cannot be empty.")
         logging.debug(f"Valid ages: {self.ages}")
 
-        # Store cases and case options
+        # Attempt to load cases and case options
         try:
             self.cases, self.options = utils_data.get_options(cases_file, cases_sheet)
             logging.info(f"Cases loaded successfully from {cases_file}, sheet: {cases_sheet}")
@@ -79,9 +82,9 @@ class Settings:
             raise
 
         # Set files directory
-        self.dir_path = os.path.join(os.getcwd(), files_dir or "")
+        self.dir_path = Path(files_dir or Path.cwd())
         try:
-            os.makedirs(self.dir_path, exist_ok=True)
+            self.dir_path.mkdir(parents=True, exist_ok=True)
             logging.info(f"Output directory set to: {self.dir_path}")
         except OSError as e:
             logging.error(f"Error creating directory: {self.dir_path} - {e}")
@@ -92,7 +95,7 @@ class Settings:
         self.PARALLEL_MODE = PARALLEL_MODE
         logging.debug(f"DEBUG_MODE: {self.DEBUG_MODE}, PARALLEL_MODE: {self.PARALLEL_MODE}")
 
-        # Process case groups
+        # Process data case groups
         self.plate_cases = self.process_cases(["Minimum plate area", "Anchor plateID"])
         self.slab_cases = self.process_cases(["Slab tesselation spacing"])
         self.point_cases = self.process_cases(["Grid spacing"])
@@ -106,6 +109,14 @@ class Settings:
         self.slab_bend_cases = self.process_cases(["Slab bend torque", "Seafloor age profile"])
         self.gpe_cases = self.process_cases(["Continental crust", "Seafloor age profile", "Grid spacing"])
         self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing"])
+
+        # Split cases with synthetic and reconstructed motions:
+        self.reconstructed_cases = []; self.synthetic_cases = []
+        for case in self.cases:
+            if self.options[case]["Reconstructed motions"]:
+                self.reconstructed_cases.append(case)
+            else:
+                self.synthetic_cases.append(case)
 
         # Store constants and mechanical parameters
         self.constants = utils_calc.set_constants()
