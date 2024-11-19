@@ -187,6 +187,7 @@ class Globe:
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Calculate the net rotation of the Earth's lithosphere.
@@ -198,7 +199,11 @@ class Globe:
         _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Calculate the net rotation of the Earth's lithosphere
-        for i, _age in enumerate(_ages):
+        for i, _age in enumerate(_tqdm(
+                _ages,
+                desc="Calculating net rotation",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR),
+            )):
             for _case in _cases:
                 # Check if plate data is provided
                 if utils_init.check_object_data(plates, Plates, _age, _case):
@@ -217,10 +222,10 @@ class Globe:
                     )
 
                 # Check if plate data is provided
-                if utils_init.check_object_data(plates, Plates, _age, _case):
+                if utils_init.check_object_data(points, Points, _age, _case):
                     logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided Points data")
                     _points = points
-                elif utils_init.check_object_data(self.plates, Plates, _age, _case):
+                elif utils_init.check_object_data(self.points, Points, _age, _case):
                     logging.info(f"Calculating net rotation for case {_case} at age {_age} using stored Points data")
                     _points = self.points
                 else:
@@ -239,9 +244,16 @@ class Globe:
                 # Select plates and points data
                 selected_plates = _plates.data[_age][_case]
                 selected_points = _points.data[_age][_case]
+
+                # Filter by plateIDs
                 if plateIDs is not None:
                     selected_plates = _plates.data[_age][_case][_plates.data[_age][_case].plateID.isin(_plateIDs)]
                     selected_points = _points.data[_age][_case][_points.data[_age][_case].plateID.isin(_plateIDs)]
+
+                # Filter by minimum plate area
+                if self.settings.options[_case]["Minimum plate area"] > 0.:
+                    selected_plates = selected_plates[selected_plates.area >= self.settings.options[_case]["Minimum plate area"]]
+                    selected_points = selected_points[selected_points.plateID.isin(selected_plates.plateID)]
 
                 # Calculate net rotation
                 net_rotation_pole = utils_calc.compute_net_rotation(
@@ -311,6 +323,7 @@ class Globe:
             self,
             cases: Optional[Union[str, List[str]]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: Optional[bool] = True,
         ):
         """
         Function to save 'Globe' object.
@@ -323,7 +336,11 @@ class Globe:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _case in _tqdm(_cases, desc="Saving Globe", disable=self.settings.logger.level==logging.INFO):
+        for _case in _tqdm(
+                _cases, 
+                desc="Saving Globe", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             utils_data.DataFrame_to_parquet(
                 self.data[_case],
                 "Globe",
@@ -337,6 +354,7 @@ class Globe:
             self,
             cases: Optional[Union[str, List[str]]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: Optional[bool] = True,
         ):
         """
         Function to export 'Globe' object.
@@ -349,7 +367,11 @@ class Globe:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _case in _tqdm(_cases, desc="Saving Globe", disable=self.settings.logger.level==logging.INFO):
+        for _case in _tqdm(
+                _cases, 
+                desc="Exporting Globe", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             utils_data.DataFrame_to_csv(
                 self.data[_case],
                 "Globe",

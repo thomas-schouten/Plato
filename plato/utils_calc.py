@@ -561,7 +561,7 @@ def compute_synthetic_stage_rotation(
     stage_rotation_poles_mag = _numpy.nan_to_num(stage_rotation_poles_mag)
 
     # Normalise the rotation poles by the drag coefficient and the square of the Earth's radius
-    stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * constants.mean_Earth_radius_m**2
+    stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * plates.area #constants.mean_Earth_radius_m**2
 
     # Convert to degrees because the 'geocentric_cartesian2spherical' does not convert the magnitude to degrees
     stage_rotation_poles_mag = _numpy.rad2deg(stage_rotation_poles_mag)

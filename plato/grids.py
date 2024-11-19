@@ -353,73 +353,78 @@ class Grids():
         logging.info(f"{grid_type} updated:", getattr(self, grid_type))
 
     def save_all(
-        self,
-        ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
-        cases: Union[None, str, List[str]] = None,
-        file_dir: Optional[str] = None,
+            self,
+            ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
+            cases: Union[None, str, List[str]] = None,
+            file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save all the grids
         """
         # Save seafloor grid
-        self.save_seafloor_age(ages, file_dir)
+        self.save_seafloor_age(ages, file_dir, PROGRESS_BAR)
 
         # Save sediment grid
-        self.save_sediment(ages, cases, file_dir)
+        self.save_sediment(ages, cases, file_dir, PROGRESS_BAR)
 
         # Save continental grid
-        self.save_continent(ages, cases, file_dir)
+        self.save_continent(ages, cases, file_dir, PROGRESS_BAR)
 
         # Save velocity grid
-        self.save_velocity(ages, cases, file_dir)
+        self.save_velocity(ages, cases, file_dir, PROGRESS_BAR)
 
     def save_seafloor_age(
             self,
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save the the seafloor age grid.
         """
-        self.save_grid(self.seafloor_age, "Seafloor_age", ages, None, file_dir)
+        self.save_grid(self.seafloor_age, "Seafloor_age", ages, None, file_dir, PROGRESS_BAR)
 
     def save_sediment(
             self,
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
             cases: Union[None, str, List[str]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save the the sediment grid.
         """
         if self.sediment is not None:
-            self.save_grid(self.sediment, "Sediment", ages, cases, file_dir)
+            self.save_grid(self.sediment, "Sediment", ages, cases, file_dir, PROGRESS_BAR)
 
     def save_continent(
             self,
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
             cases: Union[None, str, List[str]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save the the continental grid.
         """
         # Check if grids exists
         if self.continent is not None:
-            self.save_grid(self.continent, "Continent", ages, cases, file_dir)
+            self.save_grid(self.continent, "Continent", ages, cases, file_dir, PROGRESS_BAR)
 
     def save_velocity(
             self,
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
             cases: Union[None, str, List[str]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save the the velocity grid.
         """
         # Check if grids exists
         if self.velocity is not None:
-            self.save_grid(self.velocity, "Velocity", ages, cases, file_dir)
+            self.save_grid(self.velocity, "Velocity", ages, cases, file_dir, PROGRESS_BAR)
         
     def save_grid(
             self,
@@ -428,6 +433,7 @@ class Grids():
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
             cases: Union[None, str, List[str]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save a grid
@@ -442,7 +448,11 @@ class Grids():
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
         
         # Loop through ages
-        for _age in _tqdm(_ages, desc=f"Saving {type} grids", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages,
+                desc=f"Saving {type} grids",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             if data[_age] is Dict:
                 # Loop through cases
                 for _case in _cases:

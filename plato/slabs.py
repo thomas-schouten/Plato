@@ -1,6 +1,8 @@
+# Standard libraries
 import logging
 from typing import Dict, List, Optional, Union
 
+# Third party libraries
 import geopandas as _geopandas
 import gplately as _gplately
 import numpy as _numpy
@@ -8,6 +10,7 @@ import pandas as _pandas
 import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
+# Local libraries
 from . import utils_data, utils_calc, utils_init
 from .settings import Settings
 
@@ -128,7 +131,7 @@ class Slabs:
                 # Check if any DataFrames were loaded
                 if len(available_cases) > 0:
                     # Copy all DataFrames from the available case        
-                    for entries in entry:
+                    for entry in entries:
                         if entry not in available_cases:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
@@ -198,7 +201,11 @@ class Slabs:
         _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Loop through ages and cases
-        for _age in _ages:
+        for _age in _tqdm(
+            _ages,
+            desc="Calculating velocities at slabs",
+            disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+        ):
             for _case in _cases:
                 for plate in ["upper_plate", "lower_plate", "trench"]:
                     plateID_col = f"{plate}ID" if plate != "trench" else "trench_plateID"
@@ -256,6 +263,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             grids = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Samples seafloor age at slabs.
@@ -280,6 +288,7 @@ class Slabs:
             plate = "lower",
             vars = ["seafloor_age"],
             cols = ["slab_seafloor_age"],
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         # Set sampling flag to true
@@ -291,6 +300,7 @@ class Slabs:
             cases = None,
             plateIDs = None,
             grids = None,
+            PROGRESS_BAR = True,
         ):
         """
         Samples seafloor age at arcs.
@@ -315,6 +325,7 @@ class Slabs:
             plate = "upper",
             vars = ["seafloor_age"],
             cols = ["arc_seafloor_age"],
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         # Set sampling flag to true
@@ -326,6 +337,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             grids = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Samples sediment thickness at slabs.
@@ -357,6 +369,7 @@ class Slabs:
             plate = "lower",
             vars = None,
             cols = ["sediment_thickness"],
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         # Get continental arcs
@@ -364,6 +377,7 @@ class Slabs:
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
         # Set active margin sediment thickness
@@ -372,6 +386,7 @@ class Slabs:
             cases,
             plateIDs,
             cols = "sediment_thickness",
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         # Set sampling flag to true
@@ -382,6 +397,7 @@ class Slabs:
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to set whether a trench has a continental arc.
@@ -397,7 +413,7 @@ class Slabs:
         """
         # Check whether arc seafloor ages have been sampled
         if not self.sampled_seafloor_at_arcs:
-            self.sample_arc_seafloor_ages(ages, cases, plateIDs)
+            self.sample_arc_seafloor_ages(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -441,6 +457,7 @@ class Slabs:
             plate: Optional[str] = "lower",
             vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
             cols = ["slab_seafloor_age"],
+            PROGRESS_BAR: bool = True,
         ):
         """
         Samples any grid at slabs.
@@ -456,7 +473,11 @@ class Slabs:
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no grid needs to be sampled
-        for key, entries in _tqdm(_iterable.items(), desc="Sampling slabs", disable=self.settings.logger.level == logging.INFO):
+        for key, entries in _tqdm(
+                _iterable.items(), 
+                desc="Sampling slabs", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):            
             # Skip if sediment grid is not sampled
             if cols == ["sediment_thickness"] and not self.settings.options[key]["Sample sediment grid"]:
                 logging.info(f"Skipping sampling of sediment thickness for case {key}.")
@@ -559,6 +580,7 @@ class Slabs:
             plate: Optional[str] = "lower",
             cols: Optional[Union[List[str], str]] = None,
             vals: Optional[Union[List[float], float]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to add values to the 'Slabs' object.
@@ -573,7 +595,11 @@ class Slabs:
         type = "arc" if plate == "upper" else "slab"
 
         # Loop through valid cases
-        for key, entries in _tqdm(_iterable.items(), desc="Adding values", disable=(self.settings.logger.level==logging.INFO)):
+        for key, entries in _tqdm(
+                _iterable.items(), 
+                desc="Adding values", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):            
             # Special case for active margin sediments
             if cols == "sediment_thickness" and vals == None:
                 if not self.settings.options[key]["Active margin sediments"]:
@@ -630,6 +656,7 @@ class Slabs:
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to compute slab pull force along trenches.
@@ -642,7 +669,11 @@ class Slabs:
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
-        for key, entries in _tqdm(_iterable.items(), desc="Computing slab pull forces", disable=(self.settings.logger.level==logging.INFO)):
+        for key, entries in _tqdm(
+                _iterable.items(), 
+                desc="Calculating slab pull forces", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Skip if slab pull torque is not sampled
             if self.settings.options[key]["Slab pull torque"]:                
                 # Loop through ages
@@ -700,6 +731,7 @@ class Slabs:
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to compute slab bend force along trenches.
@@ -712,7 +744,11 @@ class Slabs:
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab bend torque needs to be sampled
-        for key, entries in _tqdm(_iterable.items(), desc="Computing slab bend forces", disable=(self.settings.logger.level==logging.INFO)):
+        for key, entries in _tqdm(
+                _iterable.items(),
+                desc="Calculating slab bend forces",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Skip if slab pull torque is not sampled
             if self.settings.options[key]["Slab bend torque"]:
                 # Loop through ages
@@ -762,6 +798,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             residual_torque: Optional[Dict] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate residual torque along trenches.
@@ -773,37 +810,42 @@ class Slabs:
         _cases = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
         # Loop through ages and cases
-        for _age in _ages:
-            for _case in _cases:
-                # Select plateIDs
-                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case]["lower_plateID"].unique())
+        for _case in _tqdm(
+                _cases,
+                desc="Calculating residual forces at slabs",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            if self.settings.options[_case]["Reconstructed motions"]:
+                for _age in _ages:
+                    # Select plateIDs
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case]["lower_plateID"].unique())
 
-                for _plateID in _plateIDs:
-                    if (
-                        isinstance(residual_torque, Dict)
-                        and _age in residual_torque.keys()
-                        and _case in residual_torque[_age].keys()
-                        and isinstance(residual_torque[_age][_case], _pandas.DataFrame)
-                    ):
-                        # Get stage rotation from the provided DataFrame in the dictionary
-                        _residual_torque = residual_torque[_age][_case][residual_torque[_age][_case].plateID == _plateID]
-                    
-                    # Make mask for plate
-                    mask = self.data[_age][_case]["lower_plateID"] == _plateID
-                                            
-                    # Compute velocities
-                    forces = utils_calc.compute_residual_force(
-                        self.data[_age][_case].loc[mask],
-                        _residual_torque,
-                        plateID_col = "lower_plateID",
-                        weight_col = "trench_normal_azimuth",
-                    )
+                    for _plateID in _plateIDs:
+                        if (
+                            isinstance(residual_torque, Dict)
+                            and _age in residual_torque.keys()
+                            and _case in residual_torque[_age].keys()
+                            and isinstance(residual_torque[_age][_case], _pandas.DataFrame)
+                        ):
+                            # Get stage rotation from the provided DataFrame in the dictionary
+                            _residual_torque = residual_torque[_age][_case][residual_torque[_age][_case].plateID == _plateID]
+                        
+                        # Make mask for plate
+                        mask = self.data[_age][_case]["lower_plateID"] == _plateID
+                                                
+                        # Compute velocities
+                        forces = utils_calc.compute_residual_force(
+                            self.data[_age][_case].loc[mask],
+                            _residual_torque,
+                            plateID_col = "lower_plateID",
+                            weight_col = "trench_normal_azimuth",
+                        )
 
-                    # Store velocities
-                    self.data[_age][_case].loc[mask, "residual_force_lat"] = forces[0]
-                    self.data[_age][_case].loc[mask, "residual_force_lon"] = forces[1]
-                    self.data[_age][_case].loc[mask, "residual_force_mag"] = forces[2]
-                    self.data[_age][_case].loc[mask, "residual_force_azi"] = forces[3]
+                        # Store velocities
+                        self.data[_age][_case].loc[mask, "residual_force_lat"] = forces[0]
+                        self.data[_age][_case].loc[mask, "residual_force_lon"] = forces[1]
+                        self.data[_age][_case].loc[mask, "residual_force_mag"] = forces[2]
+                        self.data[_age][_case].loc[mask, "residual_force_azi"] = forces[3]
 
     def extract_data_through_time(
             self,
@@ -884,6 +926,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save the 'Slabs' object.
@@ -901,7 +944,11 @@ class Slabs:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Saving Slabs", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Saving Slabs", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):            
             # Loop through cases
             for _case in _cases:
                 utils_data.DataFrame_to_parquet(
@@ -921,6 +968,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to export the 'Slabs' object.
@@ -938,7 +986,11 @@ class Slabs:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Exporting Slabs", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Exporting Slabs", 
+            disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):            
             # Loop through cases
             for _case in _cases:
                 utils_data.DataFrame_to_csv(

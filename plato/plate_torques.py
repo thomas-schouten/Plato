@@ -79,7 +79,7 @@ class PlateTorques():
             grids = None,
             globe = None,
             DEBUG_MODE = False,
-            PARALLEL_MODE = False
+            PARALLEL_MODE = False,
         ):
         """
         Constructor for the PlateTorques class.
@@ -181,7 +181,7 @@ class PlateTorques():
             grid_type = "seafloor_age",
             target_variable = "z",
             mask_continents = False,
-            prefactor = 1.
+            prefactor = 1.,
         ):
         """
         Function to add a grid to the grids object. This calls the add_grid method in the Grids class.
@@ -214,6 +214,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate root mean square velocities for plates.
@@ -231,6 +232,7 @@ class PlateTorques():
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
     def calculate_net_rotation(
@@ -238,6 +240,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate net rotation of the entire lithosphere.
@@ -257,6 +260,7 @@ class PlateTorques():
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
     def sample_all(
@@ -264,6 +268,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to sample all variables relevant to the plate torques calculation.
@@ -277,22 +282,23 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         """
         # Sample point seafloor ages
-        self.sample_point_seafloor_ages(ages, cases, plateIDs)
+        self.sample_point_seafloor_ages(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Sample slab seafloor ages
-        self.sample_slab_seafloor_ages(ages, cases, plateIDs)
+        self.sample_slab_seafloor_ages(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Sample arc seafloor ages
-        self.sample_arc_seafloor_ages(ages, cases, plateIDs)
+        self.sample_arc_seafloor_ages(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Sample slab sediment thicknesses
-        self.sample_slab_sediment_thicknesses(ages, cases, plateIDs)
+        self.sample_slab_sediment_thicknesses(ages, cases, plateIDs, PROGRESS_BAR)
 
     def sample_seafloor_ages(
             self,
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -316,6 +322,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -327,13 +334,14 @@ class PlateTorques():
         :param plateIDs:    plateIDs of interest (default: None)
         :type plateIDs:     int, float, list, numpy.ndarray
         """
-        self.points.sample_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
+        self.points.sample_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age, PROGRESS_BAR)
 
     def sample_slab_seafloor_ages(
             self,
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -345,13 +353,14 @@ class PlateTorques():
         :param plateIDs:    plateIDs of interest (default: None)
         :type plateIDs:     int, float, list, numpy.ndarray
         """
-        self.slabs.sample_slab_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
+        self.slabs.sample_slab_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age, PROGRESS_BAR)
 
     def sample_arc_seafloor_ages(
             self,
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -363,13 +372,16 @@ class PlateTorques():
         :param plateIDs:    plateIDs of interest (default: None)
         :type plateIDs:     int, float, list, numpy.ndarray
         """
-        self.slabs.sample_arc_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age)
+        self.slabs.sample_arc_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age, PROGRESS_BAR)
+
+        self.slabs.set_continental_arc(ages, cases, plateIDs, PROGRESS_BAR)
 
     def sample_slab_sediment_thicknesses(
             self,
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -382,16 +394,17 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         """
         # Sample arc seafloor ages
-        self.sample_arc_seafloor_ages(ages, cases, plateIDs)
+        self.sample_arc_seafloor_ages(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Sample slab sediment thickness
-        self.slabs.sample_slab_sediment_thickness(ages, cases, plateIDs, self.grids.sediment)
+        self.slabs.sample_slab_sediment_thickness(ages, cases, plateIDs, self.grids.sediment, PROGRESS_BAR)
 
     def calculate_all_torques(
             self,
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate all torques.
@@ -404,25 +417,25 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         """
         # Calculate slab pull torque
-        self.calculate_slab_pull_torque(ages, cases, plateIDs)
+        self.calculate_slab_pull_torque(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Calculate GPE torque
-        self.calculate_gpe_torque(ages, cases, plateIDs)
+        self.calculate_gpe_torque(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Calculate mantle drag torque
-        self.calculate_mantle_drag_torque(ages, cases, plateIDs)
+        self.calculate_mantle_drag_torque(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Calculate slab bend torque
-        self.calculate_slab_bend_torque(ages, cases, plateIDs)
+        self.calculate_slab_bend_torque(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Calculate synthetic velocity
-        self.calculate_synthetic_velocity(ages, cases, plateIDs)
+        self.calculate_synthetic_velocity(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Calculate driving torque
-        self.calculate_driving_torque(ages, cases, plateIDs)
+        self.calculate_driving_torque(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Calculate residual torque
-        self.calculate_residual_torque(ages, cases, plateIDs)
+        self.calculate_residual_torque(ages, cases, plateIDs, PROGRESS_BAR)
 
         logging.info("Calculated all torques!")
 
@@ -431,6 +444,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate the GPE torque.
@@ -448,6 +462,7 @@ class PlateTorques():
             cases,
             plateIDs,
             self.grids.seafloor_age,
+            PROGRESS_BAR,
         )
 
         # Calculate GPE torque acting on plate
@@ -457,6 +472,7 @@ class PlateTorques():
             cases,
             plateIDs,
             torque_var = "GPE",
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         logging.info("Calculated GPE torque!")
@@ -466,6 +482,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate the slab pull torque.
@@ -482,6 +499,7 @@ class PlateTorques():
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
         # Calculate slab pull force on plates
@@ -491,6 +509,7 @@ class PlateTorques():
             cases,
             plateIDs,
             torque_var = "slab_pull",
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         logging.info("Calculated slab pull torque!")
@@ -500,6 +519,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate the mantle drag torque.
@@ -516,6 +536,7 @@ class PlateTorques():
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
         # Calculate mantle drag force on plates
@@ -525,6 +546,7 @@ class PlateTorques():
             cases,
             plateIDs,
             torque_var = "mantle_drag",
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         logging.info("Calculated mantle drag torque!")
@@ -534,6 +556,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate the slab bend torque.
@@ -546,7 +569,7 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         """
         # Calculate the slab bend force along the trenches
-        self.slabs.calculate_slab_bend_force(ages, cases, plateIDs)
+        self.slabs.calculate_slab_bend_force(ages, cases, plateIDs, PROGRESS_BAR)
 
         # Calculate the torque on 
         self.plates.calculate_torque_on_plates(
@@ -555,6 +578,7 @@ class PlateTorques():
             cases,
             plateIDs,
             torque_var = "slab_bend",
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         logging.info("Calculated slab bend torque!")
@@ -564,6 +588,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate the driving torque.
@@ -580,6 +605,7 @@ class PlateTorques():
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
     def calculate_residual_torque(
@@ -587,6 +613,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate the driving torque.
@@ -603,6 +630,7 @@ class PlateTorques():
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
         # Calculate residual torque at slabs
@@ -611,6 +639,7 @@ class PlateTorques():
             cases,            
             plateIDs,
             type = "slabs",
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         # Calculate residual torque at points
@@ -619,6 +648,7 @@ class PlateTorques():
             cases,
             plateIDs,
             type = "points",
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
     def calculate_residual_force(
@@ -627,6 +657,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             type = "slabs",
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate the residual forces.
@@ -645,6 +676,7 @@ class PlateTorques():
                 cases,
                 plateIDs,
                 self.plates.data,
+                PROGRESS_BAR,
             )
 
         elif type == "points":
@@ -654,6 +686,7 @@ class PlateTorques():
                 cases,
                 plateIDs,
                 self.plates.data,
+                PROGRESS_BAR,
             )
 
         else:
@@ -664,6 +697,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to compute synthetic velocities.
@@ -686,16 +720,23 @@ class PlateTorques():
             _ages,
             _cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
         # Calculate net rotation
-        self.calculate_net_rotation(_ages, _cases)
+        self.calculate_net_rotation(
+            _ages,
+            _cases,
+            plateIDs,
+            PROGRESS_BAR,
+        )
 
         # Calculate velocities at points
         self.points.calculate_velocities(
             _ages,
             _cases,
             self.plates.data,
+            PROGRESS_BAR,
         )
 
         # Calculate velocities at slabs
@@ -703,6 +744,7 @@ class PlateTorques():
             _ages,
             _cases,
             self.plates.data,
+            PROGRESS_BAR,
         )
 
         # Calculate RMS velocity of plates
@@ -711,6 +753,7 @@ class PlateTorques():
             _ages,
             _cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
     def rotate_torque(
@@ -721,6 +764,7 @@ class PlateTorques():
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.
@@ -746,6 +790,7 @@ class PlateTorques():
             ages,
             cases,
             plateIDs,
+            PROGRESS_BAR,
         )
 
     def extract_data_through_time(
@@ -784,6 +829,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to save all classes within the PlateTorques object.
@@ -798,19 +844,19 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save plates
-        self.save_plates(ages, cases, plateIDs, file_dir)
+        self.save_plates(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
         # Save points
-        self.save_points(ages, cases, plateIDs, file_dir)
+        self.save_points(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
         # Save slabs
-        self.save_slabs(ages, cases, plateIDs, file_dir)
+        self.save_slabs(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
         # Save grids
-        self.save_grids(ages, cases, file_dir)
+        self.save_grids(ages, cases, file_dir, PROGRESS_BAR)
 
         # Save globe
-        self.save_globe(cases, file_dir)
+        self.save_globe(cases, file_dir, PROGRESS_BAR)
 
     def save_plates(
             self,
@@ -818,6 +864,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to save plates.
@@ -832,7 +879,7 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save plates
-        self.plates.save(ages, cases, plateIDs, file_dir)
+        self.plates.save(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def save_points(
             self,
@@ -840,6 +887,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to save points.
@@ -854,7 +902,7 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save points
-        self.points.save(ages, cases, plateIDs, file_dir)
+        self.points.save(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def save_slabs(
             self,
@@ -862,6 +910,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to save slabs.
@@ -876,13 +925,14 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save slabs
-        self.slabs.save(ages, cases, plateIDs, file_dir)
+        self.slabs.save(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def save_grids(
             self,
             ages = None,
             cases = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to save grids.
@@ -897,12 +947,13 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save grids
-        self.grids.save_all(ages, cases, file_dir)
+        self.grids.save_all(ages, cases, file_dir, PROGRESS_BAR)
 
     def save_globe(
             self,
             cases = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to save globe.
@@ -917,7 +968,7 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save globe
-        self.globe.save(cases, file_dir)
+        self.globe.save(cases, file_dir, PROGRESS_BAR)
 
     def export_all(
             self,
@@ -925,6 +976,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to export all classes within the PlateTorques object.
@@ -939,19 +991,19 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save plates
-        self.export_plates(ages, cases, plateIDs, file_dir)
+        self.export_plates(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
         # Save points
-        self.export_points(ages, cases, plateIDs, file_dir)
+        self.export_points(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
         # Save slabs
-        self.export_slabs(ages, cases, plateIDs, file_dir)
+        self.export_slabs(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
         # Save grids
-        self.save_grids(ages, cases, file_dir)
+        self.save_grids(ages, cases, file_dir, PROGRESS_BAR)
 
         # Save globe
-        self.export_globe(cases, file_dir)
+        self.export_globe(cases, file_dir, PROGRESS_BAR)
 
     def export_plates(
             self,
@@ -959,6 +1011,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to export plates.
@@ -973,7 +1026,7 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save plates
-        self.plates.export(ages, cases, plateIDs, file_dir)
+        self.plates.export(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def export_points(
             self,
@@ -981,6 +1034,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to export points.
@@ -995,7 +1049,7 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save points
-        self.points.export(ages, cases, plateIDs, file_dir)
+        self.points.export(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def export_slabs(
             self,
@@ -1003,6 +1057,7 @@ class PlateTorques():
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to export slabs.
@@ -1017,13 +1072,14 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save slabs
-        self.slabs.export(ages, cases, plateIDs, file_dir)
+        self.slabs.export(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def export_grids(
             self,
             ages = None,
             cases = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to export grids.
@@ -1036,12 +1092,13 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save grids
-        self.grids.export(ages, cases, file_dir)
+        self.grids.export(ages, cases, file_dir, PROGRESS_BAR)
 
     def export_globe(
             self,
             cases = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to expprt globe.
@@ -1052,4 +1109,4 @@ class PlateTorques():
         :type file_dir:     str
         """
         # Save globe
-        self.globe.export(cases, file_dir)
+        self.globe.export(cases, file_dir, PROGRESS_BAR)

@@ -127,7 +127,7 @@ class Settings:
         # NOTE: this is hardcoded for lack of a better alternative
         # ^* Earthbyte reconstructions: Seton et al. (2012), Müller et al. (2016, 2019), Matthews et al. (2016), Clennett et al. (2020)
         self.oceanic_arc_plateIDs = [
-            529, # Kohistan-Ladakh
+            518, 529, # Kohistan-Ladakh
             608, 659, 699, # Izu-Bonin-Marianas
             612, # Luzon
             645, # East Sunda
@@ -140,12 +140,13 @@ class Settings:
             827, # New Hebrides
             847, # Vityaz
             853, # West Solomon Sea
-            844, 841, 865, 943, # Junction
+            609, 844, 841, 865, 869, 943, # Junction
             1072, 1073, 1080, # Insular
             2007, # Antilles
             9052, 95104, # Central America
             9022, # Cascadia root
             9040, # Angayucham
+            67350, # Woyla
         ]
 
         logging.info("Settings initialisation complete.")

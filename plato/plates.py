@@ -130,7 +130,7 @@ class Plates:
                     # Copy all DataFrames from the available case        
                     for entries in entry:
                         if entry not in available_cases:
-                            self.geometries[_age][entry] = self.geometries[_age][available_cases[0]].copy()
+                            self.resolved_geometries[_age][entry] = self.resolved_geometries[_age][available_cases[0]].copy()
                 else:
                     # Initialise missing geometries
                     self.resolved_geometries[_age][key] = utils_data.get_resolved_geometries(
@@ -184,7 +184,7 @@ class Plates:
                 # Check if any DataFrames were loaded
                 if len(available_cases) > 0:
                     # Copy all DataFrames from the available case        
-                    for entries in entry:
+                    for entry in entries:
                         if entry not in available_cases:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
                 else:
@@ -445,11 +445,11 @@ class Plates:
         logging.info("Computing driving torques...")
 
         # Loop through ages
-        for i, _age in _tqdm(
-                enumerate(_ages),
+        for i, _age in enumerate(_tqdm(
+                _ages,
                 desc="Calculating driving torque",
                 disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
-            ):
+            )):
             # Loop through cases
             for _case in _cases:
                 # Select plates

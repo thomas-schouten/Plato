@@ -1,15 +1,18 @@
 # Standard libraries
 import logging
+from typing import Dict, List, Optional, Union
 
 # Third-party libraries
 import geopandas as _geopandas
+import gplately as _gplately
+import numpy as _numpy
 import pandas as _pandas
 import xarray as _xarray
-
 from tqdm import tqdm as _tqdm
 
 # Local libraries
 from . import utils_data, utils_calc, utils_init
+from .settings import Settings
 
 class Points:
     """
@@ -53,20 +56,21 @@ class Points:
     """
     def __init__(
             self,
-            settings = None,
-            reconstruction = None,
-            rotation_file = None,
-            topology_file = None,
-            polygon_file = None,
-            reconstruction_name = None,
-            ages = None,
-            cases_file = None,
-            cases_sheet = "Sheet1",
-            files_dir = None,
-            resolved_geometries = None,
-            PARALLEL_MODE = False,
-            DEBUG_MODE = False,
-            CALCULATE_VELOCITIES = True,
+            settings: Optional[Settings] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            rotation_file: Optional[str] = None,
+            topology_file: Optional[str] = None,
+            polygon_file: Optional[str] = None,
+            reconstruction_name: Optional[str] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases_file: Optional[str] = None,
+            cases_sheet: str = "Sheet1",
+            files_dir: Optional[str] = None,
+            resolved_geometries: Dict[float, Dict[str, _geopandas.GeoDataFrame]] = None,
+            PARALLEL_MODE: bool = False,
+            DEBUG_MODE: bool = False,
+            CALCULATE_VELOCITIES: bool = True,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Constructor for the 'Points' object.
@@ -118,9 +122,10 @@ class Points:
                 # Check if any DataFrames were loaded
                 if len(available_cases) > 0:
                     # Copy all DataFrames from the available case        
-                    for entries in entry:
+                    for entry in entries:
                         if entry not in available_cases:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
+
                 else:
                     # Initialise missing data
                     if not isinstance(resolved_geometries, dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
@@ -163,6 +168,7 @@ class Points:
             ages = None,
             cases = None,
             stage_rotation = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to compute velocities at points.
@@ -181,7 +187,11 @@ class Points:
         _cases = utils_data.select_cases(cases, self.settings.point_cases)
 
         # Loop through ages and cases
-        for _age in _ages:
+        for _age in _tqdm(
+                _ages,
+                desc="Calculating velocities at points",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             for _case in _cases:
                 for plateID in self.data[_age][_case].plateID.unique():
                     # Get stage rotation, if not provided
@@ -234,6 +244,8 @@ class Points:
             cases = None,
             plateIDs = None,
             seafloor_grids = None,
+            vars = ["seafloor_age"],
+            PROGRESS_BAR = True,
         ):
         """
         Samples seafloor age at points.
@@ -254,6 +266,7 @@ class Points:
             plateIDs,
             seafloor_grids,
             vars,
+            PROGRESS_BAR = PROGRESS_BAR,
         )
 
         # Set sampling flag to true
@@ -268,6 +281,7 @@ class Points:
             vars = ["seafloor_age"],
             sampling_coords = ["lat", "lon"],
             cols = ["seafloor_age"],
+            PROGRESS_BAR = True,
         ):
         """
         Samples any grid at points.
@@ -302,7 +316,11 @@ class Points:
             _vars = []
 
         # Loop through valid times
-        for _age in _tqdm(_ages, desc="Sampling points", disable=self.settings.logger.level == logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Sampling points", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             for key, entries in _iterable.items():
                 # Define plateIDs if not provided
                 _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][key].plateID.unique())
@@ -355,6 +373,7 @@ class Points:
             cases = None,
             plateIDs = None,
             seafloor_grid = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to compute gravitational potential energy (GPE) force acting at points.
@@ -375,7 +394,11 @@ class Points:
         _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
 
         # Loop through reconstruction times
-        for _age in _tqdm(_ages, desc="Computing GPE forces", disable=(self.settings.logger.level==logging.INFO)):
+        for _age in _tqdm(
+                _ages, 
+                desc="Calculating GPE forces", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Loop through gpe cases
             for key, entries in _iterable.items():
                 if self.settings.options[key]["GPE torque"]:
@@ -423,6 +446,7 @@ class Points:
             ages = None,
             cases = None,
             plateIDs = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to compute mantle drag force acting at points.
@@ -441,7 +465,11 @@ class Points:
         _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
 
         # Loop through reconstruction times
-        for _age in _tqdm(_ages, desc="Computing mantle drag forces", disable=(self.settings.logger.level==logging.INFO)):
+        for _age in _tqdm(
+                _ages, 
+                desc="Calculating mantle drag forces", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Loop through gpe cases
             for key, entries in _iterable.items():
                 if self.settings.options[key]["Mantle drag torque"] and self.settings.options[key]["Reconstructed motions"]:
@@ -483,6 +511,7 @@ class Points:
             cases = None,
             plateIDs = None,
             residual_torque = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to calculate residual torque along trenches.
@@ -503,37 +532,42 @@ class Points:
         _cases = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
         # Loop through ages and cases
-        for _age in _ages:
-            for _case in _cases:
-                # Select plateIDs
-                _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case]["plateID"].unique())
+        for _case in _tqdm(
+                _cases,
+                desc="Calculating residual forces at points",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            if self.settings.options[_case]["Reconstructed motions"]:
+                for _age in _ages:
+                    # Select plateIDs
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][_case]["plateID"].unique())
 
-                for _plateID in _plateIDs:
-                    if (
-                        isinstance(residual_torque, dict)
-                        and _age in residual_torque.keys()
-                        and _case in residual_torque[_age].keys()
-                        and isinstance(residual_torque[_age][_case], _pandas.DataFrame)
-                    ):
-                        # Get stage rotation from the provided DataFrame in the dictionary
-                        _residual_torque = residual_torque[_age][_case][residual_torque[_age][_case].plateID == _plateID]
-                    
-                    # Make mask for plate
-                    mask = self.data[_age][_case]["plateID"] == _plateID
-                                            
-                    # Compute velocities
-                    forces = utils_calc.compute_residual_force(
-                        self.data[_age][_case].loc[mask],
-                        _residual_torque,
-                        plateID_col = "plateID",
-                        weight_col = "segment_area",
-                    )
+                    for _plateID in _plateIDs:
+                        if (
+                            isinstance(residual_torque, dict)
+                            and _age in residual_torque.keys()
+                            and _case in residual_torque[_age].keys()
+                            and isinstance(residual_torque[_age][_case], _pandas.DataFrame)
+                        ):
+                            # Get stage rotation from the provided DataFrame in the dictionary
+                            _residual_torque = residual_torque[_age][_case][residual_torque[_age][_case].plateID == _plateID]
+                        
+                        # Make mask for plate
+                        mask = self.data[_age][_case]["plateID"] == _plateID
+                                                
+                        # Compute velocities
+                        forces = utils_calc.compute_residual_force(
+                            self.data[_age][_case].loc[mask],
+                            _residual_torque,
+                            plateID_col = "plateID",
+                            weight_col = "segment_area",
+                        )
 
-                    # Store velocities
-                    self.data[_age][_case].loc[mask, "residual_force_lat"] = forces[0]
-                    self.data[_age][_case].loc[mask, "residual_force_lon"] = forces[1]
-                    self.data[_age][_case].loc[mask, "residual_force_mag"] = forces[2]
-                    self.data[_age][_case].loc[mask, "residual_force_azi"] = forces[3]
+                        # Store velocities
+                        self.data[_age][_case].loc[mask, "residual_force_lat"] = forces[0]
+                        self.data[_age][_case].loc[mask, "residual_force_lon"] = forces[1]
+                        self.data[_age][_case].loc[mask, "residual_force_mag"] = forces[2]
+                        self.data[_age][_case].loc[mask, "residual_force_azi"] = forces[3]
 
     def save(
             self,
@@ -541,6 +575,7 @@ class Points:
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to save the 'Points' object.
@@ -565,7 +600,11 @@ class Points:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Saving Points", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Saving Points", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):            
             # Loop through cases
             for _case in _cases:
                 # Define plateIDs if not provided
@@ -592,6 +631,7 @@ class Points:
             cases = None,
             plateIDs = None,
             file_dir = None,
+            PROGRESS_BAR = True,
         ):
         """
         Function to export the 'Points' object.
@@ -616,7 +656,11 @@ class Points:
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
 
         # Loop through ages
-        for _age in _tqdm(_ages, desc="Exporting Points", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Exporting Points", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):            
             # Loop through cases
             for _case in _cases:
                 # Define plateIDs if not provided
