@@ -411,6 +411,10 @@ class Points:
                     # Select points
                     if plateIDs is not None:
                         _data = _data[_data.plateID.isin(_plateIDs)]
+
+                    if _data.empty:
+                        logging.info(f"No valid points found for case {key} at age {_age} Ma.")
+                        continue
                         
                     # Calculate GPE force
                     computed_data = utils_calc.compute_GPE_force(
@@ -482,6 +486,10 @@ class Points:
                     # Select points
                     if plateIDs is not None:
                         _data = _data[_data.plateID.isin(_plateIDs)]
+
+                    if _data.empty:
+                        logging.info(f"No valid points found for case {key} at age {_age} Ma.")
+                        continue
                         
                     # Calculate GPE force
                     _data = utils_calc.compute_mantle_drag_force(
@@ -554,6 +562,10 @@ class Points:
                         
                         # Make mask for plate
                         mask = self.data[_age][_case]["plateID"] == _plateID
+
+                        if mask.sum() == 0:
+                            logging.info(f"No valid points found for age {_age}, case {_case}, and plateID {_plateID}.")
+                            continue
                                                 
                         # Compute velocities
                         forces = utils_calc.compute_residual_force(

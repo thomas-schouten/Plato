@@ -242,6 +242,7 @@ class Grids():
             cases: Optional[str],
             point_data: Dict[str, _numpy.ndarray],
             components: Union[str, List[str]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to generate a velocity grid.

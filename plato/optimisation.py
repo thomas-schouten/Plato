@@ -1,5 +1,6 @@
 # Standard libraries
 import logging
+import warnings
 
 # Third-party libraries
 import numpy as _numpy
@@ -123,41 +124,44 @@ class Optimisation():
 
         # Get torques
         for k, _ in enumerate(_data.plateID):
-            residual_x = _numpy.zeros_like(sp_const_grid); residual_y = _numpy.zeros_like(sp_const_grid); residual_z = _numpy.zeros_like(sp_const_grid)
-            if self.settings.options[case]["Slab pull torque"] and "slab_pull_torque_x" in _data.columns:
-                residual_x -= _data.slab_pull_torque_x.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
-                residual_y -= _data.slab_pull_torque_y.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
-                residual_z -= _data.slab_pull_torque_z.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
 
-            # Add GPE torque
-            if self.settings.options[case]["GPE torque"] and "GPE_torque_x" in _data.columns:
-                residual_x -= _data.GPE_torque_x.iloc[k] * ones_grid
-                residual_y -= _data.GPE_torque_y.iloc[k] * ones_grid
-                residual_z -= _data.GPE_torque_z.iloc[k] * ones_grid
-            
-            # Compute magnitude of driving torque
-            if weight_by_area:
-                driving_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) * _data.area.iloc[k] / total_area
-            else:
-                driving_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) / _data.area.iloc[k]
+                residual_x = _numpy.zeros_like(sp_const_grid); residual_y = _numpy.zeros_like(sp_const_grid); residual_z = _numpy.zeros_like(sp_const_grid)
+                if self.settings.options[case]["Slab pull torque"] and "slab_pull_torque_x" in _data.columns:
+                    residual_x -= _data.slab_pull_torque_x.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
+                    residual_y -= _data.slab_pull_torque_y.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
+                    residual_z -= _data.slab_pull_torque_z.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
 
-            # Add slab bend torque
-            if self.settings.options[case]["Slab bend torque"] and "slab_bend_torque_x" in _data.columns:
-                residual_x -= _data.slab_bend_torque_x.iloc[k] * ones_grid
-                residual_y -= _data.slab_bend_torque_y.iloc[k] * ones_grid
-                residual_z -= _data.slab_bend_torque_z.iloc[k] * ones_grid
+                # Add GPE torque
+                if self.settings.options[case]["GPE torque"] and "GPE_torque_x" in _data.columns:
+                    residual_x -= _data.GPE_torque_x.iloc[k] * ones_grid
+                    residual_y -= _data.GPE_torque_y.iloc[k] * ones_grid
+                    residual_z -= _data.GPE_torque_z.iloc[k] * ones_grid
+                
+                # Compute magnitude of driving torque
+                if weight_by_area:
+                    driving_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) * _data.area.iloc[k] / total_area
+                else:
+                    driving_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) / _data.area.iloc[k]
 
-            # Add mantle drag torque
-            if self.settings.options[case]["Mantle drag torque"] and "mantle_drag_torque_x" in _data.columns:
-                residual_x -= _data.mantle_drag_torque_x.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
-                residual_y -= _data.mantle_drag_torque_y.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
-                residual_z -= _data.mantle_drag_torque_z.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
+                # Add slab bend torque
+                if self.settings.options[case]["Slab bend torque"] and "slab_bend_torque_x" in _data.columns:
+                    residual_x -= _data.slab_bend_torque_x.iloc[k] * ones_grid
+                    residual_y -= _data.slab_bend_torque_y.iloc[k] * ones_grid
+                    residual_z -= _data.slab_bend_torque_z.iloc[k] * ones_grid
 
-            # Compute magnitude of residual
-            if weight_by_area:
-                residual_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) * _data.area.iloc[k] / total_area
-            else:
-                residual_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) / _data.area.iloc[k]
+                # Add mantle drag torque
+                if self.settings.options[case]["Mantle drag torque"] and "mantle_drag_torque_x" in _data.columns:
+                    residual_x -= _data.mantle_drag_torque_x.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
+                    residual_y -= _data.mantle_drag_torque_y.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
+                    residual_z -= _data.mantle_drag_torque_z.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
+
+                # Compute magnitude of residual
+                if weight_by_area:
+                    residual_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) * _data.area.iloc[k] / total_area
+                else:
+                    residual_mag += _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2) / _data.area.iloc[k]
         
         # Divide residual by driving torque
         residual_mag_normalised = _numpy.log10(residual_mag / driving_mag)
@@ -227,81 +231,83 @@ class Optimisation():
         _cases = utils_data.select_cases(cases, self.settings.reconstructed_cases)
 
         for _age in _tqdm(_ages, desc="Optimising slab pull coefficient"):
-            for _case in _cases:
-                # Generate range of possible slab pull coefficients
-                sp_consts = _numpy.linspace(1e-5,1,grid_size)
-                ones = _numpy.ones_like(sp_consts)
+            with warnings.catch_warnings():
 
-                # Filter plates
-                _data = self.plates.data[_age][_case].copy()
+                warnings.simplefilter("ignore")
+                for _case in _cases:
+                    # Generate range of possible slab pull coefficients
+                    sp_consts = _numpy.linspace(1e-5,1,grid_size)
+                    ones = _numpy.ones_like(sp_consts)
 
-                _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
+                    # Filter plates
+                    _data = self.plates.data[_age][_case].copy()
 
-                if plateIDs is not None:
-                    _data = _data[_data["plateID"].isin(_plateIDs)]
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.plateID)
 
-                if _data.empty:
-                    return _numpy.nan, _numpy.nan, _numpy.nan
-            
-                # Loop through plates
-                for k, _plateID in enumerate(_data.plateID):
-                    residual_x = _numpy.zeros_like(sp_consts)
-                    residual_y = _numpy.zeros_like(sp_consts)
-                    residual_z = _numpy.zeros_like(sp_consts)
+                    if plateIDs is not None:
+                        _data = _data[_data["plateID"].isin(_plateIDs)]
 
-                    if self.settings.options[_case]["Slab pull torque"] and "slab_pull_torque_x" in _data.columns:
-                        residual_x -= _data.slab_pull_torque_x.iloc[k] * sp_consts / self.settings.options[_case]["Slab pull constant"]
-                        residual_y -= _data.slab_pull_torque_y.iloc[k] * sp_consts / self.settings.options[_case]["Slab pull constant"]
-                        residual_z -= _data.slab_pull_torque_z.iloc[k] * sp_consts / self.settings.options[_case]["Slab pull constant"]
+                    if _data.empty:
+                        return _numpy.nan, _numpy.nan, _numpy.nan
+                
+                    # Loop through plates
+                    for k, _plateID in enumerate(_data.plateID):
+                        residual_x = _numpy.zeros_like(sp_consts)
+                        residual_y = _numpy.zeros_like(sp_consts)
+                        residual_z = _numpy.zeros_like(sp_consts)
 
-                    # Add GPE torque
-                    if self.settings.options[_case]["GPE torque"] and "GPE_torque_x" in _data.columns:
-                        residual_x -= _data.GPE_torque_x.iloc[k] * ones
-                        residual_y -= _data.GPE_torque_y.iloc[k] * ones
-                        residual_z -= _data.GPE_torque_z.iloc[k] * ones
+                        if self.settings.options[_case]["Slab pull torque"] and "slab_pull_torque_x" in _data.columns:
+                            residual_x -= _data.slab_pull_torque_x.iloc[k] * sp_consts / self.settings.options[_case]["Slab pull constant"]
+                            residual_y -= _data.slab_pull_torque_y.iloc[k] * sp_consts / self.settings.options[_case]["Slab pull constant"]
+                            residual_z -= _data.slab_pull_torque_z.iloc[k] * sp_consts / self.settings.options[_case]["Slab pull constant"]
 
-                    # Compute magnitude of driving torque
-                    driving_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
-                    
-                    # Add slab bend torque
-                    if self.settings.options[_case]["Slab bend torque"] and "slab_bend_torque_x" in _data.columns:
-                        residual_x -= _data.slab_bend_torque_x.iloc[k] * ones
-                        residual_y -= _data.slab_bend_torque_y.iloc[k] * ones
-                        residual_z -= _data.slab_bend_torque_z.iloc[k] * ones
+                        # Add GPE torque
+                        if self.settings.options[_case]["GPE torque"] and "GPE_torque_x" in _data.columns:
+                            residual_x -= _data.GPE_torque_x.iloc[k] * ones
+                            residual_y -= _data.GPE_torque_y.iloc[k] * ones
+                            residual_z -= _data.GPE_torque_z.iloc[k] * ones
 
-                    # Add mantle drag torque
-                    if self.settings.options[_case]["Mantle drag torque"] and "mantle_drag_torque_x" in _data.columns:
-                        residual_x -= _data.mantle_drag_torque_x.iloc[k] * viscosity / self.settings.options[_case]["Mantle viscosity"]
-                        residual_y -= _data.mantle_drag_torque_y.iloc[k] * viscosity / self.settings.options[_case]["Mantle viscosity"]
-                        residual_z -= _data.mantle_drag_torque_z.iloc[k] * viscosity / self.settings.options[_case]["Mantle viscosity"]
+                        # Compute magnitude of driving torque
+                        driving_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
+                        
+                        # Add slab bend torque
+                        if self.settings.options[_case]["Slab bend torque"] and "slab_bend_torque_x" in _data.columns:
+                            residual_x -= _data.slab_bend_torque_x.iloc[k] * ones
+                            residual_y -= _data.slab_bend_torque_y.iloc[k] * ones
+                            residual_z -= _data.slab_bend_torque_z.iloc[k] * ones
 
-                    # Compute magnitude of residual
-                    residual_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
+                        # Add mantle drag torque
+                        if self.settings.options[_case]["Mantle drag torque"] and "mantle_drag_torque_x" in _data.columns:
+                            residual_x -= _data.mantle_drag_torque_x.iloc[k] * viscosity / self.settings.options[_case]["Mantle viscosity"]
+                            residual_y -= _data.mantle_drag_torque_y.iloc[k] * viscosity / self.settings.options[_case]["Mantle viscosity"]
+                            residual_z -= _data.mantle_drag_torque_z.iloc[k] * viscosity / self.settings.options[_case]["Mantle viscosity"]
 
-                    if plot:
-                        fig, ax = plt.subplots(figsize=(10,10))
-                        p = ax.plot(residual_mag/driving_mag)
-                        ax.semilogy()
-                        ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
-                        ax.set_xticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
-                        ax.set_ylim([10**-1.5, 10**1.5])
-                        ax.set_xlim([0, grid_size])
-                        ax.set_ylabel("Normalised residual torque")
-                        ax.set_xlabel("Slab pull reduction factor")
-                        plt.show()
-                    
-                    # Find optimal slab pull coefficient
-                    opt_sp_const = sp_consts[_numpy.argmin(residual_mag/driving_mag)]
+                        # Compute magnitude of residual
+                        residual_mag = _numpy.sqrt(residual_x**2 + residual_y**2 + residual_z**2)
 
-                    # Store optimal slab pull coefficient
-                    mask = self.slabs.data[_age][_case]["lower_plateID"] == _plateID
-                    self.slabs.data[_age][_case].loc[mask, "slab_pull_constant"] = opt_sp_const
-                        # self.opt_sp_const[_age][_case][_data.index[k]] = opt_sp_const
+                        if plot:
+                            fig, ax = plt.subplots(figsize=(10,10))
+                            p = ax.plot(residual_mag/driving_mag)
+                            ax.semilogy()
+                            ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
+                            ax.set_xticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
+                            ax.set_ylim([10**-1.5, 10**1.5])
+                            ax.set_xlim([0, grid_size])
+                            ax.set_ylabel("Normalised residual torque")
+                            ax.set_xlabel("Slab pull reduction factor")
+                            plt.show()
+                        
+                        # Find optimal slab pull coefficient
+                        opt_sp_const = sp_consts[_numpy.argmin(residual_mag/driving_mag)]
+
+                        # Store optimal slab pull coefficient
+                        mask = self.slabs.data[_age][_case]["lower_plateID"] == _plateID
+                        self.slabs.data[_age][_case].loc[mask, "slab_pull_constant"] = opt_sp_const
 
         # Recalculate all the relevant torques
-        self.plate_torques.calculate_slab_pull_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
-        self.plate_torques.calculate_driving_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
-        self.plate_torques.calculate_residual_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
+        self.plate_torques.calculate_slab_pull_torque(ages=_ages, cases=_cases, plateIDs=plateIDs, PROGRESS_BAR=False)
+        self.plate_torques.calculate_driving_torque(ages=_ages, cases=_cases, plateIDs=plateIDs, PROGRESS_BAR=False)
+        self.plate_torques.calculate_residual_torque(ages=_ages, cases=_cases, plateIDs=plateIDs, PROGRESS_BAR=False)
     
     def invert_residual_torque(
             self,
@@ -366,56 +372,63 @@ class Optimisation():
         residual_torque_opt_stack = {_case: {_plateID: _numpy.zeros((len(constants), len(_ages))) for _plateID in _plateIDs} for _case in _cases}
 
         for i, constant in enumerate(_tqdm(constants, desc="Inverting residual torque to determine optimal slab pull coefficient")):
-            logging.info(f"Optimising for {constant}")
-            _data = {}
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                
+                logging.info(f"Optimising for {constant}")
+                _data = {}
 
-            # Calculate the torques the normal way
-            self.plate_torques.calculate_slab_pull_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
-            self.plate_torques.calculate_driving_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
-            self.plate_torques.calculate_residual_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
+                # Calculate the torques the normal way
+                self.plate_torques.calculate_slab_pull_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
+                self.plate_torques.calculate_driving_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
+                self.plate_torques.calculate_residual_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
 
-            # Loop through ages
-            for _age in _ages:
-                if _age not in _data:
-                    _data[_age] = {}
+                # Loop through ages
+                for _age in _ages:
+                    if _age not in _data:
+                        _data[_age] = {}
+
+                    for _case in _cases:
+                        _data[_age][_case] = self.slabs.data[_age][_case].copy()
+
+                        # Filter data
+                        if plateIDs is not None:
+                            _data[_age][_case] = _data[_age][_case][_data[_age][_case]["lower_plateID"].isin(_plateIDs)]
+
+                        # Get the slab pull force magnitude
+                        max_slab_pull_force_mag = _data[_age][_case]["slab_pull_force_mag"] / _data[_age][_case]["slab_pull_constant"]
+
+                        # Modify the magnitude of the slab pull force using the 2D dot product of the residual force and the slab pull force and the constant
+                        _data[_age][_case]["slab_pull_force_mag"] -= (
+                            _data[_age][_case]["residual_force_lat"] * _data[_age][_case]["slab_pull_force_lat"] + \
+                            _data[_age][_case]["residual_force_lon"] * _data[_age][_case]["slab_pull_force_lon"]
+                        ) * 10**-constant
+
+                        # Ensure the slab pull force magnitude is positive and not larger than the original slab pull force magnitude
+                        _data[_age][_case].loc[_data[_age][_case]["slab_pull_force_mag"] < 0, "slab_pull_force_mag"] = 0
+                        _data[_age][_case].loc[_data[_age][_case]["slab_pull_force_mag"] > max_slab_pull_force_mag, "slab_pull_force_mag"] = max_slab_pull_force_mag[_data[_age][_case]["slab_pull_force_mag"] > max_slab_pull_force_mag]
+
+                        # Decompose the slab pull force into latitudinal and longitudinal components using the trench normal azimuth
+                        _data[_age][_case]["slab_pull_force_lat"] = _numpy.cos(_numpy.deg2rad(_data[_age][_case]["trench_normal_azimuth"])) * _data[_age][_case]["slab_pull_force_mag"]
+                        _data[_age][_case]["slab_pull_force_lon"] = _numpy.sin(_numpy.deg2rad(_data[_age][_case]["trench_normal_azimuth"])) * _data[_age][_case]["slab_pull_force_mag"]
+                    
+                # Calculate the torques with the modified slab pull forces
+                self.plates.calculate_torque_on_plates(_data, ages=_ages, cases=_cases, plateIDs=_plateIDs, torque_var="slab_pull", PROGRESS_BAR=False)
+                self.plate_torques.calculate_driving_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
+                self.plate_torques.calculate_residual_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
+
+                # Extract the driving and residual torques
+                _iter_driving_torque = self.plate_torques.extract_data_through_time(ages=_ages, cases=_cases, plateIDs=_plateIDs, var="driving_torque_mag")
+                _iter_residual_torque = self.plate_torques.extract_data_through_time(ages=_ages, cases=_cases, plateIDs=_plateIDs, var= "residual_torque_mag")
 
                 for _case in _cases:
-                    _data[_age][_case] = self.slabs.data[_age][_case].copy()
-
-                    # Get the slab pull force magnitude
-                    max_slab_pull_force_mag = _data[_age][_case]["slab_pull_force_mag"] / _data[_age][_case]["slab_pull_constant"]
-
-                    # Modify the magnitude of the slab pull force using the 2D dot product of the residual force and the slab pull force and the constant
-                    _data[_age][_case]["slab_pull_force_mag"] -= (
-                        _data[_age][_case]["residual_force_lat"] * _data[_age][_case]["slab_pull_force_lat"] + \
-                        _data[_age][_case]["residual_force_lon"] * _data[_age][_case]["slab_pull_force_lon"]
-                    ) * 10**-constant
-
-                    # Ensure the slab pull force magnitude is positive and not larger than the original slab pull force magnitude
-                    _data[_age][_case].loc[_data[_age][_case]["slab_pull_force_mag"] < 0, "slab_pull_force_mag"] = 0
-                    _data[_age][_case].loc[_data[_age][_case]["slab_pull_force_mag"] > max_slab_pull_force_mag, "slab_pull_force_mag"] = max_slab_pull_force_mag[_data[_age][_case]["slab_pull_force_mag"] > max_slab_pull_force_mag]
-
-                    # Decompose the slab pull force into latitudinal and longitudinal components using the trench normal azimuth
-                    _data[_age][_case]["slab_pull_force_lat"] = _numpy.cos(_numpy.deg2rad(_data[_age][_case]["trench_normal_azimuth"])) * _data[_age][_case]["slab_pull_force_mag"]
-                    _data[_age][_case]["slab_pull_force_lon"] = _numpy.sin(_numpy.deg2rad(_data[_age][_case]["trench_normal_azimuth"])) * _data[_age][_case]["slab_pull_force_mag"]
-                
-            # Calculate the torques with the modified slab pull forces
-            self.plates.calculate_torque_on_plates(_data, ages=_ages, cases=_cases, plateIDs=_plateIDs, torque_var="slab_pull", PROGRESS_BAR=False)
-            self.plate_torques.calculate_driving_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
-            self.plate_torques.calculate_residual_torque(ages=_ages, cases=_cases, plateIDs=_plateIDs, PROGRESS_BAR=False)
-
-            # Extract the driving and residual torques
-            _iter_driving_torque = self.plate_torques.extract_data_through_time(ages=_ages, cases=_cases, plateIDs=_plateIDs, var="driving_torque_mag")
-            _iter_residual_torque = self.plate_torques.extract_data_through_time(ages=_ages, cases=_cases, plateIDs=_plateIDs, var= "residual_torque_mag")
-
-            for _case in _cases:
-                for _plateID in _plateIDs:
-                    if len(_cases) == 1:
-                        driving_torque_opt_stack[_case][_plateID][i, :] = _iter_driving_torque[_plateID].values
-                        residual_torque_opt_stack[_case][_plateID][i, :] = _iter_residual_torque[_plateID].values
-                    else:
-                        driving_torque_opt_stack[_case][_plateID][i, :] = _iter_driving_torque[_case][_plateID].values
-                        residual_torque_opt_stack[_case][_plateID][i, :] = _iter_residual_torque[_case][_plateID].values
+                    for _plateID in _plateIDs:
+                        if len(_cases) == 1:
+                            driving_torque_opt_stack[_case][_plateID][i, :] = _iter_driving_torque[_plateID].values
+                            residual_torque_opt_stack[_case][_plateID][i, :] = _iter_residual_torque[_plateID].values
+                        else:
+                            driving_torque_opt_stack[_case][_plateID][i, :] = _iter_driving_torque[_case][_plateID].values
+                            residual_torque_opt_stack[_case][_plateID][i, :] = _iter_residual_torque[_case][_plateID].values
 
         # Get minimum residual torque for each unique combination of case and plate ID.
         minimum_residual_torque = {_case: {_plateID: None for _plateID in _plateIDs} for _case in _cases}

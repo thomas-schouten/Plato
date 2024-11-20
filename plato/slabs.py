@@ -288,6 +288,7 @@ class Slabs:
             plate = "lower",
             vars = ["seafloor_age"],
             cols = ["slab_seafloor_age"],
+            ITERATIONS = True,
             PROGRESS_BAR = PROGRESS_BAR,
         )
 
@@ -457,6 +458,7 @@ class Slabs:
             plate: Optional[str] = "lower",
             vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
             cols = ["slab_seafloor_age"],
+            ITERATIONS: bool = False,
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -496,7 +498,7 @@ class Slabs:
                 # Select points
                 _data = self.data[_age][key]
                 if plateIDs is not None:
-                    _data = _data[_data.plateID.isin(_plateIDs)]
+                    _data = _data[_data[f"{plate}_plateID"].isin(_plateIDs)]
 
                 # Determine the appropriate grid
                 _grid = None
@@ -559,6 +561,50 @@ class Slabs:
                             _grid[_var],
                         )
                         accumulated_data += sampled_data
+
+                    # This is to iteratively check if the sampling distance is to be adjusted
+                    # This is especially a problem with on the western active margin of South America in the Earthbyte reconstructions, where the continental mask does not account of motion of the trench
+                    if ITERATIONS:
+                        if plate == "lower":
+                            current_sampling_distance = -30
+                            iter_num = 20
+                        if plate == "upper":
+                            current_sampling_distance = +100
+                            iter_num = 4
+
+                        for i in range(iter_num):
+                            # Mask data
+                            mask = _numpy.isnan(accumulated_data)
+
+                            # Set masked data to zero to avoid errors
+                            accumulated_data[mask] = 0
+
+                            # Calculate new sampling points
+                            sampling_lat, sampling_lon = utils_calc.project_points(
+                                _data.loc[_data.index[mask], f"{type}_sampling_lat"],
+                                _data.loc[_data.index[mask], f"{type}_sampling_lat"],
+                                _data.loc[_data.index[mask], "trench_normal_azimuth"],
+                                current_sampling_distance,
+                            )
+
+                            # Sample grid at points for each variable
+                            for _var in _vars:
+                                sampled_data[mask] = utils_calc.sample_grid(
+                                    sampling_lat,
+                                    sampling_lon,
+                                    _grid[_var],
+                                )
+                                accumulated_data[mask] += sampled_data[mask]
+
+                            # Define new sampling distance
+                            if plate == "lower":
+                                if i <= 1:
+                                    current_sampling_distance -= 30
+                                elif i % 2 == 0:
+                                    current_sampling_distance -= 30 * (2 ** (i // 2))
+
+                            if plate == "upper":
+                                current_sampling_distance += 100
 
                     # Enter sampled data back into the DataFrame
                     self.data[_age][key].loc[_data.index, _col] = accumulated_data
@@ -687,6 +733,10 @@ class Slabs:
                     # Select points
                     if plateIDs is not None:
                         _data = _data[_data.lower_plateID.isin(_plateIDs)]
+
+                    if _data.empty:
+                        logging.warning(f"No valid points found for case {key} Ma.")
+                        continue
                         
                     # Calculate slab pull force
                     computed_data1 = utils_calc.compute_slab_pull_force(
@@ -762,6 +812,10 @@ class Slabs:
                     # Select points
                     if plateIDs is not None:
                         _data = _data[_data.lower_plateID.isin(_plateIDs)]
+                    
+                    if _data.empty:
+                        logging.warning(f"No valid points found for case {key} Ma.")
+                        continue
                         
                     # Calculate slab pull force
                     _data = utils_calc.compute_slab_bend_force(
@@ -832,6 +886,10 @@ class Slabs:
                         
                         # Make mask for plate
                         mask = self.data[_age][_case]["lower_plateID"] == _plateID
+
+                        if mask.sum() == 0:
+                            logging.info(f"No valid points found for age {_age}, case {_case}, and plateID {_plateID}.")
+                            continue
                                                 
                         # Compute velocities
                         forces = utils_calc.compute_residual_force(
@@ -951,8 +1009,17 @@ class Slabs:
             ):            
             # Loop through cases
             for _case in _cases:
+                # Select data
+                _data = self.data[_age][_case]
+
+                # Subselect data, if plateIDs are provided
+                if plateIDs is not None:
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
+                    _data = _data[_data.lower_plateID.isin(_plateIDs)]
+
+                # Save data
                 utils_data.DataFrame_to_parquet(
-                    self.data[_age][_case],
+                    _data,
                     "Slabs",
                     self.settings.name,
                     _age,
@@ -993,8 +1060,17 @@ class Slabs:
             ):            
             # Loop through cases
             for _case in _cases:
+                # Select data
+                _data = self.data[_age][_case]
+
+                # Subselect data, if plateIDs are provided
+                if plateIDs is not None:
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.lower_plateID.unique())
+                    _data = _data[_data.lower_plateID.isin(_plateIDs)]
+
+                # Export data
                 utils_data.DataFrame_to_csv(
-                    self.data[_age][_case],
+                    _data,
                     "Slabs",
                     self.settings.name,
                     _age,

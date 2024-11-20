@@ -1199,14 +1199,12 @@ class PlotReconstruction():
         """
         # Normalise vectors, if necessary
         if normalise_vectors and vector_mag is not None:
-            # Normalise by dividing by the magnitude of the vectors
-            # Multiply by 10 to make the vectors more visible
-            vector_lon = vector_lon / vector_mag * 10
-            vector_lat = vector_lat / vector_mag * 10
-
-            print(_numpy.nanmean(_numpy.sqrt(vector_lon**2 + vector_lat**2)))
-
-            print("Normalised vectors!")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                # Normalise by dividing by the magnitude of the vectors
+                # Multiply by 10 to make the vectors more visible
+                vector_lon = vector_lon / vector_mag * 10
+                vector_lat = vector_lat / vector_mag * 10
 
         # Plot vectors
         # Ignore annoying warnings

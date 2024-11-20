@@ -128,7 +128,7 @@ class Plates:
                 # Check if any DataFrames were loaded
                 if len(available_cases) > 0:
                     # Copy all DataFrames from the available case        
-                    for entries in entry:
+                    for entry in entries:
                         if entry not in available_cases:
                             self.resolved_geometries[_age][entry] = self.resolved_geometries[_age][available_cases[0]].copy()
                 else:
@@ -285,6 +285,10 @@ class Plates:
                     for _plateID in _plateIDs:
                         # Select points belonging to plate 
                         mask = points.data[_age][key].plateID == _plateID
+
+                        if mask.sum() == 0:
+                            logging.warning(f"No points found for plate {_plateID} for case {key} at {_age} Ma")
+                            continue
 
                         # Calculate RMS velocity for plate
                         rms_velocity = utils_calc.compute_rms_velocity(

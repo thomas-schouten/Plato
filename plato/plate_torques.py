@@ -1,5 +1,13 @@
 # Standard libraries
 import logging
+from typing import Dict, List, Optional, Union
+
+# Third-party libraries
+import geopandas as _geopandas
+import gplately as _gplately
+import numpy as _numpy
+import pandas as _pandas
+import xarray as _xarray
 
 # Local libraries
 from . import utils_data, utils_init
@@ -59,16 +67,16 @@ class PlateTorques():
     """
     def __init__(
             self,
-            settings = None,
-            reconstruction = None,
-            rotation_file = None,
-            topology_file = None,
-            polygon_file = None,
-            reconstruction_name = None,
-            ages = None,
-            cases_file = None,
-            cases_sheet = "Sheet1",
-            files_dir = None,
+            settings: Optional[Settings] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            rotation_file: Optional[str] = None,
+            topology_file: Optional[str] = None,
+            polygon_file: Optional[str] = None,
+            reconstruction_name: Optional[str] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases_file: Optional[str] = None,
+            cases_sheet: str = "Sheet1",
+            files_dir: Optional[str] = None,
             seafloor_age_grids = None,
             sediment_grids = None,
             continental_grids = None,
@@ -237,10 +245,10 @@ class PlateTorques():
 
     def calculate_net_rotation(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate net rotation of the entire lithosphere.
@@ -265,10 +273,10 @@ class PlateTorques():
 
     def sample_all(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to sample all variables relevant to the plate torques calculation.
@@ -295,10 +303,10 @@ class PlateTorques():
 
     def sample_seafloor_ages(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -319,10 +327,10 @@ class PlateTorques():
 
     def sample_point_seafloor_ages(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -338,10 +346,10 @@ class PlateTorques():
 
     def sample_slab_seafloor_ages(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -357,10 +365,10 @@ class PlateTorques():
 
     def sample_arc_seafloor_ages(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -378,10 +386,10 @@ class PlateTorques():
 
     def sample_slab_sediment_thicknesses(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to sample the seafloor ages and other variables (if available).
@@ -401,10 +409,10 @@ class PlateTorques():
 
     def calculate_all_torques(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate all torques.
@@ -441,10 +449,10 @@ class PlateTorques():
 
     def calculate_gpe_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the GPE torque.
@@ -479,10 +487,10 @@ class PlateTorques():
 
     def calculate_slab_pull_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the slab pull torque.
@@ -516,10 +524,10 @@ class PlateTorques():
 
     def calculate_mantle_drag_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the mantle drag torque.
@@ -553,10 +561,10 @@ class PlateTorques():
 
     def calculate_slab_bend_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the slab bend torque.
@@ -585,10 +593,10 @@ class PlateTorques():
 
     def calculate_driving_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the driving torque.
@@ -610,10 +618,10 @@ class PlateTorques():
 
     def calculate_residual_torque(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the driving torque.
@@ -653,11 +661,11 @@ class PlateTorques():
 
     def calculate_residual_force(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            type = "slabs",
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            type: str = "slabs",
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate the residual forces.
@@ -694,10 +702,10 @@ class PlateTorques():
 
     def calculate_synthetic_velocity(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to compute synthetic velocities.
@@ -758,21 +766,21 @@ class PlateTorques():
 
     def rotate_torque(
             self,
-            reference_rotations,
-            reference_plates,
+            reference_rotations: _gplately.pygplates.RotationModel,
+            reference_plates: Union[Dict[str, _pandas.DataFrame], _pandas.DataFrame],
             torque = "slab_pull_torque",
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to rotate a torque vector stored in another the Plates object to the reference frame of this Plates object.
 
         :param reference_rotations:     reference rotations to use for rotation
-        :type reference_rotations:      dict, xarray.Dataset
+        :type reference_rotations:      pygplates.RotationModel
         :param reference_plates:        reference plates to use for rotation
-        :type reference_plates:         dict, xarray.Dataset
+        :type reference_plates:         dict, pandas.DataFrame
         :param torque:                  torque to rotate (default: "slab_pull_torque")
         :type torque:                   str
         :param ages:                    ages of interest (default: None)
@@ -795,11 +803,11 @@ class PlateTorques():
 
     def extract_data_through_time(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            type = "plates",
-            var = "residual_torque_mag",
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            type: str = "plates",
+            var: str = "residual_torque_mag",
         ):
         """
         Function to extract data through time.
@@ -825,11 +833,11 @@ class PlateTorques():
 
     def save_all(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save all classes within the PlateTorques object.
@@ -842,6 +850,8 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save plates
         self.save_plates(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
@@ -860,11 +870,11 @@ class PlateTorques():
 
     def save_plates(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save plates.
@@ -877,17 +887,19 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save plates
         self.plates.save(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def save_points(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save points.
@@ -900,17 +912,19 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save points
         self.points.save(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def save_slabs(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save slabs.
@@ -923,16 +937,19 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save slabs
         self.slabs.save(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def save_grids(
             self,
-            ages = None,
-            cases = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save grids.
@@ -945,15 +962,17 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save grids
         self.grids.save_all(ages, cases, file_dir, PROGRESS_BAR)
 
     def save_globe(
             self,
-            cases = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            cases: Optional[Union[str, List[str]]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save globe.
@@ -966,17 +985,19 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save globe
         self.globe.save(cases, file_dir, PROGRESS_BAR)
 
     def export_all(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to export all classes within the PlateTorques object.
@@ -989,6 +1010,8 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save plates
         self.export_plates(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
@@ -1007,11 +1030,11 @@ class PlateTorques():
 
     def export_plates(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to export plates.
@@ -1024,20 +1047,22 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save plates
         self.plates.export(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def export_points(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
-        Function to export points.
+        Function to export points data to a csv file.
 
         :param ages:        ages of interest (default: None)
         :type ages:         float, int, list, numpy.ndarray
@@ -1053,14 +1078,14 @@ class PlateTorques():
 
     def export_slabs(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
-        Function to export slabs.
+        Function to export slabs data to a csv file.
 
         :param ages:        ages of interest (default: None)
         :type ages:         float, int, list, numpy.ndarray
@@ -1070,16 +1095,18 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save slabs
         self.slabs.export(ages, cases, plateIDs, file_dir, PROGRESS_BAR)
 
     def export_grids(
             self,
-            ages = None,
-            cases = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to export grids.
@@ -1090,15 +1117,17 @@ class PlateTorques():
         :type cases:        str, list
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save grids
         self.grids.export(ages, cases, file_dir, PROGRESS_BAR)
 
     def export_globe(
             self,
-            cases = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            cases: Optional[Union[str, List[str]]] = None,
+            file_dir: str = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to expprt globe.
@@ -1107,6 +1136,8 @@ class PlateTorques():
         :type cases:        str, list
         :param file_dir:    directory to store files (default: None)
         :type file_dir:     str
+        :param PROGRESS_BAR: flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save globe
         self.globe.export(cases, file_dir, PROGRESS_BAR)
