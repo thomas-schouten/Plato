@@ -412,20 +412,34 @@
 <a class="viewcode-back" href="../../api/grids/index.html#plato.grids.Grids.add_grid">[docs]</a>
     <span class="k">def</span> <span class="nf">add_grid</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
-            <span class="n">input_grids</span><span class="p">,</span>
-            <span class="n">variable_name</span> <span class="o">=</span> <span class="s2">&quot;new_grid&quot;</span><span class="p">,</span>
-            <span class="n">grid_type</span> <span class="o">=</span> <span class="s2">&quot;seafloor_age&quot;</span><span class="p">,</span>
-            <span class="n">target_variable</span> <span class="o">=</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span>
-            <span class="n">mask_continents</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="n">interpolate</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="n">prefactor</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+            <span class="n">input_grids</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">_xarray</span><span class="o">.</span><span class="n">Dataset</span><span class="p">],</span> <span class="n">_xarray</span><span class="o">.</span><span class="n">Dataset</span><span class="p">],</span>
+            <span class="n">variable_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;new_grid&quot;</span><span class="p">,</span>
+            <span class="n">grid_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;seafloor_age&quot;</span><span class="p">,</span>
+            <span class="n">target_variable</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span>
+            <span class="n">mask_continents</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">interpolate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">prefactor</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to add another grid of a variable to the seafloor grid.</span>
 <span class="sd">        The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction age, or a single xarray.Dataset, in which case it will be stored without an age.</span>
 <span class="sd">        &#39;mask_continents&#39; is a boolean that determines whether or not to cut the grids to the seafloor. It should only be used for grids that only describe the seafloor, e.g. marine sediment distributions, and not e.g. continental erosion rate grids.</span>
+<span class="sd">        </span>
+<span class="sd">        :param input_grids:     input grids to add</span>
+<span class="sd">        :type input_grids:      dict, xarray.Dataset</span>
+<span class="sd">        :param variable_name:   name of the variable to add</span>
+<span class="sd">        :type variable_name:    str</span>
+<span class="sd">        :param grid_type:       type of grid to add to</span>
+<span class="sd">        :type grid_type:        str</span>
+<span class="sd">        :param target_variable: variable to add</span>
+<span class="sd">        :type target_variable:  str</span>
+<span class="sd">        :param mask_continents: flag to mask continents (default: False)</span>
+<span class="sd">        :type mask_continents:  bool</span>
+<span class="sd">        :param interpolate:     flag to interpolate (default: True)</span>
+<span class="sd">        :type interpolate:      bool</span>
+<span class="sd">        :param prefactor:       prefactor to apply to the grid (default: 1.)</span>
+<span class="sd">        :type prefactor:        float</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="c1"># Check if the attribute exists and is initially None</span>
         <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grid_type</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Initialize to the type of input_grids</span>
@@ -504,9 +518,21 @@
             <span class="n">cases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
             <span class="n">point_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
             <span class="n">components</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to generate a velocity grid.</span>
+
+<span class="sd">        :param ages:        ages of interest</span>
+<span class="sd">        :type ages:         int, float</span>
+<span class="sd">        :param cases:       cases of interest</span>
+<span class="sd">        :type cases:        str</span>
+<span class="sd">        :param point_data:  point data to interpolate</span>
+<span class="sd">        :type point_data:   dict</span>
+<span class="sd">        :param components:  components to interpolate</span>
+<span class="sd">        :type components:   str, list</span>
+<span class="sd">        :param PROGRESS_BAR:flag to show progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages, if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -519,7 +545,11 @@
         <span class="n">_components</span> <span class="o">=</span> <span class="p">[</span><span class="n">_components</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_components</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">_components</span>
 
         <span class="c1"># Loop through the ages</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Generating velocity grids&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="n">_ages</span><span class="p">,</span> 
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Generating velocity grids&quot;</span><span class="p">,</span> 
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="c1"># Loop through the cases</span>
             <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">point_data</span> <span class="ow">and</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">point_data</span><span class="p">[</span><span class="n">_age</span><span class="p">]:</span>
@@ -567,6 +597,19 @@
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to interpolate data to the resolution of the seafloor age grid.</span>
+
+<span class="sd">        :param age:         age of the grid</span>
+<span class="sd">        :type age:          int, float</span>
+<span class="sd">        :param lat:         latitude of the grid</span>
+<span class="sd">        :type lat:          float, list, numpy.ndarray</span>
+<span class="sd">        :param lon:         longitude of the grid</span>
+<span class="sd">        :type lon:          float, list, numpy.ndarray</span>
+<span class="sd">        :param data:        data to interpolate</span>
+<span class="sd">        :type data:         float, list, numpy.ndarray</span>
+<span class="sd">        :param case:        case of the grid (default: None)</span>
+<span class="sd">        :type case:         str</span>
+<span class="sd">        :param grid_type:   type of grid to interpolate to (default: &quot;velocity&quot;)</span>
+<span class="sd">        :type grid_type:    str</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Convert inputs to numpy arrays if they are lists</span>
         <span class="n">lat</span> <span class="o">=</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
@@ -621,25 +664,35 @@
 <div class="viewcode-block" id="Grids.save_all">
 <a class="viewcode-back" href="../../api/grids/index.html#plato.grids.Grids.save_all">[docs]</a>
     <span class="k">def</span> <span class="nf">save_all</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to save all the grids</span>
+
+<span class="sd">        :param ages:        ages of interest (default: None)</span>
+<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:       cases of interest (default: None)</span>
+<span class="sd">        :type cases:        str, list</span>
+<span class="sd">        :param file_dir:    directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:     str</span>
+<span class="sd">        :param PROGRESS_BAR:flag to show progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Save seafloor grid</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">save_seafloor_age</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_seafloor_age</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
 
         <span class="c1"># Save sediment grid</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">save_sediment</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_sediment</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
 
         <span class="c1"># Save continental grid</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">save_continent</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_continent</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
 
         <span class="c1"># Save velocity grid</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">save_velocity</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_velocity</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Grids.save_seafloor_age">
@@ -648,11 +701,19 @@
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to save the the seafloor age grid.</span>
+
+<span class="sd">        :param ages:        ages of interest (default: None)</span>
+<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
+<span class="sd">        :param file_dir:    directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:     str</span>
+<span class="sd">        :param PROGRESS_BAR:flag to show progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seafloor_age</span><span class="p">,</span> <span class="s2">&quot;Seafloor_age&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seafloor_age</span><span class="p">,</span> <span class="s2">&quot;Seafloor_age&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Grids.save_sediment">
@@ -662,12 +723,22 @@
             <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to save the the sediment grid.</span>
+
+<span class="sd">        :param ages:        ages of interest (default: None)</span>
+<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:       cases of interest (default: None)</span>
+<span class="sd">        :type cases:        str, list</span>
+<span class="sd">        :param file_dir:    directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:     str</span>
+<span class="sd">        :param PROGRESS_BAR:flag to show progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sediment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sediment</span><span class="p">,</span> <span class="s2">&quot;Sediment&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sediment</span><span class="p">,</span> <span class="s2">&quot;Sediment&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Grids.save_continent">
@@ -677,13 +748,23 @@
             <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to save the the continental grid.</span>
+
+<span class="sd">        :param ages:        ages of interest (default: None)</span>
+<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:       cases of interest (default: None)</span>
+<span class="sd">        :type cases:        str, list</span>
+<span class="sd">        :param file_dir:    directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:     str</span>
+<span class="sd">        :param PROGRESS_BAR:flag to show progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check if grids exists</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">continent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">continent</span><span class="p">,</span> <span class="s2">&quot;Continent&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">continent</span><span class="p">,</span> <span class="s2">&quot;Continent&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Grids.save_velocity">
@@ -693,13 +774,23 @@
             <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to save the the velocity grid.</span>
+
+<span class="sd">        :param ages:        ages of interest (default: None)</span>
+<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:       cases of interest (default: None)</span>
+<span class="sd">        :type cases:        str, list</span>
+<span class="sd">        :param file_dir:    directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:     str</span>
+<span class="sd">        :param PROGRESS_BAR:flag to show progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check if grids exists</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">velocity</span><span class="p">,</span> <span class="s2">&quot;Velocity&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">velocity</span><span class="p">,</span> <span class="s2">&quot;Velocity&quot;</span><span class="p">,</span> <span class="n">ages</span><span class="p">,</span> <span class="n">cases</span><span class="p">,</span> <span class="n">file_dir</span><span class="p">,</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span></div>
 
         
 <div class="viewcode-block" id="Grids.save_grid">
@@ -711,9 +802,23 @@
             <span class="n">ages</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">_numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">cases</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">file_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">PROGRESS_BAR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Function to save a grid</span>
+<span class="sd">        Function to save a grid.</span>
+
+<span class="sd">        :param data:        data to save</span>
+<span class="sd">        :type data:         dict, xarray.Dataset</span>
+<span class="sd">        :param type:        type of grid</span>
+<span class="sd">        :type type:         str</span>
+<span class="sd">        :param ages:        ages of interest (default: None)</span>
+<span class="sd">        :type ages:         float, int, list, numpy.ndarray</span>
+<span class="sd">        :param cases:       cases of interest (default: None)</span>
+<span class="sd">        :type cases:        str, list</span>
+<span class="sd">        :param file_dir:    directory to store files (default: None)</span>
+<span class="sd">        :type file_dir:     str</span>
+<span class="sd">        :param PROGRESS_BAR:flag to show progress bar (default: True)</span>
+<span class="sd">        :type PROGRESS_BAR: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define ages, if not provided</span>
         <span class="n">_ages</span> <span class="o">=</span> <span class="n">utils_data</span><span class="o">.</span><span class="n">select_ages</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">ages</span><span class="p">)</span>
@@ -725,7 +830,11 @@
         <span class="n">_file_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">dir_path</span> <span class="k">if</span> <span class="n">file_dir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">file_dir</span>
         
         <span class="c1"># Loop through ages</span>
-        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span><span class="n">_ages</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Saving </span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2"> grids&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span><span class="o">==</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_age</span> <span class="ow">in</span> <span class="n">_tqdm</span><span class="p">(</span>
+                <span class="n">_ages</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Saving </span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2"> grids&quot;</span><span class="p">,</span>
+                <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">PROGRESS_BAR</span><span class="p">)</span>
+            <span class="p">):</span>
             <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="n">_age</span><span class="p">]</span> <span class="ow">is</span> <span class="n">Dict</span><span class="p">:</span>
                 <span class="c1"># Loop through cases</span>
                 <span class="k">for</span> <span class="n">_case</span> <span class="ow">in</span> <span class="n">_cases</span><span class="p">:</span>
@@ -783,7 +892,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=86841498"></script>
+</div><script src="../../_static/documentation_options.js?v=27c35e89"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

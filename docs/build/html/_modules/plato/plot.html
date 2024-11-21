@@ -1485,14 +1485,12 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Normalise vectors, if necessary</span>
         <span class="k">if</span> <span class="n">normalise_vectors</span> <span class="ow">and</span> <span class="n">vector_mag</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># Normalise by dividing by the magnitude of the vectors</span>
-            <span class="c1"># Multiply by 10 to make the vectors more visible</span>
-            <span class="n">vector_lon</span> <span class="o">=</span> <span class="n">vector_lon</span> <span class="o">/</span> <span class="n">vector_mag</span> <span class="o">*</span> <span class="mi">10</span>
-            <span class="n">vector_lat</span> <span class="o">=</span> <span class="n">vector_lat</span> <span class="o">/</span> <span class="n">vector_mag</span> <span class="o">*</span> <span class="mi">10</span>
-
-            <span class="nb">print</span><span class="p">(</span><span class="n">_numpy</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">_numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vector_lon</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">vector_lat</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span>
-
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Normalised vectors!&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+                <span class="c1"># Normalise by dividing by the magnitude of the vectors</span>
+                <span class="c1"># Multiply by 10 to make the vectors more visible</span>
+                <span class="n">vector_lon</span> <span class="o">=</span> <span class="n">vector_lon</span> <span class="o">/</span> <span class="n">vector_mag</span> <span class="o">*</span> <span class="mi">10</span>
+                <span class="n">vector_lat</span> <span class="o">=</span> <span class="n">vector_lat</span> <span class="o">/</span> <span class="n">vector_mag</span> <span class="o">*</span> <span class="mi">10</span>
 
         <span class="c1"># Plot vectors</span>
         <span class="c1"># Ignore annoying warnings</span>
@@ -1611,7 +1609,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=ad0b566d"></script>
+</div><script src="../../_static/documentation_options.js?v=27c35e89"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

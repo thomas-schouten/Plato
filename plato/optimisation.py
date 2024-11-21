@@ -360,7 +360,8 @@ class Optimisation():
         _data = {_age: {_case: None for _case in _cases} for _age in _ages}
         _plateIDs = {_age: {_case: None for _case in _cases} for _age in _ages}
 
-        for _age in _ages:
+        # Loop through ages
+        for _age in _tqdm(_ages, desc="Inverting residual torque"):
             for _case in _cases:
                 # Obtain plateIDs for all unique combinations of ages and cases
                 _plateIDs[_age][_case] = utils_data.select_plateIDs(plateIDs, self.slabs.data[_age][_case]["lower_plateID"].unique())
@@ -371,9 +372,6 @@ class Optimisation():
                 minimum_residual_torque[_age][_case] = {_plateID: _numpy.nan for _plateID in _plateIDs[_age][_case]}
                 opt_constants[_age][_case] = {_plateID: _numpy.nan for _plateID in _plateIDs[_age][_case]}
 
-        # Loop through ages
-        for _age in _tqdm(_ages, desc="Inverting residual torque"):
-            for _case in _cases:
                 for i, constant in enumerate(constants):
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
@@ -426,9 +424,7 @@ class Optimisation():
                         for _plateID in _plateIDs[_age][_case]:
                             driving_torque_opt_stack[_age][_case][_plateID][i] = _iter_driving_torque[_plateID].values[0]
                             residual_torque_opt_stack[_age][_case][_plateID][i] = _iter_residual_torque[_plateID].values[0]
-
-        for _age in _ages:
-            for _case in _cases:
+                            
                 for _plateID in _plateIDs[_age][_case]:
                     minimum_residual_torque[_age][_case][_plateID] = _numpy.nanmin(residual_torque_opt_stack[_age][_case][_plateID]/driving_torque_opt_stack[_age][_case][_plateID])
                     opt_index = _numpy.nanargmin(residual_torque_opt_stack[_age][_case][_plateID]/driving_torque_opt_stack[_age][_case][_plateID])

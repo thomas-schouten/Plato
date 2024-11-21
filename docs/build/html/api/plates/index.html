@@ -438,7 +438,7 @@ It can also be used directly if the user has a set of points on Earth with force
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plato.plates.Plates.save">
-<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.save" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PROGRESS_BAR</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.save" title="Link to this definition">¶</a></dt>
 <dd><p>Function to export the <cite>Plates</cite> object.
 All files are saved as .parquet files to reduce file size and enable rapid reloading.
 The <cite>Plates</cite> object can be filtered by age, case, and plateID.
@@ -451,6 +451,7 @@ The user can specify the directory to store the files using the <cite>file_dir</
 <li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em>) – cases of interest (default: None)</p></li>
 <li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
 <li><p><strong>file_dir</strong> (<em>str</em>) – directory to store files (default: None)</p></li>
+<li><p><strong>PROGRESS_BAR</strong> (<em>bool</em>) – flag to enable the tqdm progress bar (default: True)</p></li>
 </ul>
 </dd>
 </dl>
@@ -458,7 +459,7 @@ The user can specify the directory to store the files using the <cite>file_dir</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plato.plates.Plates.export">
-<span class="sig-name descname"><span class="pre">export</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.export"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.export" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">export</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plateIDs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PROGRESS_BAR</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/plato/plates.html#Plates.export"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plato.plates.Plates.export" title="Link to this definition">¶</a></dt>
 <dd><p>Function to export the <cite>Plates</cite> object.
 Geometries are exported as shapefiles, data are exported as .csv files.
 The <cite>Plates</cite> object can be filtered by age, case, and plateID.
@@ -471,6 +472,7 @@ The user can specify the directory to store the files using the <cite>file_dir</
 <li><p><strong>cases</strong> (<em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em>) – cases of interest (default: None)</p></li>
 <li><p><strong>plateIDs</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>list</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>, </em><em>numpy.ndarray</em>) – plateIDs of interest (default: None)</p></li>
 <li><p><strong>file_dir</strong> (<em>str</em>) – directory to store files (default: None)</p></li>
+<li><p><strong>PROGRESS_BAR</strong> (<em>bool</em>) – flag to enable the tqdm progress bar (default: True)</p></li>
 </ul>
 </dd>
 </dl>
@@ -559,7 +561,7 @@ The user can specify the directory to store the files using the <cite>file_dir</
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=ad0b566d"></script>
+</div><script src="../../_static/documentation_options.js?v=27c35e89"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
