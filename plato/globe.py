@@ -16,25 +16,62 @@ from .slabs import Slabs
 class Globe:
     """
     Class to store information on global plate tectonic properties of the Earth.
+
+    A `Globe` object can be initialised in multiple ways:
+
+    1.  The user can initialise a `Globe` object from scratch by providing the reconstruction and the ages of interest.
+        The reconstruction can be provided as a file with rotation poles, a file with topologies, and a file with polygons, or as one of the model name string identifiers for the models available on the GPlately DataServer (https://gplates.github.io/gplately/v1.3.0/#dataserver).
+        
+        Additionally, the user may specify the excel file with a number of different cases (combinations of options) to be considered.
+
+    2.  Alternatively, the user can initialise a `Globe` object by providing a `Settings` object and a `Reconstruction` object from a `Globe`, `Grids`, `Plates`, `Points` or `Slabs` object.
+        Providing the settings from a `Globe` object will allow the user to initialise a new `Globe` object with the same settings as the original object.
+
+    :param settings:            `Settings` object (default: None)
+    :type settings:             plato.settings.Settings
+    :param reconstruction:      `Reconstruction` object (default: None)
+    :type reconstruction:       gplately.PlateReconstruction
+    :param rotation_file:       filepath to .rot file with rotation poles (default: None)
+    :type rotation_file:        str
+    :param topology_file:       filepath to .gpml file with topologies (default: None)
+    :type topology_file:        str
+    :param polygon_file:        filepath to .gpml file with polygons (default: None)
+    :type polygon_file:         str
+    :param reconstruction_name: model name string identifiers for the GPlately DataServer (default: None)
+    :type reconstruction_name:  str
+    :param ages:                ages of interest (default: None)
+    :type ages:                 float, int, list, numpy.ndarray
+    :param cases_file:          filepath to excel file with cases (default: None)
+    :type cases_file:           str
+    :param cases_sheet:         name of the sheet in the excel file with cases (default: "Sheet1")
+    :type cases_sheet:          str
+    :param files_dir:           directory to store files (default: None)
+    :type files_dir:            str
+    :param PARALLEL_MODE:       flag to enable parallel mode (default: False)
+    :type PARALLEL_MODE:        bool
+    :param DEBUG_MODE:          flag to enable debug mode (default: False)
+    :type DEBUG_MODE:           bool
+    :param CALCULATE_VELOCITIES: flag to calculate velocities (default: True)
+    :type CALCULATE_VELOCITIES: bool
     """
     def __init__(
             self,
-            settings = None,
-            reconstruction = None,
-            rotation_file = None,
-            topology_file = None,
-            polygon_file = None,
-            reconstruction_name = None,
-            ages = None,
-            cases_file = None,
-            cases_sheet = "Sheet1",
-            files_dir = None,
+            settings: Optional[Settings] = None,
+            reconstruction: Optional[_gplately.PlateReconstruction] = None,
+            rotation_file: Optional[str] = None,
+            topology_file: Optional[str] = None,
+            polygon_file: Optional[str] = None,
+            reconstruction_name: Optional[str] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases_file: Optional[str] = None,
+            cases_sheet: str = "Sheet1",
+            files_dir: Optional[str] = None,
             plates: Optional[Plates] = None,
             points: Optional[Points] = None,
             slabs: Optional[Slabs] = None,
-            PARALLEL_MODE = False,
-            DEBUG_MODE = False,
-            CALCULATE_VELOCITIES = True,
+            PARALLEL_MODE: bool = False,
+            DEBUG_MODE: bool = False,
+            CALCULATE_VELOCITIES: bool = True,
         ):
         """
         Initialie the Globe class with the required objects.
@@ -104,9 +141,9 @@ class Globe:
 
     def calculate_number_of_plates(
             self,
-            plates: Plates = None,
-            ages = None,
-            cases = None,
+            plates: Optional[Plates] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
         ):
         """
         Calculate the number of plates for each time step.
@@ -184,13 +221,26 @@ class Globe:
             self,
             plates: Plates = None,
             points: Points = None,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Calculate the net rotation of the Earth's lithosphere.
+
+        :param plates:      `Plates` object (default: None)
+        :type plates:       plato.plates.Plates
+        :param points:      `Points` object (default: None)
+        :type points:       plato.points.Points
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list, numpy.ndarray
+        :param PROGRESS_BAR: flag to enable progress bar (default: True)
+        :type PROGRESS_BAR:  bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)

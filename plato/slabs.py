@@ -254,8 +254,9 @@ class Slabs:
                         self.data[_age][_case].loc[mask, f"{plate}_spin_rate_mag"] = velocities[4]
 
                 # Get convergence rates
-                self.data[_age][_case].loc[:, f"convergence_velocity_lat"] = self.data[_age][_case]["upper_plate_velocity_lat"]
-                self.data[_age][_case].loc[:, f"convergence_velocity_lon"] = self.data[_age][_case]["upper_plate_velocity_lon"]
+                self.data[_age][_case].loc[:, f"convergence_velocity_lat"] = self.data[_age][_case]["lower_plate_velocity_lat"] - self.data[_age][_case]["trench_velocity_lat"]
+                self.data[_age][_case].loc[:, f"convergence_velocity_lon"] = self.data[_age][_case]["lower_plate_velocity_lon"] - self.data[_age][_case]["trench_velocity_lon"]
+                self.data[_age][_case].loc[:, f"convergence_velocity_mag"] = _numpy.sqrt(self.data[_age][_case]["convergence_velocity_lat"]**2 + self.data[_age][_case]["convergence_velocity_lon"]**2)
 
     def sample_slab_seafloor_ages(
             self,

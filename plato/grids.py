@@ -153,20 +153,34 @@ class Grids():
 
     def add_grid(
             self,
-            input_grids,
-            variable_name = "new_grid",
-            grid_type = "seafloor_age",
-            target_variable = "z",
-            mask_continents = False,
-            interpolate = True,
-            prefactor = 1.,
+            input_grids: Union[Dict[Union[int, float], _xarray.Dataset], _xarray.Dataset],
+            variable_name: str = "new_grid",
+            grid_type: str = "seafloor_age",
+            target_variable: str = "z",
+            mask_continents: bool = False,
+            interpolate: bool = True,
+            prefactor: Union[int, float] = 1.,
         ):
         """
         Function to add another grid of a variable to the seafloor grid.
         The grids should be organised in a dictionary with each item being an xarray.Dataset with each key being the corresponding reconstruction age, or a single xarray.Dataset, in which case it will be stored without an age.
         'mask_continents' is a boolean that determines whether or not to cut the grids to the seafloor. It should only be used for grids that only describe the seafloor, e.g. marine sediment distributions, and not e.g. continental erosion rate grids.
+        
+        :param input_grids:     input grids to add
+        :type input_grids:      dict, xarray.Dataset
+        :param variable_name:   name of the variable to add
+        :type variable_name:    str
+        :param grid_type:       type of grid to add to
+        :type grid_type:        str
+        :param target_variable: variable to add
+        :type target_variable:  str
+        :param mask_continents: flag to mask continents (default: False)
+        :type mask_continents:  bool
+        :param interpolate:     flag to interpolate (default: True)
+        :type interpolate:      bool
+        :param prefactor:       prefactor to apply to the grid (default: 1.)
+        :type prefactor:        float
         """
-
         # Check if the attribute exists and is initially None
         if getattr(self, grid_type) is None:
             # Initialize to the type of input_grids
@@ -246,6 +260,17 @@ class Grids():
         ):
         """
         Function to generate a velocity grid.
+
+        :param ages:        ages of interest
+        :type ages:         int, float
+        :param cases:       cases of interest
+        :type cases:        str
+        :param point_data:  point data to interpolate
+        :type point_data:   dict
+        :param components:  components to interpolate
+        :type components:   str, list
+        :param PROGRESS_BAR:flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Define ages, if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -258,7 +283,11 @@ class Grids():
         _components = [_components] if isinstance(_components, str) else _components
 
         # Loop through the ages
-        for _age in _tqdm(_ages, desc="Generating velocity grids", disable=self.settings.logger.level==logging.INFO):
+        for _age in _tqdm(
+                _ages, 
+                desc="Generating velocity grids", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
             # Loop through the cases
             for _case in _cases:
                 if _age in point_data and _case in point_data[_age]:
@@ -303,6 +332,19 @@ class Grids():
         ):
         """
         Function to interpolate data to the resolution of the seafloor age grid.
+
+        :param age:         age of the grid
+        :type age:          int, float
+        :param lat:         latitude of the grid
+        :type lat:          float, list, numpy.ndarray
+        :param lon:         longitude of the grid
+        :type lon:          float, list, numpy.ndarray
+        :param data:        data to interpolate
+        :type data:         float, list, numpy.ndarray
+        :param case:        case of the grid (default: None)
+        :type case:         str
+        :param grid_type:   type of grid to interpolate to (default: "velocity")
+        :type grid_type:    str
         """
         # Convert inputs to numpy arrays if they are lists
         lat = _numpy.asarray(lat)
@@ -362,6 +404,15 @@ class Grids():
         ):
         """
         Function to save all the grids
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR:flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Save seafloor grid
         self.save_seafloor_age(ages, file_dir, PROGRESS_BAR)
@@ -383,6 +434,13 @@ class Grids():
         ):
         """
         Function to save the the seafloor age grid.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR:flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         self.save_grid(self.seafloor_age, "Seafloor_age", ages, None, file_dir, PROGRESS_BAR)
 
@@ -395,6 +453,15 @@ class Grids():
         ):
         """
         Function to save the the sediment grid.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR:flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         if self.sediment is not None:
             self.save_grid(self.sediment, "Sediment", ages, cases, file_dir, PROGRESS_BAR)
@@ -408,6 +475,15 @@ class Grids():
         ):
         """
         Function to save the the continental grid.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR:flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Check if grids exists
         if self.continent is not None:
@@ -422,6 +498,15 @@ class Grids():
         ):
         """
         Function to save the the velocity grid.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR:flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Check if grids exists
         if self.velocity is not None:
@@ -437,7 +522,20 @@ class Grids():
             PROGRESS_BAR: bool = True,
         ):
         """
-        Function to save a grid
+        Function to save a grid.
+
+        :param data:        data to save
+        :type data:         dict, xarray.Dataset
+        :param type:        type of grid
+        :type type:         str
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR:flag to show progress bar (default: True)
+        :type PROGRESS_BAR: bool
         """
         # Define ages, if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)

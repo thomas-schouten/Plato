@@ -165,10 +165,10 @@ class Points:
 
     def calculate_velocities(
             self,
-            ages = None,
-            cases = None,
-            stage_rotation = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            stage_rotation: Optional[Dict[Union[int, float], Dict[str, _pandas.DataFrame]]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to compute velocities at points.
@@ -245,7 +245,7 @@ class Points:
             plateIDs = None,
             seafloor_grids = None,
             vars = ["seafloor_age"],
-            PROGRESS_BAR = True,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Samples seafloor age at points.
@@ -274,14 +274,14 @@ class Points:
 
     def sample_grid(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            grids = None,
-            vars = ["seafloor_age"],
-            sampling_coords = ["lat", "lon"],
-            cols = ["seafloor_age"],
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            grids: Dict[Union[int, float], Union[_xarray.Dataset, Dict[str, _xarray.Dataset]]] = None,
+            vars: List[str] = ["seafloor_age"],
+            sampling_coords: List[str] = ["lat", "lon"],
+            cols: List[str] = ["seafloor_age"],
+            PROGRESS_BAR: bool = True,
         ):
         """
         Samples any grid at points.
@@ -369,11 +369,11 @@ class Points:
     
     def calculate_gpe_force(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            seafloor_grid = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            seafloor_grid: Dict[Union[int, float], _xarray.Dataset] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to compute gravitational potential energy (GPE) force acting at points.
@@ -447,10 +447,10 @@ class Points:
 
     def calculate_mantle_drag_force(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to compute mantle drag force acting at points.
@@ -515,11 +515,11 @@ class Points:
 
     def calculate_residual_force(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            residual_torque = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            residual_torque: Optional[Dict] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate residual torque along trenches.
@@ -583,11 +583,11 @@ class Points:
 
     def save(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to save the 'Points' object.
@@ -639,11 +639,11 @@ class Points:
 
     def export(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            file_dir = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            file_dir: Optional[str] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to export the 'Points' object.
