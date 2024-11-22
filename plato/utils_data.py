@@ -551,7 +551,7 @@ def get_options(
         "Slab bend mechanism",
         "Reconstructed motions",
         "Continental crust",
-        "Seafloor age variable",
+        "Continental keels",
         "Seafloor age profile",
         "Sample sediment grid", 
         "Active margin sediments",
@@ -580,7 +580,7 @@ def get_options(
         "viscous",
         True,
         False,
-        "z",
+        False,
         "half space cooling",
         False,
         0,
@@ -601,14 +601,17 @@ def get_options(
     ]
 
     # Adjust TRUE/FALSE values in excel file to boolean
-    boolean_options = ["Slab pull torque",
-                       "GPE torque",
-                       "Mantle drag torque",
-                       "Slab bend torque",
-                       "Reconstructed motions",
-                       "Continental crust",
-                       "Randomise trench orientation",
-                       "Randomise slab age"]
+    boolean_options = [
+        "Slab pull torque",
+        "GPE torque",
+        "Mantle drag torque",
+        "Slab bend torque",
+        "Reconstructed motions",
+        "Continental crust",
+        "Continental keels",
+        "Randomise trench orientation",
+        "Randomise slab age",
+    ]
 
     # If no file_name is provided, return default values with case "ref"
     if not file_name:

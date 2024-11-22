@@ -9,6 +9,7 @@ from tqdm import tqdm as _tqdm
 
 # Plato libraries
 from . import utils_data
+from .utils_calc import haversine
 from .plate_torques import PlateTorques
 
 class Optimisation():
@@ -46,8 +47,8 @@ class Optimisation():
         # Organise dictionaries to store optimal values for slab pull coefficient, viscosity and normalised residual torque magnitude for each unique combination of age, case and plate
         # The index of each plate corresponds to the index in the plate data arrays.
         # The last entry in the arrays is for the global value.
-        self.opt_sp_const = {age: {case: self.settings.options[case]["Slab pull constant"] for case in self.settings.cases} for age in self.settings.ages}
-        self.opt_visc = {age: {case: self.settings.options[case]["Mantle viscosity"] for case in self.settings.cases} for age in self.settings.ages}
+        # self.opt_sp_const = {age: {case: self.settings.options[case]["Slab pull constant"] for case in self.settings.cases} for age in self.settings.ages}
+        # self.opt_visc = {age: {case: self.settings.options[case]["Mantle viscosity"] for case in self.settings.cases} for age in self.settings.ages}
 
         # for age in self.settings.ages:
         #     for case in self.settings.cases:
@@ -172,8 +173,8 @@ class Optimisation():
         opt_sp_const = sp_const_grid[opt_i, opt_j]
 
         # Assign optimal values to last entry in arrays
-        self.opt_sp_const[age][case][-1] = opt_sp_const
-        self.opt_visc[age][case][-1] = opt_visc
+        # self.opt_sp_const[age][case][-1] = opt_sp_const
+        # self.opt_visc[age][case][-1] = opt_visc
 
         # Plot
         if plot == True:
@@ -196,7 +197,7 @@ class Optimisation():
         print("Optimum Drag Coefficient [Pa s/m]: {:.2e}".format(opt_visc / self.settings.mech.La))
         print("Optimum Slab Pull constant: {:.2%}".format(opt_sp_const))
 
-        return self.opt_sp_const[age][case][-1], self.opt_visc[age][case][-1], residual_mag_normalised, (opt_i, opt_j)
+        # return self.opt_sp_const[age][case][-1], self.opt_visc[age][case][-1], residual_mag_normalised, (opt_i, opt_j)
     
     def optimise_slab_pull_coefficient(
             self,
@@ -351,9 +352,9 @@ class Optimisation():
         constants = _numpy.arange(vmin, vmax, step)
 
         # Initialise dictionaries to store minimum residual torque and optimal constants
-        driving_torque_opt_stack = {_age: {_case: None for _case in _cases} for _age in _ages}
-        residual_torque_opt_stack = {_age: {_case: None for _case in _cases} for _age in _ages}
-        minimum_residual_torque = {_age: {_case: None for _case in _cases} for _age in _ages}
+        pole_lat_opt_stack = {_age: {_case: None for _case in _cases} for _age in _ages}
+        pole_lon_opt_stack = {_age: {_case: None for _case in _cases} for _age in _ages}
+        pole_angle_opt_stack = {_age: {_case: None for _case in _cases} for _age in _ages}
         opt_constants = {_age: {_case: None for _case in _cases} for _age in _ages}
 
         # Initialise data and plateID dictionary
@@ -367,10 +368,15 @@ class Optimisation():
                 _plateIDs[_age][_case] = utils_data.select_plateIDs(plateIDs, self.slabs.data[_age][_case]["lower_plateID"].unique())
 
                 # Initialise entries for each plate ID in dictionaries
-                driving_torque_opt_stack[_age][_case] = {_plateID: _numpy.zeros((len(constants))) for _plateID in _plateIDs[_age][_case]}
-                residual_torque_opt_stack[_age][_case] = {_plateID: _numpy.zeros((len(constants))) for _plateID in _plateIDs[_age][_case]}
-                minimum_residual_torque[_age][_case] = {_plateID: _numpy.nan for _plateID in _plateIDs[_age][_case]}
+                pole_lat_opt_stack[_age][_case] = {_plateID: _numpy.zeros((len(constants))) for _plateID in _plateIDs[_age][_case]}
+                pole_lon_opt_stack[_age][_case] = {_plateID: _numpy.zeros((len(constants))) for _plateID in _plateIDs[_age][_case]}
+                pole_angle_opt_stack[_age][_case] = {_plateID: _numpy.zeros((len(constants))) for _plateID in _plateIDs[_age][_case]}
                 opt_constants[_age][_case] = {_plateID: _numpy.nan for _plateID in _plateIDs[_age][_case]}
+
+                # Store reconstructed pole of rotation
+                reconstructed_pole_lat = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var="pole_lat")
+                reconstructed_pole_lon = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var="pole_lon")
+                reconstructed_pole_angle = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var="pole_angle")
 
                 for i, constant in enumerate(constants):
                     with warnings.catch_warnings():
@@ -414,21 +420,37 @@ class Optimisation():
                     
                         # Calculate the torques with the modified slab pull forces
                         self.plates.calculate_torque_on_plates(_data, ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], torque_var="slab_pull", PROGRESS_BAR=False)
-                        self.plate_torques.calculate_driving_torque(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], PROGRESS_BAR=False)
-                        self.plate_torques.calculate_residual_torque(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], PROGRESS_BAR=False)
+                        self.plates.calculate_synthetic_velocity(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], PROGRESS_BAR=False, RECONSTRUCTED_CASES=True)
 
-                        # Extract the driving and residual torques
-                        _iter_driving_torque = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var="driving_torque_mag")
-                        _iter_residual_torque = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var= "residual_torque_mag")
+                        # Extract the pole of rotation
+                        _iter_pole_lat = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var="pole_lon")
+                        _iter_pole_lon = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var="pole_lat")
+                        _iter_pole_angle = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateIDs[_age][_case], var="pole_angle")
 
                         for _plateID in _plateIDs[_age][_case]:
-                            driving_torque_opt_stack[_age][_case][_plateID][i] = _iter_driving_torque[_plateID].values[0]
-                            residual_torque_opt_stack[_age][_case][_plateID][i] = _iter_residual_torque[_plateID].values[0]
+                            # print(_age, _case, _plateID, constant, _iter_pole_lat[_plateID].values[0], _iter_pole_lon[_plateID].values[0], _iter_pole_angle[_plateID].values[0])
+                            pole_lon_opt_stack[_age][_case][_plateID][i] = _iter_pole_lat[_plateID].values[0]
+                            pole_lat_opt_stack[_age][_case][_plateID][i] = _iter_pole_lon[_plateID].values[0]
+                            pole_angle_opt_stack[_age][_case][_plateID][i] = _iter_pole_angle[_plateID].values[0]
                             
                 for _plateID in _plateIDs[_age][_case]:
-                    minimum_residual_torque[_age][_case][_plateID] = _numpy.nanmin(residual_torque_opt_stack[_age][_case][_plateID]/driving_torque_opt_stack[_age][_case][_plateID])
-                    opt_index = _numpy.nanargmin(residual_torque_opt_stack[_age][_case][_plateID]/driving_torque_opt_stack[_age][_case][_plateID])
+                    # Calculate distance to the pole of rotation
+                    distances = haversine(
+                        pole_lon_opt_stack[_age][_case][_plateID],
+                        pole_lat_opt_stack[_age][_case][_plateID],
+                        _numpy.repeat(reconstructed_pole_lon[_plateID], len(constants)),
+                        _numpy.repeat(reconstructed_pole_lon[_plateID], len(constants)),
+                    )
+                    plt.plot(constants, distances, label="Distance to pole of rotation")
+                    plt.plot(constants, pole_angle_opt_stack[_age][_case][_plateID]-_numpy.repeat(reconstructed_pole_angle[_plateID], len(constants)), label="Ratio between synthetic and reconstructed pole angle")
+                    plt.plot(constants, distances + _numpy.abs(pole_angle_opt_stack[_age][_case][_plateID]-_numpy.repeat(reconstructed_pole_angle[_plateID], len(constants))), label="Equally weighted components")
+                    plt.legend()
+                    plt.show()
+
+                    opt_index = _numpy.nanargmin(distances + _numpy.abs(pole_angle_opt_stack[_age][_case][_plateID]-_numpy.repeat(reconstructed_pole_angle[_plateID], len(constants))))
                     opt_constants[_age][_case][_plateID] = constants[opt_index]
+
+                    print("Optimal constant for plate", _plateID, f"for case {_case} at age {_age}", opt_constants[_age][_case][_plateID])
 
         for _age in _tqdm(_ages, desc="Optimising torques"):
             for _case in _cases:

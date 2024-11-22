@@ -706,6 +706,7 @@ class PlateTorques():
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             PROGRESS_BAR: bool = True,
+            RECONSTRUCTED_CASES: bool = False,
         ):
         """
         Function to compute synthetic velocities.
@@ -729,6 +730,7 @@ class PlateTorques():
             _cases,
             plateIDs,
             PROGRESS_BAR,
+            RECONSTRUCTED_CASES,
         )
 
         # Calculate net rotation
@@ -739,30 +741,31 @@ class PlateTorques():
             PROGRESS_BAR,
         )
 
-        # Calculate velocities at points
-        self.points.calculate_velocities(
-            _ages,
-            _cases,
-            self.plates.data,
-            PROGRESS_BAR,
-        )
+        if not RECONSTRUCTED_CASES:
+            # Calculate velocities at points
+            self.points.calculate_velocities(
+                _ages,
+                _cases,
+                self.plates.data,
+                PROGRESS_BAR,
+            )
 
-        # Calculate velocities at slabs
-        self.slabs.calculate_velocities(
-            _ages,
-            _cases,
-            self.plates.data,
-            PROGRESS_BAR,
-        )
+            # Calculate velocities at slabs
+            self.slabs.calculate_velocities(
+                _ages,
+                _cases,
+                self.plates.data,
+                PROGRESS_BAR,
+            )
 
-        # Calculate RMS velocity of plates
-        self.plates.calculate_rms_velocity(
-            self.points,
-            _ages,
-            _cases,
-            plateIDs,
-            PROGRESS_BAR,
-        )
+            # Calculate RMS velocity of plates
+            self.plates.calculate_rms_velocity(
+                self.points,
+                _ages,
+                _cases,
+                plateIDs,
+                PROGRESS_BAR,
+            )
 
     def rotate_torque(
             self,

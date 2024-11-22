@@ -206,7 +206,111 @@ class Plates:
     
     def __repr__(self):
         return self.__str__()
+    
+    def calculate_continental_fraction(
+            self,
+            points: Optional[Points] = None,
+            seafloor_grids: Optional[Dict[float, Dict[str, _pandas.DataFrame]]] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Function to calculate the continental fraction of the plates.
 
+        This function can be called in multiple ways:
+
+        1.  If no `Points` object is provided, but a `Grids` is, the function will initialise a `Points` object, sample the seafloor ages and calculate the continental fraction
+
+        2.  If a `Points` object is provided, the function will calculate the continental fraction using the data in the `Points` object.
+
+        3.  If ages, cases, and plateIDs are provided, the function will calculate the continental fraction for the specified ages, cases, and plateIDs.
+            Otherwise, the function will calculate the continental fraction for all ages, cases, and plateIDs.
+
+        :param points:          `Points` object (default: None)
+        :type points:           plato.points.Points
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list, numpy.ndarray
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Check if no points are passed, initialise Points object
+        if points is None and seafloor_grids:
+            # Initialise a Points object
+            points = Points(
+                settings = self.settings,
+                reconstruction = self.reconstruction,
+                resolved_geometries = self.resolved_geometries
+            )
+        
+        # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
+        _iterable = utils_data.select_iterable(cases, self.settings.cases)
+
+        # Loop through ages
+        for _age in _tqdm(
+                _ages, 
+                desc="Calculating continental fractions",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            # Check if age in point data
+            if _age in points.data.keys():
+                # Loop through cases
+                for key, entries in _iterable.items():
+                    # Check if case in point data
+                    if key not in points.data[_age].keys():
+                        # Initialise a Points object for this age and case
+                        points = Points(
+                            settings = self.settings,
+                            reconstruction = self.reconstruction,
+                            ages = _age,
+                            cases = key,
+                            resolved_geometries = self.resolved_geometries,
+                        )
+                        logging.info(f"Initialised Points object for case {key} at {_age} Ma to calculate RMS velocities")
+
+                        # Sample seafloor age
+                        points.sample_seafloor_age(
+                            seafloor_grids,
+                            ages = _age,
+                            cases = key,
+                            PROGRESS_BAR = PROGRESS_BAR,
+                        )
+
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.select_plateIDs(
+                        plateIDs,
+                        self.data[_age][key].plateID,
+                    )
+
+                    # Loop through plateIDs
+                    for _plateID in _plateIDs:
+                        # Select point data
+                        _data = points.data[_age][key]
+                        _data = _data[_data.plateID == _plateID]
+
+                        if _data.empty:
+                            continue
+
+                        # Calculate continental fraction for plate
+                        self.data[_age][key].loc[self.data[_age][key]["plateID"] == _plateID, "continental_fraction"] = _data.loc[_data["seafloor_age"].isna(), "segment_area"].sum() / _data["segment_area"].sum()
+
+                    # Copy values to other cases, if necessary
+                    if len(entries) > 1:
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries, 
+                            ["continental_fraction"], 
+                        )
+                    
     def calculate_rms_velocity(
             self,
             points: Optional[Points] = None,
@@ -539,6 +643,7 @@ class Plates:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             PROGRESS_BAR: bool = True,
+            RECONSTRUCTED_CASES: bool = False,
         ):
         """
         Function to calculate synthetic velocity of plates.
@@ -570,8 +675,7 @@ class Plates:
                 disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
             ):
             # Skip if reconstructed motions are enabled
-            if not self.settings.options[_case]["Reconstructed motions"]:
-
+            if not self.settings.options[_case]["Reconstructed motions"] or RECONSTRUCTED_CASES:
                 # Inform the user that the driving torques are being calculated
                 logging.info(f"Computing synthetic velocity for case {_case}")
 
@@ -708,17 +812,19 @@ class Plates:
         # Default is to select all major plates in the Müller et al. (2016) reconstruction
         _plateIDs = utils_data.select_plateIDs(
             plateIDs, 
-            [101,   # North America
-            201,    # South America
-            301,    # Eurasia
-            501,    # India
-            801,    # Australia
-            802,    # Antarctica
-            901,    # Pacific
-            902,    # Farallon
-            911,    # Nazca
-            919,    # Phoenix
-            926,    # Izanagi
+            [
+                101,    # North America
+                201,    # South America
+                301,    # Eurasia
+                501,    # India
+                701,    # Africa
+                801,    # Australia
+                802,    # Antarctica
+                901,    # Pacific
+                902,    # Farallon
+                911,    # Nazca
+                919,    # Phoenix
+                926,    # Izanagi
             ]
         )
 

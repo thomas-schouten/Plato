@@ -108,7 +108,7 @@ class Settings:
         ])
         self.slab_bend_cases = self.process_cases(["Slab bend torque", "Seafloor age profile"])
         self.gpe_cases = self.process_cases(["Continental crust", "Seafloor age profile", "Grid spacing"])
-        self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing"])
+        self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing", "Continental keels"])
 
         # Split cases with synthetic and reconstructed motions:
         self.reconstructed_cases = []; self.synthetic_cases = []

@@ -466,7 +466,7 @@ class Points:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.mantle_drag_cases)
 
         # Loop through reconstruction times
         for _age in _tqdm(

@@ -347,7 +347,12 @@ def sample_slabs_from_seafloor(
 
         return ages, sediment_thickness
 
-def project_points(lat, lon, azimuth, distance):
+def project_points(
+        lat: Union[int, float, list, _numpy.ndarray],
+        lon: Union[int, float, list, _numpy.ndarray],
+        azimuth: Union[int, float, list, _numpy.ndarray],
+        distance: Union[int, float]
+    ):
     """
     Function to calculate coordinates of sampling points
 
@@ -366,19 +371,28 @@ def project_points(lat, lon, azimuth, distance):
     # Set constants
     constants = set_constants()
 
+    # Convert to numpy arrays
+    lat = _numpy.asarray(lat); lon = _numpy.asarray(lon); azimuth = _numpy.asarray(azimuth)
+
     # Convert to radians
-    lon_radians = _numpy.deg2rad(lon)
-    lat_radians = _numpy.deg2rad(lat)
-    azimuth_radians = _numpy.deg2rad(azimuth)
+    lat_rad = _numpy.deg2rad(lat); lon_rad = _numpy.deg2rad(lon); azimuth_rad = _numpy.deg2rad(azimuth)
 
     # Angular distance in km
     angular_distance = distance / constants.mean_Earth_radius_km
 
     # Calculate sample points
-    new_lat_radians = _numpy.arcsin(_numpy.sin(lat_radians) * _numpy.cos(angular_distance) + _numpy.cos(lat_radians) * _numpy.sin(angular_distance) * _numpy.cos(azimuth_radians))
-    new_lon_radians = lon_radians + _numpy.arctan2(_numpy.sin(azimuth_radians) * _numpy.sin(angular_distance) * _numpy.cos(lat_radians), _numpy.cos(angular_distance) - _numpy.sin(lat_radians) * _numpy.sin(new_lat_radians))
-    new_lon = _numpy.degrees(new_lon_radians)
-    new_lat = _numpy.degrees(new_lat_radians)
+    new_lat_rad = _numpy.arcsin(
+        _numpy.sin(lat_rad) * _numpy.cos(angular_distance) + \
+        _numpy.cos(lat_rad) * _numpy.sin(angular_distance) * _numpy.cos(azimuth_rad)
+    )
+    new_lon_rad = lon_rad + _numpy.arctan2(
+        _numpy.sin(azimuth_rad) * _numpy.sin(angular_distance) * _numpy.cos(lat_rad), 
+        _numpy.cos(angular_distance) - _numpy.sin(lat_rad) * _numpy.sin(new_lat_rad)
+    )
+
+    # Convert to degrees
+    new_lon = _numpy.rad2deg(new_lon_rad)
+    new_lat = _numpy.rad2deg(new_lat_rad)
 
     return new_lat, new_lon
 
@@ -535,6 +549,15 @@ def compute_mantle_drag_force(
         points.loc[:, "mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
         points.loc[:, "mantle_drag_force_mag"] = _numpy.linalg.norm([points["mantle_drag_force_lat"], points["mantle_drag_force_lon"]], axis=0)
 
+        if options["Continental keels"]:
+            # Get continental points
+            mask = points["seafloor_age"].isna()
+
+            # Multiply by factor 20 to account for higher viscosity in asthenosphere below continents
+            points.loc[mask, "mantle_drag_force_lat"] *= 2
+            points.loc[mask, "mantle_drag_force_lon"] *= 2
+            points.loc[mask, "mantle_drag_force_mag"] *= 2
+
     return points
 
 def compute_synthetic_stage_rotation(
@@ -560,8 +583,11 @@ def compute_synthetic_stage_rotation(
     # Convert any NaN values to 0
     stage_rotation_poles_mag = _numpy.nan_to_num(stage_rotation_poles_mag)
 
-    # Normalise the rotation poles by the drag coefficient and the square of the Earth's radius
-    stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * plates.area #constants.mean_Earth_radius_m**2
+    # Normalise the rotation poles by the drag coefficient and the area of a plate
+    if options["Continental keels"]:
+        stage_rotation_poles_mag /= options["Mantle viscosity"] * (1 + plates.continental_fraction) / mech.La * plates.area
+    else:
+        stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * plates.area
 
     # Convert to degrees because the 'geocentric_cartesian2spherical' does not convert the magnitude to degrees
     stage_rotation_poles_mag = _numpy.rad2deg(stage_rotation_poles_mag)
@@ -1353,3 +1379,33 @@ def rotate_vector(vector, rotation):
     rotated_vector = _numpy.dot(rotation_matrix, vector.values.T)
 
     return rotated_vector.T
+
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    Calculate the Haversine distance between two sets of points on Earth.
+
+    :param lat1:    Latitude of the first point in degrees.
+    :type lat1:     float
+    :param lon1:    Longitude of the first point in degrees.
+    :type lon1:     float
+    :param lat2:    Latitude of the second point in degrees.
+    :type lat2:     float
+    :param lon2:    Longitude of the second point in degrees.
+    :type lon2:     float
+
+    :return:        The Haversine distance between the two points in kilometres.
+    :rtype:         float
+    """
+    # Convert latitude and longitude from degrees to radians
+    lat1 = _numpy.deg2rad(lat1)
+    lon1 = _numpy.deg2rad(lon1)
+    lat2 = _numpy.deg2rad(lat2)
+    lon2 = _numpy.deg2rad(lon2)
+
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = _numpy.sin(dlat / 2) ** 2 + _numpy.cos(lat1) * _numpy.cos(lat2) * _numpy.sin(dlon / 2) ** 2
+    c = 2 * _numpy.arctan2(_numpy.sqrt(a), _numpy.sqrt(1 - a))
+
+    return c
