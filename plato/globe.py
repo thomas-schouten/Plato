@@ -116,7 +116,13 @@ class Globe:
             "world_uncertainty": 0.,
             "net_rotation_pole_lat": 0.,
             "net_rotation_pole_lon": 0.,
-            "net_rotation_rate": 0.}
+            "net_rotation_rate": 0.,
+            "trench_normal_migration_pole_lat": 0.,
+            "trench_normal_migration_pole_lon": 0.,
+            "trench_normal_migration_rate": 0.,
+            "trench_parallel_migration_pole_lat": 0.,
+            "trench_parallel_migration_pole_lon": 0.,
+            "trench_parallel_migration_rate": 0.},
         ) for case in self.settings.cases}
 
         # Get the number of plates
@@ -318,14 +324,101 @@ class Globe:
 
                 logging.info(f"Net rotation for case {_case} at age {_age} has been calculated!")
 
+    def calculate_trench_migration(
+            self,
+            slabs: Slabs = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Calculate the net migration of the Earth's subduction zones.
+
+        :param slabs:       `Plates` object (default: None)
+        :type s,abs:        plato.slabs.Slabs
+        :param points:      `Points` object (default: None)
+        :type points:       plato.points.Points
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list, numpy.ndarray
+        :param PROGRESS_BAR: flag to enable progress bar (default: True)
+        :type PROGRESS_BAR:  bool
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Calculate the net migration of the Earth's subduction zones
+        for i, _age in enumerate(_tqdm(
+            _ages,
+            desc="Calculating trench migration",
+            disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR),
+        )):
+            for _case in _cases:
+                # Check if plate data is provided
+                if utils_init.check_object_data(slabs, Slabs, _age, _case):
+                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided Plates data")
+                    _slabs = slabs
+                elif utils_init.check_object_data(self.plates, Plates, _age, _case):
+                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using stored Plates data")
+                    _slabs = self.plates
+                else:
+                    logging.info(f"Instantiating Plates object for case {_case} at age {_age} to calculate net rotation")
+                    # Get a new plates object if not provided
+                    _slabs = Slabs(
+                        self.settings,
+                        self.reconstruction,
+                        ages = _age,
+                    )
+
+                # Define what column to use for plateIDs
+                plateID_col = "trench_plateID" if self.settings.options[_case]["Reconstructed motions"] else "upper_plateID"
+
+                # Check if plates and points are provided
+                _plateIDs = utils_data.select_plateIDs(plateIDs, _slabs.data[_age][_case][plateID_col].unique())
+
+                # Select plates and points data
+                selected_slabs = _slabs.data[_age][_case]
+
+                # Filter by plateIDs, if necessary
+                if plateIDs is not None:
+                    selected_slabs = _slabs.data[_age][_case][_slabs.data[_age][_case][[plateID_col]].isin(_plateIDs)]
+
+                # Filter by minimum plate area
+                if self.settings.options[_case]["Minimum plate area"] > 0.:
+                    selected_slabs = selected_slabs[selected_slabs.area >= self.settings.options[_case]["Minimum plate area"]]
+
+                # Calculate trench migration
+                trench_normal_migration, trench_parallel_migration = utils_calc.compute_trench_migration(
+                    selected_slabs,
+                )
+
+                # Store trench normal migration
+                self.data[_case].loc[i, "trench_normal_migration_pole_lat"] = trench_normal_migration[0]
+                self.data[_case].loc[i, "trench_normal_migration_pole_lon"] = trench_normal_migration[1]
+                self.data[_case].loc[i, "trench_normal_migration_rate"] = trench_normal_migration[2]
+
+                # Store trench parallel migration
+                self.data[_case].loc[i, "trench_parallel_migration_pole_lat"] = trench_parallel_migration[0]
+                self.data[_case].loc[i, "trench_parallel_migration_pole_lon"] = trench_parallel_migration[1]
+                self.data[_case].loc[i, "trench_parallel_migration_rate"] = trench_parallel_migration[2]
+
     def calculate_world_uncertainty(
             self,
-            ages = None,
-            polygons = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             reconstructed_polygons = None
         ):
         """
         Calculate the fraction of the Earth's surface that has been lost to subduction.
+
+        :param ages:                ages of interest (default: None)
+        :type ages:                 float, int, list, numpy.ndarray
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -378,6 +471,13 @@ class Globe:
         """
         Function to save 'Globe' object.
         Data of the 'Globe' object is saved to .parquet files.
+
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR: flag to enable progress bar (default: True)
+        :type PROGRESS_BAR:  bool
         """
         # Define cases if not provided
         _cases = utils_data.select_cases(cases, self.settings.cases)
@@ -409,6 +509,13 @@ class Globe:
         """
         Function to export 'Globe' object.
         Data of the 'Globe' object is exported to .csv files.
+
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param file_dir:    directory to store files (default: None)
+        :type file_dir:     str
+        :param PROGRESS_BAR: flag to enable progress bar (default: True)
+        :type PROGRESS_BAR:  bool
         """
         # Define cases if not provided
         _cases = utils_data.select_cases(cases, self.settings.cases)

@@ -168,6 +168,31 @@ def compute_interface_term(slabs, options):
 
     return slabs
 
+def compute_slab_suction_force(
+        slabs,
+        options,
+    ):
+    """
+    Function to optimise slab pull force at subduction zones
+
+    :param slabs:       subduction zone data
+    :type slabs:        pandas.DataFrame
+    :param options:     options
+    :type options:      dict
+
+    :return:            slabs
+    :rtype:             pandas.DataFrame
+    """
+    # Compute magnitude
+    mask = ~slabs["slab_seafloor_age"].isna()
+    slabs.loc[~mask, "slab_suction_force_mag"] = 0
+    slabs.loc[mask, "slab_suction_force_mag"] = options["Slab suction constant"] * slabs.loc[mask, "slab_pull_force_mag"]
+
+    # Decompose into latitudinal and longitudinal components
+    slabs["slab_suction_force_lat"], slabs["slab_suction_force_lon"] = mag_azi2lat_lon(slabs["slab_suction_force_mag"], slabs["trench_normal_azimuth"]-180 % 360)
+
+    return slabs
+
 def compute_slab_bend_force(slabs, options, mech, constants):
     """
     Function to calculate the slab bending force.
@@ -554,9 +579,9 @@ def compute_mantle_drag_force(
             mask = points["seafloor_age"].isna()
 
             # Multiply by factor 20 to account for higher viscosity in asthenosphere below continents
-            points.loc[mask, "mantle_drag_force_lat"] *= 2
-            points.loc[mask, "mantle_drag_force_lon"] *= 2
-            points.loc[mask, "mantle_drag_force_mag"] *= 2
+            points.loc[mask, "mantle_drag_force_lat"] *= options["Lateral viscosity variation"]
+            points.loc[mask, "mantle_drag_force_lon"] *= options["Lateral viscosity variation"]
+            points.loc[mask, "mantle_drag_force_mag"] *= options["Lateral viscosity variation"]
 
     return points
 
@@ -585,7 +610,7 @@ def compute_synthetic_stage_rotation(
 
     # Normalise the rotation poles by the drag coefficient and the area of a plate
     if options["Continental keels"]:
-        stage_rotation_poles_mag /= options["Mantle viscosity"] * (1 + plates.continental_fraction) / mech.La * plates.area
+        stage_rotation_poles_mag /= options["Mantle viscosity"] * (1 + plates.continental_fraction * options["Lateral viscosity variation"]) / mech.La * plates.area
     else:
         stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * plates.area
 
@@ -698,7 +723,7 @@ def compute_net_rotation(
         point_data: _pandas.DataFrame,
     ):
     """
-    Function to calculate net rotation of the entire lithosphere.
+    Function to calculate net rotation of the entire lithosphere relative to the lower mantle.
     """
     # Initialise array to store net rotation vector
     net_rotation_xyz = _numpy.zeros(3)
@@ -748,6 +773,38 @@ def compute_net_rotation(
 
     return net_rotation_pole_lat, net_rotation_pole_lon, net_rotation_rate
 
+def compute_trench_migration(
+        slab_data: _pandas.DataFrame,
+        options: Dict,
+    ):
+    """
+    Function to calculate global trench migration relative to the lower mantle.
+    """
+    # Calculate position vectors in Cartesian coordinates (bulk operation) on the unit sphere
+    # The shape of the position vectors is (n, 3)
+    positions_x, positions_y, positions_z = geocentric_spherical2cartesian(
+        slab_data.lat, 
+        slab_data.lon, 
+    )
+    positions_xyz = _numpy.column_stack((positions_x, positions_y, positions_z))
+    
+    # Define which plate motion to use
+    plate = "trench" if options["Reconstructed motions"] else "upper"
+    
+    # Get lat and lon components of trench normal azimuth
+    trench_normal_lat, trench_normal_lon = mag_azi2lat_lon(1., slab_data[f"trench_normal_azimuth"])
+
+    # Get magnitude of trench normal migration from the dot product of the velocity vector and the trench normal vector in latitudinal and longitudinal components
+    trench_normal_migration = _numpy.sum(
+        trench_normal_lat * slab_data[f"{plate}_velocity_lat"] + \
+        trench_normal_lon * slab_data[f"{plate}_velocity_lon"]
+    )
+
+    # Get magnitude of trench parallel migration
+    trench_parallel_migration = _numpy.sin(_numpy.arcos(trench_normal_migration / _numpy.linalg.norm(trench_normal_lat, trench_normal_lon)))
+
+    return trench_normal_migration, trench_parallel_migration
+
 def sum_torque(
         plates: _pandas.DataFrame,
         torque_type: str,
@@ -758,11 +815,11 @@ def sum_torque(
     """
     # Determine torque components based on torque type
     if torque_type == "driving" or torque_type == "mantle_drag":
-        torque_components = ["slab_pull_torque", "GPE_torque"]
+        torque_components = ["slab_pull_torque", "GPE_torque", "slab_suction_torque"]
     elif torque_type == "mantle_drag":
-        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque"]
+        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "slab_suction_torque"]
     elif torque_type == "residual":
-        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "mantle_drag_torque"]
+        torque_components = ["slab_pull_torque", "GPE_torque", "slab_bend_torque", "slab_suction_torque", "mantle_drag_torque"]
     else:
         raise ValueError("Invalid torque_type, must be 'driving' or 'residual' or 'mantle_drag'!")
 
@@ -996,9 +1053,17 @@ def compute_torque_on_plates(
     # Convert points to Cartesian coordinates
     positions_xyz = geocentric_spherical2cartesian(lats, lons, constants.mean_Earth_radius_m)
     
+    # Convert forces in Cartesian coordinates
+    forces_xyz = tangent_spherical2cartesian(
+        lats,
+        lons,
+        forces_lat * areas,
+        forces_lon * areas,
+    )
+
     # Calculate torques in Cartesian coordinates
-    torques_xyz = forces2torques(positions_xyz, lats, lons, forces_lat, forces_lon, areas)
-    
+    torques_xyz = _numpy.cross(positions_xyz, forces_xyz, axis=0)    
+
     # Assign the calculated torques to the new torque_var columns
     point_data[torque_var + "_torque_x"] = torques_xyz[0]
     point_data[torque_var + "_torque_y"] = torques_xyz[1]
@@ -1183,19 +1248,15 @@ def tangent_cartesian2spherical(
 
     return vectors_lat, vectors_lon, vectors_mag, vectors_azi
 
-def forces2torques(
-        positions_xyz, 
+def tangent_spherical2cartesian(
         lats, 
         lons, 
-        forces_lat, 
-        forces_lon, 
-        areas,
+        vectors_lat, 
+        vectors_lon, 
     ):
     """
-    Calculate plate torque vector from force vectors.
+    Convert a vector tangent to the surface of a sphere to Cartesian coordinates.
 
-    :param position:            Position vector in Cartesian coordinates.
-    :type position:             numpy.array
     :param lat:                 Latitude in degrees.
     :type lat:                  float, int, list, numpy.array, pandas.Series
     :param lon:                 Longitude in degrees.
@@ -1217,31 +1278,28 @@ def forces2torques(
     lats_rad = _numpy.deg2rad(lats)
 
     # Calculate force_magnitude
-    forces_mag = _numpy.linalg.norm([forces_lat*areas, forces_lon*areas], axis=0)
+    vectors_mag = _numpy.linalg.norm([vectors_lat, vectors_lon], axis=0)
 
     # Calculate theta
-    theta = _numpy.empty_like(forces_lon)
-    mask = ~_numpy.logical_or(forces_lon == 0, _numpy.isnan(forces_lon), _numpy.isnan(forces_lat))
+    theta = _numpy.empty_like(vectors_lon)
+    mask = ~_numpy.logical_or(vectors_lon == 0, _numpy.isnan(vectors_lon), _numpy.isnan(vectors_lat))
     theta[mask] = _numpy.where(
-        (forces_lon[mask] > 0) & (forces_lat[mask] >= 0),  
-        _numpy.arctan(forces_lat[mask] / forces_lon[mask]),                          
+        (vectors_lon[mask] > 0) & (vectors_lat[mask] >= 0),  
+        _numpy.arctan(vectors_lat[mask] / vectors_lon[mask]),                          
         _numpy.where(
-            (forces_lon[mask] < 0) & (forces_lat[mask] >= 0) | (forces_lon[mask] < 0) & (forces_lat[mask] < 0),    
-            _numpy.pi + _numpy.arctan(forces_lat[mask] / forces_lon[mask]),              
-            (2*_numpy.pi) + _numpy.arctan(forces_lat[mask] / forces_lon[mask])           
+            (vectors_lon[mask] < 0) & (vectors_lat[mask] >= 0) | (vectors_lon[mask] < 0) & (vectors_lat[mask] < 0),    
+            _numpy.pi + _numpy.arctan(vectors_lat[mask] / vectors_lon[mask]),              
+            (2*_numpy.pi) + _numpy.arctan(vectors_lat[mask] / vectors_lon[mask])           
         )
     )
 
     # Calculate force in Cartesian coordinates
-    forces_x = forces_mag * _numpy.cos(theta) * (-1.0 * _numpy.sin(lons_rad))
-    forces_y = forces_mag * _numpy.cos(theta) * _numpy.cos(lons_rad)
-    forces_z = forces_mag * _numpy.sin(theta) * _numpy.cos(lats_rad)
-    forces_xyz = _numpy.asarray([forces_x, forces_y, forces_z])
+    vectors_x = vectors_mag * _numpy.cos(theta) * (-1.0 * _numpy.sin(lons_rad))
+    vectors_y = vectors_mag * _numpy.cos(theta) * _numpy.cos(lons_rad)
+    vectors_z = vectors_mag * _numpy.sin(theta) * _numpy.cos(lats_rad)
+    vectors_xyz = _numpy.asarray([vectors_x, vectors_y, vectors_z])
 
-    # Calculate torque
-    torques = _numpy.cross(positions_xyz, forces_xyz, axis=0)
-
-    return torques   
+    return vectors_xyz   
 
 def mag_azi2lat_lon(magnitude, azimuth):
     """

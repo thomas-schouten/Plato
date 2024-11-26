@@ -153,9 +153,13 @@ class Plates:
                         for entry in entries[1:]:
                             self.resolved_geometries[_age][entry] = self.resolved_geometries[_age][key].copy()
                             self.resolved_topologies[_age][entry] = self.resolved_topologies[_age][key].copy()
-
+        
+        # DATA
         # Initialise data dictionary
         self.data = {age: {} for age in self.settings.ages}
+
+        # Initialise dictionary to store data that was newly initialised
+        self.NEW_DATA = {age: [] for age in self.settings.ages}
 
         # Loop through times
         for _age in _tqdm(
@@ -195,6 +199,9 @@ class Plates:
                         self.resolved_topologies[_age][key], 
                         self.settings.options[key],
                     )
+
+                    # Set flag to for newly initialised data
+                    self.NEW_DATA[_age].append(key)
                     
                     # Copy to matching cases
                     if len(entries) > 1:
@@ -452,6 +459,8 @@ class Plates:
             matching_cases = self.settings.slab_pull_cases
         elif torque_var == "slab_bend":
             matching_cases = self.settings.slab_bend_cases
+        elif torque_var == "slab_suction":
+            matching_cases = self.settings.slab_suction_cases
         elif torque_var == "GPE":
             matching_cases = self.settings.gpe_cases
         elif torque_var == "mantle_drag":
@@ -461,7 +470,12 @@ class Plates:
         _iterable = utils_data.select_iterable(cases, matching_cases)
 
         # Define plateID column of point data
-        point_data_plateID_col = "lower_plateID" if torque_var == "slab_pull" or torque_var == "slab_bend" else "plateID"
+        if torque_var == "slab_pull" or torque_var == "slab_bend":
+            point_data_plateID_col = "lower_plateID"
+        elif torque_var == "slab_suction":
+            point_data_plateID_col = "upper_plateID"
+        else:
+            "plateID"
 
         # Define columns to store torque and force components and store them in one list
         torque_cols = [f"{torque_var}_torque_" + axis for axis in ["x", "y", "z", "mag"]]
@@ -471,12 +485,12 @@ class Plates:
         # Loop through ages
         for _age in _tqdm(
                 _ages,
-                desc="Calculating torque on plates", 
+                desc=f"Calculating {torque_var.replace('_', ' ')} torque on plates", 
                 disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
             ):
             logging.info(f"Calculating torque on plates at {_age} Ma")
             for key, entries in _iterable.items():
-                # Select data
+
                 _plate_data = self.data[_age][key].copy()
                 _point_data = point_data[_age][key].copy()
 
@@ -490,6 +504,9 @@ class Plates:
 
                 if torque_var == "slab_pull" or torque_var == "slab_bend":
                     selected_points_plateID = _point_data.lower_plateID.values
+                    selected_points_area = _point_data.trench_segment_length.values
+                elif torque_var == "slab_suction":
+                    selected_points_plateID = _point_data.upper_plateID.values
                     selected_points_area = _point_data.trench_segment_length.values
                 else:
                     selected_points_plateID = _point_data.plateID.values

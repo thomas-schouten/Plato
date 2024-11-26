@@ -107,6 +107,7 @@ class Settings:
             "Slab pull constant", "Shear zone width", "Slab length"
         ])
         self.slab_bend_cases = self.process_cases(["Slab bend torque", "Seafloor age profile"])
+        self.slab_suction_cases = self.process_cases(["Slab suction torque", "Seafloor age profile"])
         self.gpe_cases = self.process_cases(["Continental crust", "Seafloor age profile", "Grid spacing"])
         self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing", "Continental keels"])
 

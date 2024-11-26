@@ -469,7 +469,7 @@ class Slabs:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
         # Define sampling points
         type = "arc" if plate == "upper" else "slab"
@@ -776,6 +776,73 @@ class Slabs:
 
             # Inform the user that the slab pull forces have been calculated
             logging.info(f"Calculated slab pull forces for case {key} Ma.")
+
+    def calculate_slab_suction_force(
+            self,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Function to compute slab suction force along trenches.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.slab_suction_cases)
+
+        # Loop through valid cases
+        # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
+        for key, entries in _tqdm(
+                _iterable.items(), 
+                desc="Calculating slab suction forces", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            # Skip if slab pull torque is not sampled
+            if self.settings.options[key]["Slab suction torque"]:                
+                # Loop through ages
+                for _age in _ages:
+                    # Select points
+                    _data = self.data[_age][key].copy()
+
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.select_plateIDs(plateIDs, _data.upper_plateID.unique())
+
+                    # Select points
+                    if plateIDs is not None:
+                        _data = _data[_data.upper_plateID.isin(_plateIDs)]
+
+                    if _data.empty:
+                        logging.warning(f"No valid points found for case {key} Ma.")
+                        continue
+                        
+                    # Calculate slab suction force
+                    computed_data = utils_calc.compute_slab_suction_force(
+                        _data,
+                        self.settings.options[key],
+                    )
+
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index] = computed_data
+                    
+                    # Copy to other entries
+                    if len(entries) > 1:
+                        cols = [
+                            "slab_suction_force_lat",
+                            "slab_suction_force_lon",
+                            "slab_suction_force_mag",
+                        ]
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries,
+                            cols,
+                        )
+
+            # Inform the user that the slab pull forces have been calculated
+            logging.info(f"Calculated slab suction forces for case {key} Ma.")
 
     def calculate_slab_bend_force(
             self,

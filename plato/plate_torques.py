@@ -167,8 +167,12 @@ class PlateTorques():
                 slabs = self.slabs,
             )
 
-        # Calculate RMS plate velocities
-        self.calculate_rms_velocity()
+        # Calculate RMS plate velocities for newly initialised data
+        for _age in self.plates.NEW_DATA.keys():
+            self.calculate_rms_velocity(
+                ages = _age,
+                cases = self.plates.NEW_DATA[_age],
+            )
 
         # Set shortcuts
         self.ages = self.settings.ages
@@ -436,6 +440,9 @@ class PlateTorques():
         # Calculate slab bend torque
         self.calculate_slab_bend_torque(ages, cases, plateIDs, PROGRESS_BAR)
 
+        # Calculate slab suction torque
+        self.calculate_slab_suction_torque(ages, cases, plateIDs, PROGRESS_BAR)
+
         # Calculate synthetic velocity
         self.calculate_synthetic_velocity(ages, cases, plateIDs, PROGRESS_BAR)
 
@@ -559,6 +566,36 @@ class PlateTorques():
 
         logging.info("Calculated mantle drag torque!")
 
+    def calculate_slab_suction_torque(
+            self,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Function to calculate the slab bend torque.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list, numpy.ndarray
+        """
+        # Calculate the slab bend force along the trenches
+        self.slabs.calculate_slab_suction_force(ages, cases, plateIDs, PROGRESS_BAR)
+
+        # Calculate the torque on 
+        self.plates.calculate_torque_on_plates(
+            self.slabs.data,
+            ages,
+            cases,
+            plateIDs,
+            torque_var = "slab_suction",
+            PROGRESS_BAR = PROGRESS_BAR,
+        )
+
     def calculate_slab_bend_torque(
             self,
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
@@ -588,8 +625,6 @@ class PlateTorques():
             torque_var = "slab_bend",
             PROGRESS_BAR = PROGRESS_BAR,
         )
-
-        logging.info("Calculated slab bend torque!")
 
     def calculate_driving_torque(
             self,
