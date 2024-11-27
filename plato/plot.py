@@ -652,6 +652,10 @@ class PlotReconstruction():
         velocity_vectors1 = self.points.data[age][case1].iloc[::209].copy()
         velocity_vectors2 = self.points.data[age][case2].iloc[::209].copy()
 
+        # Remove NaN and zero values
+        velocity_vectors1 = velocity_vectors1.dropna(subset = ["velocity_lat", "velocity_lon", velocity_component])
+        velocity_vectors2 = velocity_vectors2.dropna(subset = ["velocity_lat", "velocity_lon", velocity_component])
+
         # Plot velocity vectors
         qu = self.plot_vectors(
             ax,

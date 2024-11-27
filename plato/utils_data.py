@@ -110,7 +110,7 @@ def get_plate_data(
     merged_plates["slab_flux"] = 0.; merged_plates["sediment_flux"] = 0.
 
     # Initialise columns to store whole-plate torques (Cartesian) and force at plate centroid (North-East).
-    torques = ["slab_pull", "GPE", "slab_bend", "mantle_drag", "driving", "residual"]
+    torques = ["slab_pull", "GPE", "slab_suction", "slab_bend", "mantle_drag", "driving", "residual"]
     axes = ["x", "y", "z", "mag"]
     coords = ["lat", "lon", "mag", "azi"]
     
@@ -198,7 +198,7 @@ def get_slab_data(
     slabs["slab_length"] = 0.
 
     # Forces
-    forces = ["slab_pull", "slab_bend", "residual"]
+    forces = ["slab_pull", "slab_bend", "slab_suction", "residual"]
     coords = ["mag", "lat", "lon"]
     slabs[[force + "_force_" + coord for force in forces for coord in coords]] = [[0.] * len(coords) * len(forces) for _ in range(len(slabs))]
     slabs["slab_pull_constant"] = options["Slab pull constant"]
@@ -580,7 +580,7 @@ def get_options(
         True,
         True,
         False,
-        True,
+        False,
         "viscous",
         True,
         False,

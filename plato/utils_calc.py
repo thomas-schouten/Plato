@@ -773,6 +773,50 @@ def compute_net_rotation(
 
     return net_rotation_pole_lat, net_rotation_pole_lon, net_rotation_rate
 
+def compute_no_net_rotation(
+        plate_data: _pandas.DataFrame,
+        point_data: _pandas.DataFrame,
+    ):
+    """
+    Function to remove the net rotation of the entire lithosphere relative to the lower mantle from the stage rotations of individual plates.
+    """
+    # Calculate net rotation in spherical coordinates
+    net_rotation_lat, net_rotation_lon, net_rotation_mag = compute_net_rotation(plate_data, point_data)
+
+    # Convert net rotation to Cartesian coordinates
+    net_rotation_xyz = _numpy.column_stack(geocentric_spherical2cartesian(
+        net_rotation_lat, 
+        net_rotation_lon, 
+        net_rotation_mag,
+    ))
+
+    # Loop through plates
+    for index, plate in plate_data.iterrows():
+        # Calculate rotation pole in Cartesian coordinates
+        rotation_pole_xyz = _numpy.column_stack(geocentric_spherical2cartesian(
+            plate.pole_lat, 
+            plate.pole_lon, 
+            plate.pole_angle,
+        ))
+
+        # Subtract the net rotation from the stage rotation
+        new_rotation_pole_xyz = rotation_pole_xyz - net_rotation_xyz
+
+        # Convert the new rotation pole to spherical coordinates
+        new_rotation_pole_lat, new_rotation_pole_lon, _, _ = geocentric_cartesian2spherical(
+            new_rotation_pole_xyz[:, 0], new_rotation_pole_xyz[:, 1], new_rotation_pole_xyz[:, 2],
+        )
+
+        # Calculate the magnitude of the new rotation pole
+        new_rotation_rate = _numpy.linalg.norm(new_rotation_pole_xyz)
+
+        # Assign new rotation pole to DataFrame
+        plate_data.loc[index, "pole_lat"] = new_rotation_pole_lat[0]
+        plate_data.loc[index, "pole_lon"] = new_rotation_pole_lon[0]
+        plate_data.loc[index, "pole_angle"] = new_rotation_rate
+
+    return plate_data
+
 def compute_trench_migration(
         slab_data: _pandas.DataFrame,
         options: Dict,

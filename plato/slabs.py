@@ -264,6 +264,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             grids = None,
+            ITERATIONS: bool = True,
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -289,7 +290,7 @@ class Slabs:
             plate = "lower",
             vars = ["seafloor_age"],
             cols = ["slab_seafloor_age"],
-            ITERATIONS = True,
+            ITERATIONS = ITERATIONS,
             PROGRESS_BAR = PROGRESS_BAR,
         )
 

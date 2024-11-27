@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm as _tqdm
 
 # Plato libraries
-from . import utils_data
-from .utils_calc import haversine
+from . import utils_data, utils_calc
 from .plate_torques import PlateTorques
 
 class Optimisation():
@@ -942,7 +941,7 @@ class Optimisation():
                             
                 for _plateID in _plateIDs[_age][_case]:
                     # Calculate distance to the pole of rotation
-                    distances = haversine(
+                    distances = utils_calc.haversine(
                         pole_lon_opt_stack[_age][_case][_plateID],
                         pole_lat_opt_stack[_age][_case][_plateID],
                         _numpy.repeat(reconstructed_pole_lon[_plateID], len(constants)),
@@ -1093,6 +1092,37 @@ class Optimisation():
         
         NOTE: This function is not yet implemented.
         """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided
+        _cases = utils_data.select_cases(cases, self.settings.cases)
+
+        # Loop through plates
+        for _age in _tqdm(_ages, desc="Removing net rotation"):
+            for _case in _cases:
+                # Select plateIDs
+                _plateIDs = utils_data.select_plateIDs(plateIDs, self.plates.data[_age][_case].plateID)
+
+                # Select data
+                _plate_data = self.plates.data[_age][_case].copy()
+                _point_data = self.points.data[_age][_case].copy()
+
+                # Filter plates
+                if plateIDs is not None:
+                    _plate_data = _plate_data[_plate_data["plateID"].isin(_plateIDs)]
+                    _point_data = _point_data[_point_data["plateID"].isin(_plateIDs)]
+
+                # Remove net rotation
+                computed_data = utils_calc.compute_no_net_rotation(_plate_data, _point_data)
+
+                # Feed data back into the object
+                self.plates.data[_age][_case] = computed_data
+
+        # Recalculate new velocities
+        self.points.calculate_velocities(_ages, _cases, self.plates.data)
+        self.slabs.calculate_velocities(_ages, _cases, self.plates.data)
+        self.plate_torques.calculate_rms_velocity(_ages, _cases)
 
     def extract_data_through_time(
             self,

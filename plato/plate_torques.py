@@ -310,6 +310,7 @@ class PlateTorques():
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            ITERATIONS: bool = True,
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -324,10 +325,10 @@ class PlateTorques():
         :type plateIDs:     int, float, list, numpy.ndarray
         """
         # Sample points
-        self.sample_point_seafloor_ages(ages, cases, plateIDs)
+        self.sample_point_seafloor_ages(ages, cases, plateIDs, PROGRESS_BAR)
     
         # Sample slabs
-        self.sample_slab_seafloor_ages(ages, cases, plateIDs)
+        self.sample_slab_seafloor_ages(ages, cases, plateIDs, ITERATIONS, PROGRESS_BAR)
 
     def sample_point_seafloor_ages(
             self,
@@ -353,6 +354,7 @@ class PlateTorques():
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            ITERATIONS: bool = True,
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -365,7 +367,7 @@ class PlateTorques():
         :param plateIDs:    plateIDs of interest (default: None)
         :type plateIDs:     int, float, list, numpy.ndarray
         """
-        self.slabs.sample_slab_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age, PROGRESS_BAR)
+        self.slabs.sample_slab_seafloor_ages(ages, cases, plateIDs, self.grids.seafloor_age, ITERATIONS, PROGRESS_BAR)
 
     def sample_arc_seafloor_ages(
             self,

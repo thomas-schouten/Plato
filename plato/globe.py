@@ -132,7 +132,7 @@ class Globe:
         self.calculate_subduction_length()
 
         # Get the world uncertainty
-        self.calculate_world_uncertainty()
+        # self.calculate_world_uncertainty()
 
         # Get the net rotation
         if CALCULATE_VELOCITIES:
