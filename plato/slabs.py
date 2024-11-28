@@ -104,6 +104,8 @@ class Slabs:
         # Initialise data dictionary
         self.data = {age: {} for age in self.settings.ages}
 
+        # In
+
         # Loop through times
         for _age in _tqdm(
                 self.settings.ages, 
@@ -340,6 +342,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             grids = None,
+            ITERATIONS: bool = True,
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -372,6 +375,7 @@ class Slabs:
             plate = "lower",
             vars = None,
             cols = ["sediment_thickness"],
+            ITERATIONS = ITERATIONS,
             PROGRESS_BAR = PROGRESS_BAR,
         )
 
@@ -562,6 +566,8 @@ class Slabs:
                             _data[f"{type}_sampling_lon"],
                             _grid[_var],
                         )
+                        
+                        # Accumulate the sampled data
                         accumulated_data += sampled_data
 
                     # This is to iteratively check if the sampling distance is to be adjusted
@@ -577,6 +583,9 @@ class Slabs:
                         for i in range(iter_num):
                             # Mask data
                             mask = _numpy.isnan(accumulated_data)
+
+                            if len(mask == 0):
+                                break
 
                             # Set masked data to zero to avoid errors
                             accumulated_data[mask] = 0
@@ -596,7 +605,16 @@ class Slabs:
                                     sampling_lon,
                                     _grid[_var],
                                 )
+
+                                # Make sure NaN values are set to zero
+                                sampled_data = _numpy.nan_to_num(sampled_data)
+
+                                # Add data to total data.
                                 accumulated_data[mask] += sampled_data[mask]
+
+                                # Set zero values back to NaN
+                                new_mask = accumulated_data[mask] == 0
+                                accumulated_data[mask][new_mask] = _numpy.nan
 
                             # Define new sampling distance
                             if plate == "lower":
@@ -708,6 +726,8 @@ class Slabs:
         ):
         """
         Function to compute slab pull force along trenches.
+
+        
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)

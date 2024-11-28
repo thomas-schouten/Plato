@@ -207,7 +207,7 @@ class Optimisation():
             case = None, 
             plateIDs = None, 
             grid_size = 500, 
-            viscosity_range = [1, 100],
+            viscosity_range = [5e18, 5e20],
             plot = True,
             weight_by_area = True,
             minimum_plate_area = None
@@ -250,8 +250,11 @@ class Optimisation():
         else:
             sp_consts = _numpy.linspace(.1, 1., grid_size)
 
+        # Set range of lateral viscosity variations
+        lvvs = _numpy.linspace(1, 100., grid_size)
+
         # Create grids from ranges of viscosities and slab pull coefficients
-        visc_grid, sp_const_grid = _numpy.meshgrid(viscs, sp_consts)
+        visc_grid, lvv_grid, sp_const_grid = _numpy.meshgrid(viscs, lvvs, sp_consts)
         ones_grid = _numpy.ones_like(visc_grid)
 
         # Filter plates
@@ -278,15 +281,15 @@ class Optimisation():
 
                 residual_x = _numpy.zeros_like(sp_const_grid); residual_y = _numpy.zeros_like(sp_const_grid); residual_z = _numpy.zeros_like(sp_const_grid)
                 if self.settings.options[case]["Slab pull torque"] and "slab_pull_torque_x" in _data.columns:
-                    residual_x -= _data.slab_pull_torque_x.iloc[k] * ones_grid
-                    residual_y -= _data.slab_pull_torque_y.iloc[k] * ones_grid
-                    residual_z -= _data.slab_pull_torque_z.iloc[k] * ones_grid
+                    residual_x -= _data.slab_pull_torque_x.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
+                    residual_y -= _data.slab_pull_torque_y.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
+                    residual_z -= _data.slab_pull_torque_z.iloc[k] * sp_const_grid / self.settings.options[case]["Slab pull constant"]
 
                 # Add slab suction torque
-                if self.settings.options[case]["Slab suction torque"] and "slab_suction_torque_x" in _data.columns:
-                    residual_x -= _data.slab_suction_torque_x.iloc[k] * sp_const_grid / self.settings.options[case]["Slab suction constant"]
-                    residual_y -= _data.slab_suction_torque_y.iloc[k] * sp_const_grid / self.settings.options[case]["Slab suction constant"]
-                    residual_z -= _data.slab_suction_torque_z.iloc[k] * sp_const_grid / self.settings.options[case]["Slab suction constant"]
+                # if self.settings.options[case]["Slab suction torque"] and "slab_suction_torque_x" in _data.columns:
+                #     residual_x -= _data.slab_suction_torque_x.iloc[k] * ones_grid
+                #     residual_y -= _data.slab_suction_torque_y.iloc[k] * ones_grid
+                #     residual_z -= _data.slab_suction_torque_z.iloc[k] * ones_grid
 
                 # Add GPE torque
                 if self.settings.options[case]["GPE torque"] and "GPE_torque_x" in _data.columns:
@@ -308,14 +311,17 @@ class Optimisation():
 
                 # Add mantle drag torque
                 if self.settings.options[case]["Mantle drag torque"] and "mantle_drag_torque_x" in _data.columns:
-                    if self.settings.options[case]["Continental keels"]:
-                        residual_x -= _data.mantle_drag_torque_y.iloc[k] * (1 + visc_grid * _data.continental_fraction.iloc[k]) / (1 + self.settings.options[case]["Lateral viscosity variation"] * _data.continental_fraction.iloc[k])
-                        residual_y -= _data.mantle_drag_torque_y.iloc[k] * (1 + visc_grid * _data.continental_fraction.iloc[k]) / (1 + self.settings.options[case]["Lateral viscosity variation"] * _data.continental_fraction.iloc[k])
-                        residual_z -= _data.mantle_drag_torque_z.iloc[k] * (1 + visc_grid * _data.continental_fraction.iloc[k]) / (1 + self.settings.options[case]["Lateral viscosity variation"] * _data.continental_fraction.iloc[k])
-                    else:
-                        residual_x -= _data.mantle_drag_torque_x.iloc[k] * ones_grid
-                        residual_y -= _data.mantle_drag_torque_y.iloc[k] * ones_grid
-                        residual_z -= _data.mantle_drag_torque_z.iloc[k] * ones_grid
+                    # if self.settings.options[case]["Continental keels"]:
+                    residual_x -= _data.mantle_drag_torque_y.iloc[k] / self.settings.options[case]["Mantle viscosity"] * visc_grid * \
+                        (1 + lvv_grid * _data.continental_fraction.iloc[k]) / (1 + self.settings.options[case]["Lateral viscosity variation"] * _data.continental_fraction.iloc[k])
+                    residual_y -= _data.mantle_drag_torque_y.iloc[k] / self.settings.options[case]["Mantle viscosity"] * visc_grid * \
+                        (1 + lvv_grid * _data.continental_fraction.iloc[k]) / (1 + self.settings.options[case]["Lateral viscosity variation"] * _data.continental_fraction.iloc[k])
+                    residual_z -= _data.mantle_drag_torque_z.iloc[k] / self.settings.options[case]["Mantle viscosity"] * visc_grid * \
+                        (1 + lvv_grid * _data.continental_fraction.iloc[k]) / (1 + self.settings.options[case]["Lateral viscosity variation"] * _data.continental_fraction.iloc[k])
+                    # else:
+                    # residual_x -= _data.mantle_drag_torque_x.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
+                    # residual_y -= _data.mantle_drag_torque_y.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
+                    # residual_z -= _data.mantle_drag_torque_z.iloc[k] * visc_grid / self.settings.options[case]["Mantle viscosity"]
                     
                 # Compute magnitude of residual
                 if weight_by_area:
@@ -327,9 +333,10 @@ class Optimisation():
         residual_mag_normalised = _numpy.log10(residual_mag / driving_mag)
 
         # Find the indices of the minimum value directly using _numpy.argmin
-        opt_i, opt_j = _numpy.unravel_index(_numpy.argmin(residual_mag), residual_mag.shape)
-        opt_visc = visc_grid[opt_i, opt_j]
-        opt_sp_const = sp_const_grid[opt_i, opt_j]
+        indices = _numpy.unravel_index(_numpy.argmin(residual_mag), residual_mag.shape)
+        opt_visc = viscs[indices[0]]
+        opt_lvv = lvvs[indices[2]]
+        opt_sp_const = sp_consts[indices[1]]
 
         # # Assign optimal values to last entry in arrays
         # self.opt_sp_const[age][case][-1] = opt_sp_const
@@ -338,23 +345,24 @@ class Optimisation():
         # Plot
         if plot == True:
             fig, ax = plt.subplots(figsize=(15, 12))
-            im = ax.imshow(residual_mag_normalised, cmap="cmc.lapaz_r", vmin=-1.5, vmax=1.5)
+            im = ax.imshow(residual_mag_normalised[:, indices[1], :], cmap="cmc.lapaz_r", vmin=-1.5, vmax=1.5)
             ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
             ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
-            ax.set_xticklabels(["{:.2f}".format(visc) for visc in _numpy.linspace(viscosity_range[0], viscosity_range[1], 5)])
+            ax.set_xticklabels(["{:.2e}".format(visc) for visc in _numpy.linspace(viscosity_range[0], viscosity_range[1], 5)])
             ax.set_yticklabels(["{:.2f}".format(sp_const) for sp_const in _numpy.linspace(sp_consts.min(), sp_consts.max(), 5)])
-            ax.set_xlabel("Lateral viscosity variation")
-            ax.set_ylabel("Slab suction constant")
-            ax.scatter(opt_j, opt_i, marker="*", facecolor="none", edgecolor="k", s=30)  # Adjust the marker style and size as needed
+            ax.set_xlabel("Mantle viscosity [Pa s]")
+            ax.set_ylabel("Slab pull reduction factor")
+            ax.scatter(indices[0], indices[2], marker="*", facecolor="none", edgecolor="k", s=30)  # Adjust the marker style and size as needed
             fig.colorbar(im, label = "Log(residual torque/driving torque)")
             plt.show()
 
         # Print results
         print(f"Optimal coefficients for ", ", ".join(_data.name.astype(str)), " plate(s), (PlateIDs: ", ", ".join(_data.plateID.astype(str)), ")")
         print("Minimum residual torque: {:.2%} of driving torque".format(10**(_numpy.amin(residual_mag_normalised))))
-        print("Optimum lateral viscosity variation: {:.2f}".format(opt_visc))
+        print("Optimum viscosity: {:.2e} [Pa s]".format(opt_visc))
+        print("Optimum lateral viscosity variation: {:.2f}".format(opt_lvv))
         # print("Optimum Drag Coefficient [Pa s/m]: {:.2e}".format(opt_visc / self.settings.mech.La))
-        print("Optimum slab suction constant: {:.2%}".format(opt_sp_const))
+        print("Optimum slab pull constant: {:.2%}".format(opt_sp_const))
 
         return residual_mag_normalised
 

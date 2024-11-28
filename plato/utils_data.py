@@ -585,7 +585,7 @@ def get_options(
         True,
         False,
         False,
-        2,
+        1,
         "half space cooling",
         False,
         0,
