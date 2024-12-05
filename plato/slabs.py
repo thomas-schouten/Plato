@@ -104,7 +104,8 @@ class Slabs:
         # Initialise data dictionary
         self.data = {age: {} for age in self.settings.ages}
 
-        # In
+        # Initialise dictionary to store data that was newly initialised
+        self.NEW_DATA = {age: [] for age in self.settings.ages}
 
         # Loop through times
         for _age in _tqdm(
@@ -158,7 +159,12 @@ class Slabs:
 
         # Calculate velocities along slabs
         if CALCULATE_VELOCITIES:
-            self.calculate_velocities(PROGRESS_BAR = PROGRESS_BAR)
+            for _age in self.NEW_DATA.keys():
+                self.calculate_velocities(
+                    _age,
+                    self.NEW_DATA[_age],
+                    PROGRESS_BAR = PROGRESS_BAR
+                )
 
         # Calculate total slab length as a function of age and case
         self.total_slab_length = _numpy.zeros((len(self.settings.ages), len(self.settings.slab_pull_cases)))
@@ -194,7 +200,7 @@ class Slabs:
         :param stage_rotation:  stage rotation model (default: None)
         :type stage_rotation:   dict
 
-        TODO: Implement selection of entries by plateID
+        TODO: Trench velocities need to be calculated differently from the 
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -212,6 +218,9 @@ class Slabs:
                 for plate in ["upper_plate", "lower_plate", "trench"]:
                     plateID_col = f"{plate}ID" if plate != "trench" else "trench_plateID"
                     for plateID in self.data[_age][_case][plateID_col].unique():
+                        # Set stage rotation to zero
+                        _stage_rotation = None
+
                         if (
                             isinstance(stage_rotation, Dict)
                             and _age in stage_rotation.keys()
@@ -220,9 +229,21 @@ class Slabs:
                         ):
                             # Get stage rotation from the provided DataFrame in the dictionary
                             _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
+
+                            if _stage_rotation.empty():
+                                _stage_rotation = None
                     
                         # Get stage rotation, if not provided
-                        else:
+                        if not _stage_rotation:
+                            # if plate == "trench" and RELATIVE_ROTATION:
+                            #     stage_rotation = self.reconstruction.rotation_model.get_rotation(
+                            #     to_time =_age,
+                            #     moving_plate_id = int(plateID),
+                            #     from_time=_age + self.settings.options[_case]["Velocity time step"],
+                            #     anchor_plate_id = int(plateID)
+                            # ).get_lat_lon_euler_pole_and_angle_degrees()
+
+
                             stage_rotation = self.reconstruction.rotation_model.get_rotation(
                                 to_time =_age,
                                 moving_plate_id = int(plateID),
@@ -265,7 +286,7 @@ class Slabs:
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
-            grids = None,
+            grids: Optional[Dict[Union[int, float], _xarray.Dataset]] = None,
             ITERATIONS: bool = True,
             PROGRESS_BAR: bool = True,
         ):
@@ -301,11 +322,12 @@ class Slabs:
 
     def sample_arc_seafloor_ages(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            grids = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            grids: Optional[Dict[Union[int, float], _xarray.Dataset]] = None,
+            ITERATIONS: bool = False,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Samples seafloor age at arcs.
@@ -330,6 +352,7 @@ class Slabs:
             plate = "upper",
             vars = ["seafloor_age"],
             cols = ["arc_seafloor_age"],
+            ITERATIONS = ITERATIONS,
             PROGRESS_BAR = PROGRESS_BAR,
         )
 
@@ -341,7 +364,7 @@ class Slabs:
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
-            grids = None,
+            grids: Optional[Dict[Union[int, float], _xarray.Dataset]] = None,
             ITERATIONS: bool = True,
             PROGRESS_BAR: bool = True,
         ):
@@ -463,7 +486,7 @@ class Slabs:
             grids: Optional[Dict] = None,
             plate: Optional[str] = "lower",
             vars: Optional[Union[str, List[str]]] = ["seafloor_age"],
-            cols = ["slab_seafloor_age"],
+            cols: Optional[Union[str, List[str]]] = ["slab_seafloor_age"],
             ITERATIONS: bool = False,
             PROGRESS_BAR: bool = True,
         ):

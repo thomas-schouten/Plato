@@ -249,6 +249,65 @@ class Grids():
         # Ensure the modified new_grids is saved back to the object's attribute
         setattr(self, grid_type, new_grids)
         logging.info(f"{grid_type} updated:", getattr(self, grid_type))
+
+    def reconstruct_grid(
+            self,
+            grid: Union[Dict[Union[int, float], _xarray.DataArray], _xarray.DataArray],
+            target_variable: str = "z",
+            ages: Optional[Union[int, float]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Function to reconstruct a grid to a given reconstruction age.
+
+        NOTE: This function needs to be tested still.
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # If it is a single grid, convert to gplately.Raster object
+        if isinstance(grid, _xarray.DataArray):
+            raster = _gplately.Raster(
+                plate_reconstruction = self.reconstruction,
+                data = raster[target_variable].values,
+                extent="global",    # equivalent to (-180, 180, -90, 90)
+                origin="lower",     # or set extent to (-180, 180, -90, 90)
+            )
+
+        # Initialise dictionary to store reconstructed grids
+        reconstructed_grids = {}
+
+        # Loop through ages
+        for _age in _tqdm(
+                _ages,
+                desc = "Reconstructing grids",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            # If a dictionary of grids is passed, convert each entry to gplately.Raster object
+            if isinstance(grid, dict) and _age in grid and isinstance(grid[_age], _xarray.Dataset):
+                    raster = _gplately.Raster(
+                    plate_reconstruction = self.reconstruction,
+                    data = raster[target_variable].values,
+                    extent="global",    # equivalent to (-180, 180, -90, 90)
+                    origin="lower",     # or set extent to (-180, 180, -90, 90)
+                )
+                
+            # Reconstruct the raster back to the current reconstruction age
+            reconstructed_raster = raster.reconstruct(
+                time = _age,
+                partitioning_features = self.reconstruction.static_polygons,
+            )
+
+            # Convert reconstructed raster back to xarray.Dataset
+            reconstructed_grids[_age] = _xarray.Dataset(
+                data_vars = {target_variable: (["latitude", "longitude"], reconstructed_raster.data)},
+                coords = {
+                        "latitude": (["latitude"], reconstructed_raster.lats),
+                        "longitude": (["longitude"], reconstructed_raster.lons)
+                    }
+                )
+
+        return reconstructed_grids
     
     def generate_velocity_grid(
             self,
@@ -514,7 +573,7 @@ class Grids():
         
     def save_grid(
             self,
-            data: Dict,
+            data: Dict[Union[int, float], _xarray.Dataset],
             type: str,
             ages: Union[None, List[int], List[float], _numpy.ndarray] = None,
             cases: Union[None, str, List[str]] = None,

@@ -108,6 +108,11 @@ class Globe:
         self.points = points
         self.slabs = slabs
 
+        # Make shortcuts
+        self.ages = self.settings.ages
+        self.cases = self.settings.cases
+        self.options = self.settings.options
+
         # Initialise dataframe to store global properties for each case
         self.data = {case: _pandas.DataFrame(
             {'age': self.settings.ages,
@@ -117,6 +122,9 @@ class Globe:
             "net_rotation_pole_lat": 0.,
             "net_rotation_pole_lon": 0.,
             "net_rotation_rate": 0.,
+            "trench_migration_pole_lat": 0.,
+            "trench_migration_pole_lon": 0.,
+            "trench_migration_rate": 0.,
             "trench_normal_migration_pole_lat": 0.,
             "trench_normal_migration_pole_lon": 0.,
             "trench_normal_migration_rate": 0.,
@@ -137,6 +145,7 @@ class Globe:
         # Get the net rotation
         if CALCULATE_VELOCITIES:
             self.calculate_net_rotation()
+            self.calculate_trench_migration()
     
     def __str__(self):
         return f"Globe is a class that contains data and methods for to characterise the global geodynamic state of a reconstruction."
@@ -144,7 +153,6 @@ class Globe:
     def __repr__(self):
         return self.__str__()
     
-
     def calculate_number_of_plates(
             self,
             plates: Optional[Plates] = None,
@@ -176,7 +184,7 @@ class Globe:
 
     def calculate_subduction_length(
             self,
-            slabs: 'Slabs' = None,
+            slabs: Slabs = None,
             ages: Optional[Union[int, float, _numpy.integer, _numpy.floating, list, _numpy.ndarray]] = None,
             cases: Optional[List[str]] = None,
         ):
@@ -225,8 +233,8 @@ class Globe:
 
     def calculate_net_rotation(
             self,
-            plates: Plates = None,
-            points: Points = None,
+            plates: Optional[Plates] = None,
+            points: Optional[Points] = None,
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
@@ -326,7 +334,7 @@ class Globe:
 
     def calculate_trench_migration(
             self,
-            slabs: Slabs = None,
+            slabs: Optional[Slabs] = None,
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
@@ -336,7 +344,7 @@ class Globe:
         Calculate the net migration of the Earth's subduction zones.
 
         :param slabs:       `Plates` object (default: None)
-        :type s,abs:        plato.slabs.Slabs
+        :type slabs:        plato.slabs.Slabs
         :param points:      `Points` object (default: None)
         :type points:       plato.points.Points
         :param ages:        ages of interest (default: None)
@@ -367,7 +375,7 @@ class Globe:
                     _slabs = slabs
                 elif utils_init.check_object_data(self.plates, Plates, _age, _case):
                     logging.info(f"Calculating net rotation for case {_case} at age {_age} using stored Plates data")
-                    _slabs = self.plates
+                    _slabs = self.slabs
                 else:
                     logging.info(f"Instantiating Plates object for case {_case} at age {_age} to calculate net rotation")
                     # Get a new plates object if not provided
@@ -394,10 +402,27 @@ class Globe:
                 if self.settings.options[_case]["Minimum plate area"] > 0.:
                     selected_slabs = selected_slabs[selected_slabs.area >= self.settings.options[_case]["Minimum plate area"]]
 
-                # Calculate trench migration
-                trench_normal_migration, trench_parallel_migration = utils_calc.compute_trench_migration(
+                # Calculate full trench migration vector as well as normal and parallel components
+                trench_migration = utils_calc.compute_trench_migration(
                     selected_slabs,
+                    self.options[_case],
                 )
+                trench_normal_migration = utils_calc.compute_trench_migration(
+                    selected_slabs,
+                    self.options[_case],
+                    "normal"
+                )
+                trench_parallel_migration = utils_calc.compute_trench_migration(
+                    selected_slabs,
+                    self.options[_case],
+                    "parallel"
+                )
+                print(trench_parallel_migration)
+
+                # Store full trench migration
+                self.data[_case].loc[i, "trench_migration_pole_lat"] = trench_migration[0]
+                self.data[_case].loc[i, "trench_migration_pole_lon"] = trench_migration[1]
+                self.data[_case].loc[i, "trench_migration_rate"] = trench_migration[2]
 
                 # Store trench normal migration
                 self.data[_case].loc[i, "trench_normal_migration_pole_lat"] = trench_normal_migration[0]

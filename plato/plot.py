@@ -47,8 +47,8 @@ class PlotReconstruction():
             slabs: Optional[Slabs] = None,
             points: Optional[Points] = None,
             grids: Optional[Grids] = None,
-            globe = None,
-            coastline_file = None,
+            globe: Optional[Globe] = None,
+            coastline_file: Optional[str] = None,
         ):
         """
         Constructor for the Plot class.
@@ -120,14 +120,14 @@ class PlotReconstruction():
             self,
             ax: object,
             age: int,
-            cmap = "cmc.lajolla_r",
-            vmin = 0,
-            vmax = 250,
-            log_scale = False,
-            coastlines_facecolour = "lightgrey",
-            coastlines_edgecolour = "lightgrey",
-            coastlines_linewidth = 0,
-            plate_boundaries_linewidth = 1,
+            cmap: str = "cmc.lajolla_r",
+            vmin: Union[int, float] = 0,
+            vmax: Union[int, float] = 250,
+            log_scale: bool = False,
+            coastlines_facecolour: str = "lightgrey",
+            coastlines_edgecolour: str = "lightgrey",
+            coastlines_linewidth: Union[int, float] = 0,
+            plate_boundaries_linewidth: Union[int, float] = 1,
         ) -> object:
         """
         Function to create subplot of the reconstruction with global seafloor age.
@@ -196,18 +196,18 @@ class PlotReconstruction():
 
     def plot_sediment_map(
             self,
-            ax,
+            ax: object,
             age: int,
-            case,
-            cmap = "cmc.imola",
-            vmin = 1e0,
-            vmax = 1e4,
-            log_scale = True,
-            coastlines_facecolour = "lightgrey",
-            coastlines_edgecolour = "lightgrey",
-            coastlines_linewidth = 0,
-            plate_boundaries_linewidth = 1,
-            marker_size = 20,
+            case: str,
+            cmap: str = "cmc.imola",
+            vmin: Union[int, float] = 1e0,
+            vmax: Union[int, float] = 1e4,
+            log_scale: bool = True,
+            coastlines_facecolour: str = "lightgrey",
+            coastlines_edgecolour: str = "lightgrey",
+            coastlines_linewidth: Union[int, float] = 0,
+            plate_boundaries_linewidth: Union[int, float] = 1,
+            marker_size: Union[int, float] = 20,
         ):
         """
         Function to create subplot of the reconstruction with global sediment thicknesses.
@@ -323,17 +323,17 @@ class PlotReconstruction():
     
     def plot_erosion_rate_map(
             self,
-            ax,
+            ax: object,
             age: int = None,
             case: str = None,
             cmap = "cmc.davos_r",
-            vmin = 1e0,
-            vmax = 1e3,
-            log_scale = True,
-            coastlines_facecolour = "none",
-            coastlines_edgecolour = "none",
-            coastlines_linewidth = 0,
-            plate_boundaries_linewidth = 1,
+            vmin: Union[int, float] = 0,
+            vmax: Union[int, float] = 1e6,
+            log_scale: bool = True,
+            coastlines_facecolour: str = "none",
+            coastlines_edgecolour: str = "none",
+            coastlines_linewidth: Union[int, float] = 0,
+            plate_boundaries_linewidth: Union[int, float] = 1,
         ):
         """
         Function to create subplot of the reconstruction with global erosion rates.
@@ -1056,7 +1056,10 @@ class PlotReconstruction():
 
         return sc, slab_qu, plate_qu
     
-    def plot_basemap(self, ax):
+    def plot_basemap(
+            self,
+            ax: object
+        ):
         """
         Function to plot a basemap on an axes object.
 
@@ -1092,12 +1095,12 @@ class PlotReconstruction():
     
     def plot_grid(
             self,
-            ax,
-            grid,
-            log_scale=False,
-            vmin=0,
-            vmax=1e3,
-            cmap="viridis",
+            ax: object,
+            grid: Union[_numpy.ndarray, _xarray.DataArray],
+            log_scale: bool = False,
+            vmin: Union[int, float] = 0,
+            vmax: Union[int, float] = 1e3,
+            cmap: str = "viridis",
         ):
         """
         Function to plot a grid.
@@ -1234,12 +1237,12 @@ class PlotReconstruction():
         
     def plot_reconstruction(
             self,
-            ax,
+            ax: object,
             age: int, 
-            coastlines_facecolour = "none",
-            coastlines_edgecolour = "none",
-            coastlines_linewidth = "none",
-            plate_boundaries_linewidth = "none",
+            coastlines_facecolour: str = "none",
+            coastlines_edgecolour: str = "none",
+            coastlines_linewidth: str = "none",
+            plate_boundaries_linewidth: str = "none",
         ):
         """
         Function to plot reconstructed features: coastlines, plates and trenches.

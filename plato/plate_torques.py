@@ -165,6 +165,7 @@ class PlateTorques():
                 plates = self.plates,
                 points = self.points,
                 slabs = self.slabs,
+                CALCULATE_VELOCITIES = True,
             )
 
         # Calculate RMS plate velocities for newly initialised data
@@ -188,12 +189,13 @@ class PlateTorques():
 
     def add_grid(
             self,
-            input_grids,
-            variable_name = "new_grid",
-            grid_type = "seafloor_age",
-            target_variable = "z",
-            mask_continents = False,
-            prefactor = 1.,
+            input_grids: Union[Dict[Union[int, float], _xarray.Dataset], _xarray.Dataset],
+            variable_name: str = "new_grid",
+            grid_type: str = "seafloor_age",
+            target_variable: str = "z",
+            mask_continents: bool = False,
+            interpolate: bool = True,
+            prefactor: Union[int, float] = 1.,
         ):
         """
         Function to add a grid to the grids object. This calls the add_grid method in the Grids class.
@@ -223,10 +225,10 @@ class PlateTorques():
 
     def calculate_rms_velocity(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            PROGRESS_BAR = True,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
         ):
         """
         Function to calculate root mean square velocities for plates.

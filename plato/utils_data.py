@@ -30,7 +30,7 @@ import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
 # Local libraries
-from .utils_calc import set_constants, mag_azi2lat_lon, project_points
+from .utils_calc import set_constants, mag_azi2lat_lon, project_points, compute_velocity
 
 def get_plate_data(
         rotations: _pygplates.RotationModel,
@@ -46,7 +46,7 @@ def get_plate_data(
 
     # Make _pandas.df with all plates
     # Initialise list
-    plates = _numpy.zeros([len(resolved_topologies),10])
+    plates = _numpy.zeros([len(resolved_topologies),7])
 
     # Loop through plates
     for n, topology in enumerate(resolved_topologies):
@@ -75,20 +75,14 @@ def get_plate_data(
         plates[n,5] = centroid_lon
         plates[n,6] = centroid_lat
 
-        # Get velocity [cm/a] at centroid
-        centroid_velocity = get_velocities([centroid_lat], [centroid_lon], (pole_lat, pole_lon, pole_angle))
-    
-        plates[n,7] = centroid_velocity[1]
-        plates[n,8] = centroid_velocity[0]
-        plates[n,9] = centroid_velocity[2]
-
     # Convert to DataFrame    
     plates = _pandas.DataFrame(plates)
 
     # Initialise columns
-    plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat", "centroid_velocity_lon", "centroid_velocity_lat", "centroid_velocity_mag"]
+    plates.columns = ["plateID", "area", "pole_lat", "pole_lon", "pole_angle", "centroid_lon", "centroid_lat"]
 
-    # Merge topological networks with main plate; this is necessary because the topological networks have the same PlateID as their host plate and this leads to computational issues down the road
+    # Merge topological networks with main plate
+    # This is necessary because the topological networks have the same PlateID as their host plate and this leads to computational issues down the road
     main_plates_indices = plates.groupby("plateID")["area"].idxmax()
 
     # Create new DataFrame with the main plates
@@ -128,11 +122,12 @@ def get_slab_data(
     ) -> _pandas.DataFrame:
     """
     Function to get data on slabs in reconstruction.
+    To this end, the subduction zones for the set age are split into points.
     """
     # Set constants
     constants = set_constants()
 
-    # Tesselate subduction zones and get slab pull and bend torques along subduction zones
+    # Discretise subduction zones into points
     slabs = reconstruction.tessellate_subduction_zones(
         age,
         ignore_warnings=True,
@@ -395,50 +390,50 @@ def get_plateIDs(
 
     return plateIDs
 
-def get_velocities(
-        lats: Union[List, _numpy.array],
-        lons: Union[List, _numpy.array],
-        stage_rotation: tuple,
-    ) -> Tuple[_numpy.array, _numpy.array, _numpy.array, _numpy.array]:
-    """
-    Function to get velocities for a set of latitudes and longitudes.
-    NOTE: This function is not vectorised yet, but has not been a bottleneck in the code so far.
-    """
-    # Convert lats and lons to numpy arrays if they are not already
-    lats = _numpy.asarray(lats)
-    lons = _numpy.asarray(lons)
+# def get_velocities(
+#         lats: Union[List, _numpy.array],
+#         lons: Union[List, _numpy.array],
+#         stage_rotation: tuple,
+#     ) -> Tuple[_numpy.array, _numpy.array, _numpy.array, _numpy.array]:
+#     """
+#     Function to get velocities for a set of latitudes and longitudes.
+#     NOTE: This function is not vectorised yet, but has not been a bottleneck in the code so far.
+#     """
+#     # Convert lats and lons to numpy arrays if they are not already
+#     lats = _numpy.asarray(lats)
+#     lons = _numpy.asarray(lons)
 
-    # Initialise empty array to store velocities
-    velocities_lat = _numpy.zeros(len(lats))
-    velocities_lon = _numpy.zeros(len(lats))
-    velocities_mag = _numpy.zeros(len(lats))
-    velocities_azi = _numpy.zeros(len(lats))
+#     # Initialise empty array to store velocities
+#     velocities_lat = _numpy.zeros(len(lats))
+#     velocities_lon = _numpy.zeros(len(lats))
+#     velocities_mag = _numpy.zeros(len(lats))
+#     velocities_azi = _numpy.zeros(len(lats))
 
-    # Loop through points to get velocities
-    for i, _ in enumerate(lats):
-        # Convert to LocalCartesian
-        point = _pygplates.PointOnSphere((lats[i], lons[i]))
+#     # Loop through points to get velocities
+#     for i, _ in enumerate(lats):
+#         # Convert to LocalCartesian
+#         point = _pygplates.PointOnSphere((lats[i], lons[i]))
 
-        # Calculate magnitude and azimuth of velocities at points
-        velocity_mag_azi = _numpy.asarray(
-            _pygplates.LocalCartesian.convert_from_geocentric_to_magnitude_azimuth_inclination(
-                point,
-                _pygplates.calculate_velocities(
-                    point, 
-                    _pygplates.FiniteRotation((stage_rotation[0], stage_rotation[1]), _numpy.deg2rad(stage_rotation[2])), 
-                    1.,
-                    velocity_units = _pygplates.VelocityUnits.cms_per_yr
-                )
-            )
-        )
+#         # Calculate magnitude and azimuth of velocities at points
+#         velocity_mag_azi = _numpy.asarray(
+#             _pygplates.LocalCartesian.convert_from_geocentric_to_magnitude_azimuth_inclination(
+#                 point,
+#                 _pygplates.calculate_velocities(
+#                     point, 
+#                     _pygplates.FiniteRotation((stage_rotation[0], stage_rotation[1]), _numpy.deg2rad(stage_rotation[2])), 
+#                     1.,
+#                     velocity_units = _pygplates.VelocityUnits.cms_per_yr
+#                 )
+#             )
+#         )
 
-        # Get magnitude and azimuth of velocities
-        velocities_mag[i] = velocity_mag_azi[0][0]; velocities_azi[i] = velocity_mag_azi[0][1]
+#         # Get magnitude and azimuth of velocities
+#         velocities_mag[i] = velocity_mag_azi[0][0]; velocities_azi[i] = velocity_mag_azi[0][1]
 
-    # Convert to lat and lon components
-    velocities_lat, velocities_lon = mag_azi2lat_lon(velocities_mag, _numpy.rad2deg(velocities_azi))
+#     # Convert to lat and lon components
+#     velocities_lat, velocities_lon = mag_azi2lat_lon(velocities_mag, _numpy.rad2deg(velocities_azi))
 
-    return velocities_lat, velocities_lon, velocities_mag, velocities_azi
+#     return velocities_lat, velocities_lon, velocities_mag, velocities_azi
 
 def get_topology_geometries(
         reconstruction: _gplately.PlateReconstruction,

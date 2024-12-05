@@ -99,6 +99,9 @@ class Points:
         # Initialise data dictionary
         self.data = {age: {} for age in self.settings.ages}
 
+        # Initialise dictionary to store data that was newly initialised
+        self.NEW_DATA = {age: [] for age in self.settings.ages}
+
         # Loop through times
         for _age in _tqdm(self.settings.ages, desc="Loading point data", disable=self.settings.logger.level==logging.INFO):
             # Load available data
@@ -150,7 +153,12 @@ class Points:
 
         # Calculate velocities at points
         if CALCULATE_VELOCITIES:
-            self.calculate_velocities()
+            for _age in self.NEW_DATA.keys():
+                self.calculate_velocities(
+                    _age,
+                    self.NEW_DATA[_age],
+                    PROGRESS_BAR = PROGRESS_BAR
+                )
 
         # Set flags for computed torques
         self.sampled_seafloor = False
@@ -240,11 +248,11 @@ class Points:
 
     def sample_seafloor_ages(
             self,
-            ages = None,
-            cases = None,
-            plateIDs = None,
-            seafloor_grids = None,
-            vars = ["seafloor_age"],
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            grids: Optional[Dict[Union[int, float], _xarray.Dataset]] = None,
+            vars: Optional[List[str]] = ["seafloor_age"],
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -264,7 +272,7 @@ class Points:
             ages,
             cases,
             plateIDs,
-            seafloor_grids,
+            grids,
             vars,
             PROGRESS_BAR = PROGRESS_BAR,
         )
