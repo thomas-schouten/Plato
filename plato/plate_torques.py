@@ -8,6 +8,7 @@ import gplately as _gplately
 import numpy as _numpy
 import pandas as _pandas
 import xarray as _xarray
+from tqdm import tqdm as _tqdm
 
 # Local libraries
 from . import utils_data, utils_init
@@ -169,10 +170,15 @@ class PlateTorques():
             )
 
         # Calculate RMS plate velocities for newly initialised data
-        for _age in self.plates.NEW_DATA.keys():
+        for _age in _tqdm(
+            self.plates.NEW_DATA.keys(),
+            desc="Calculating RMS velocities",
+            disable=self.settings.logger.level in [logging.INFO, logging.DEBUG]
+        ):
             self.calculate_rms_velocity(
                 ages = _age,
                 cases = self.plates.NEW_DATA[_age],
+                PROGRESS_BAR = False,
             )
 
         # Set shortcuts
@@ -660,6 +666,8 @@ class PlateTorques():
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            CALCULATE_AT_SLABS: bool = True,
+            CALCULATE_AT_POINTS: bool = True,
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -680,23 +688,25 @@ class PlateTorques():
             PROGRESS_BAR,
         )
 
-        # Calculate residual torque at slabs
-        self.calculate_residual_force(
-            ages,
-            cases,            
-            plateIDs,
-            type = "slabs",
-            PROGRESS_BAR = PROGRESS_BAR,
-        )
+        if CALCULATE_AT_SLABS:
+            # Calculate residual torque at slabs
+            self.calculate_residual_force(
+                ages,
+                cases,
+                plateIDs,
+                type = "slabs",
+                PROGRESS_BAR = PROGRESS_BAR,
+            )
 
-        # Calculate residual torque at points
-        self.calculate_residual_force(
-            ages,
-            cases,
-            plateIDs,
-            type = "points",
-            PROGRESS_BAR = PROGRESS_BAR,
-        )
+        if CALCULATE_AT_POINTS:
+            # Calculate residual torque at points
+            self.calculate_residual_force(
+                ages,
+                cases,
+                plateIDs,
+                type = "points",
+                PROGRESS_BAR = PROGRESS_BAR,
+            )
 
     def calculate_residual_force(
             self,

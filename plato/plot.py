@@ -165,7 +165,7 @@ class PlotReconstruction():
         gl.top_labels = False
         gl.right_labels = False
 
-        if age in self.grids.seafloor_age and "seafloor_age" in self.grids.seafloor_age[age].data_vars:
+        if self.grids.seafloor_age[age] is not None and "seafloor_age" in self.grids.seafloor_age[age].data_vars:
             ax.imshow(self.grids.seafloor_age[age].seafloor_age,)
             
             # Plot seafloor age grid
@@ -260,7 +260,7 @@ class PlotReconstruction():
         gl.right_labels = False
 
         # Get sediment thickness grid
-        if age in self.grids.sediment and self.settings.options[case]["Sample sediment grid"] in self.grids.sediment[age].data_vars:           
+        if self.grids.sediment[age] is not None and self.settings.options[case]["Sample sediment grid"] in self.grids.sediment[age].data_vars:           
             grid = self.grids.sediment[age][self.settings.options[case]["Sample sediment grid"]].values
         else:
             grid = _numpy.where(_numpy.isnan(self.grids.seafloor_age[age].seafloor_age.values), _numpy.nan, vmin)

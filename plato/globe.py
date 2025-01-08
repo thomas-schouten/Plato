@@ -373,8 +373,8 @@ class Globe:
                 if utils_init.check_object_data(slabs, Slabs, _age, _case):
                     logging.info(f"Calculating net rotation for case {_case} at age {_age} using provided Plates data")
                     _slabs = slabs
-                elif utils_init.check_object_data(self.plates, Plates, _age, _case):
-                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using stored Plates data")
+                elif utils_init.check_object_data(self.slabs, Slabs, _age, _case):
+                    logging.info(f"Calculating net rotation for case {_case} at age {_age} using stored Points data")
                     _slabs = self.slabs
                 else:
                     logging.info(f"Instantiating Plates object for case {_case} at age {_age} to calculate net rotation")
@@ -392,6 +392,7 @@ class Globe:
                 _plateIDs = utils_data.select_plateIDs(plateIDs, _slabs.data[_age][_case][plateID_col].unique())
 
                 # Select plates and points data
+                selected_plates = self.plates.data[_age][_case]
                 selected_slabs = _slabs.data[_age][_case]
 
                 # Filter by plateIDs, if necessary
@@ -400,7 +401,8 @@ class Globe:
 
                 # Filter by minimum plate area
                 if self.settings.options[_case]["Minimum plate area"] > 0.:
-                    selected_slabs = selected_slabs[selected_slabs.area >= self.settings.options[_case]["Minimum plate area"]]
+                    selected_plates = selected_plates[selected_plates.area >= self.settings.options[_case]["Minimum plate area"]]
+                    selected_slabs = selected_slabs[selected_slabs.lower_plateID.isin(selected_plates.plateID)]
 
                 # Calculate full trench migration vector as well as normal and parallel components
                 trench_migration = utils_calc.compute_trench_migration(
@@ -417,7 +419,7 @@ class Globe:
                     self.options[_case],
                     "parallel"
                 )
-                print(trench_parallel_migration)
+                # print(trench_parallel_migration)
 
                 # Store full trench migration
                 self.data[_case].loc[i, "trench_migration_pole_lat"] = trench_migration[0]

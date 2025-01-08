@@ -130,6 +130,7 @@ class Points:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
 
                 else:
+                    logging.info(f"No point data found for age {_age} and key {key}.")
                     # Initialise missing data
                     if not isinstance(resolved_geometries, dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
                         resolved_geometries = utils_data.get_resolved_geometries(
@@ -157,7 +158,7 @@ class Points:
                 self.calculate_velocities(
                     _age,
                     self.NEW_DATA[_age],
-                    PROGRESS_BAR = PROGRESS_BAR
+                    PROGRESS_BAR = False
                 )
 
         # Set flags for computed torques

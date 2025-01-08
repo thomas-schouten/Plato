@@ -1526,7 +1526,16 @@ def project_points(
     """
     Function to calculate coordinates of sampling points.
 
-    
+    :param lat:         latitude of the point in degrees.
+    :type lat:          int, float, list, numpy.ndarray, pandas.Series
+    :param lon:         longitude of the point in degrees.
+    :type lon:          int, float, list, numpy.ndarray, pandas.Series
+    :param azimuth:     azimuth of the point in degrees.
+    :type azimuth:      int, float, list, numpy.ndarray, pandas.Series
+    :param distance:    distance from the point in km.
+
+    :return:            latitude and longitude of the sampling points.
+    :rtype:             numpy.ndarray, numpy.ndarray
     """
     # Set constants
     constants = set_constants()
@@ -1596,3 +1605,42 @@ def haversine(
     c = 2 * _numpy.arctan2(_numpy.sqrt(a), _numpy.sqrt(1 - a))
 
     return c
+
+def propose_value(
+        existing_values: Union[List[Union[int, float]], _numpy.ndarray],
+        existing_scores: Union[List[Union[int, float]], _numpy.ndarray],
+        lower_bound: Union[int, float] = 1e-8,
+        upper_bound: Union[int, float] = 1e-13,
+        exploration_prob: Union[int, float] = 0.0,
+    ):
+    """
+    Propose a new value, either focusing on the current best or performing a random excursion.
+    
+    :param existing_values:     list of existing values.
+    :type existing_values:      list, numpy.ndarray
+    :param existing_scores:     list of existing scores.
+    :type existing_scores:      list, numpy.ndarray
+    :param lower_bound:         lower bound of the parameter space.
+    :type lower_bound:          int, float
+    :param upper_bound:         upper bound of the parameter space.
+    :type upper_bound:          int, float
+    :param exploration_prob:    probability of exploration.
+
+    :return:                    proposed value.
+    :rtype:                     int, float
+    """
+    # Decide between exploitation and exploration
+    if _numpy.random.rand() < exploration_prob:
+        # Random exploration: propose a completely random value in the parameter space
+        proposed_value = 10 ** _numpy.random.uniform(_numpy.log10(lower_bound), _numpy.log10(upper_bound))
+        
+    else:
+        # Exploitation: refine around the best observed value
+        best_index = _numpy.argmin(existing_scores)
+        best_value = existing_values[best_index]
+        
+        # Generate a small perturbation around the best value in log space
+        perturbation = 10 ** (_numpy.log10(best_value) + _numpy.random.uniform(-0.5, 0.5))
+        proposed_value = perturbation
+    
+    return proposed_value

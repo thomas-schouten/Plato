@@ -108,13 +108,9 @@ class Slabs:
         self.NEW_DATA = {age: [] for age in self.settings.ages}
 
         # Loop through times
-        for _age in _tqdm(
-                self.settings.ages, 
-                desc="Loading slab data", 
-                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
-            ):
+        for _age in _tqdm(self.settings.ages, desc="Loading slab data", disable=self.settings.logger.level==logging.INFO):
             # Load available data
-            for key, entries in self.settings.slab_cases.items():
+            for key, entries in self.settings.point_cases.items():
                 # Make list to store available cases
                 available_cases = []
 
@@ -124,8 +120,8 @@ class Slabs:
                         self.settings.dir_path,
                         "Slabs",
                         self.settings.name,
+                        _age,
                         entry,
-                        _age
                     )
                     # Store the cases for which a DataFrame could be loaded
                     if self.data[_age][entry] is not None:
@@ -137,11 +133,15 @@ class Slabs:
                     for entry in entries:
                         if entry not in available_cases:
                             self.data[_age][entry] = self.data[_age][available_cases[0]].copy()
+
                 else:
+                    logging.info(f"No slab data found for age {_age} and key {key}.")
                     # Initialise missing data
-                    if not isinstance(resolved_geometries, Dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
-                        resolved_geometries = utils_data.get_topology_geometries(
-                            self.reconstruction, _age, self.settings.options[self.settings.cases[0]]["Anchor plateID"]
+                    if not isinstance(resolved_geometries, dict) or not isinstance(resolved_geometries.get(key), _geopandas.GeoDataFrame):
+                        resolved_geometries = utils_data.get_resolved_geometries(
+                            self.reconstruction,
+                            _age,
+                            self.settings.options[key]["Anchor plateID"]
                         )
 
                     # Initialise missing data
@@ -160,11 +160,12 @@ class Slabs:
         # Calculate velocities along slabs
         if CALCULATE_VELOCITIES:
             for _age in self.NEW_DATA.keys():
-                self.calculate_velocities(
-                    _age,
-                    self.NEW_DATA[_age],
-                    PROGRESS_BAR = PROGRESS_BAR
-                )
+                if len(self.NEW_DATA[_age]) > 0:
+                    self.calculate_velocities(
+                        _age,
+                        self.NEW_DATA[_age],
+                        PROGRESS_BAR = PROGRESS_BAR
+                    )
 
         # Calculate total slab length as a function of age and case
         self.total_slab_length = _numpy.zeros((len(self.settings.ages), len(self.settings.slab_pull_cases)))
@@ -606,8 +607,9 @@ class Slabs:
                         for i in range(iter_num):
                             # Mask data
                             mask = _numpy.isnan(accumulated_data)
-
-                            if len(mask == 0):
+                            
+                            # Exit if there are no more points to sample
+                            if len(accumulated_data[mask]) == 0:
                                 break
 
                             # Set masked data to zero to avoid errors
@@ -632,21 +634,20 @@ class Slabs:
                                 # Make sure NaN values are set to zero
                                 sampled_data = _numpy.nan_to_num(sampled_data)
 
-                                # Add data to total data.
+                                # Add data to total data
                                 accumulated_data[mask] += sampled_data[mask]
 
                                 # Set zero values back to NaN
-                                new_mask = accumulated_data[mask] == 0
-                                accumulated_data[mask][new_mask] = _numpy.nan
+                                accumulated_data[accumulated_data == 0] = _numpy.nan
 
                             # Define new sampling distance
                             if plate == "lower":
                                 if i <= 1:
                                     current_sampling_distance -= 30
-                                elif i % 2 == 0:
+                                else:
                                     current_sampling_distance -= 30 * (2 ** (i // 2))
 
-                            if plate == "upper":
+                            elif plate == "upper":
                                 current_sampling_distance += 100
 
                     # Enter sampled data back into the DataFrame
