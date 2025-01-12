@@ -1152,6 +1152,8 @@ class Optimisation():
 
                 # Loop through plates
                 for _plateID in _plateIDs[_age][_case]:
+                    if _plateID not in self.plates.data[_age][_case]["plateID"].values:
+                        continue
                     # # Extract rotation pole
                     # rotation_pole_lat = self.plates.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateID, var="pole_lat")
                     # rotation_pole_lon = self.plates.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateID, var="pole_lon")
@@ -1174,7 +1176,7 @@ class Optimisation():
                             if i > len(constants)-1:
                                 # The inversion should start with a more general, grid-based exploration of the parameter space
                                 # Only after ~20 iterations or so, the algorithm should start to adapt the step size
-                                constant = utils_calc.propose_value(existing_values, existing_scores, 0.0, lower_bound=vmin, upper_bound=vmax)
+                                constant = utils_calc.propose_value(existing_values, existing_scores, lower_bound=vmin, upper_bound=vmax)
                             else:
                                 constant = 10**constants[i]
 
@@ -1194,17 +1196,19 @@ class Optimisation():
                             # self.plate_torques.calculate_residual_torque(ages=_age, cases=_case, plateIDs=_plateID, PROGRESS_BAR=False, CALCULATE_AT_POINTS=False)
 
                             # Select data
-                            _plate_data[_age][_case] = self.plates.data[_age][_case].copy()
+                            _plate_data = self.plates.data[_age][_case].copy()
                             _slab_data[_age][_case] = self.slabs.data[_age][_case].copy()
 
                             # Filter data, if necessary
                             if plateIDs is not None:
-                                _plate_data = _plate_data[_age][_case][_plate_data[_age][_case]["plateID"].isin(_plateIDs[_age][_case])]
+                                _plate_data = _plate_data[_plate_data["plateID"].isin(_plateIDs[_age][_case])]
                                 _slab_data[_age][_case] = _slab_data[_age][_case][_slab_data[_age][_case]["lower_plateID"].isin(_plateIDs[_age][_case])]
 
                             # Skip if no data
                             if _slab_data[_age][_case].empty:
                                 continue
+
+                            print(_plate_data)
 
                             # Get the slab pull force magnitude
                             max_slab_pull_force_mag = _slab_data[_age][_case]["slab_pull_force_mag"] / _slab_data[_age][_case]["slab_pull_constant"]
@@ -1227,7 +1231,7 @@ class Optimisation():
                             # Calculate the torques with the modified slab pull forces
                             # Calculate torques
                             _iter_torques = utils_calc.compute_torque_on_plates(
-                                _plate_data[_age][_case],
+                                _plate_data,
                                 _slab_data[_age][_case].lat.values,
                                 _slab_data[_age][_case].lon.values,
                                 _slab_data[_age][_case].lower_plateID.values,
@@ -1247,6 +1251,7 @@ class Optimisation():
                             _iter_torques = utils_calc.sum_torque(_iter_torques, "driving", self.settings.constants)
                             _iter_torques = utils_calc.sum_torque(_iter_torques, "residual", self.settings.constants)
 
+                            print(_iter_torques)
                             # self.plate_torques.calculate_driving_torque(ages=_age, cases=_case, plateIDs=_plateID, PROGRESS_BAR=False)
                             # self.plate_torques.calculate_residual_torque(ages=_age, cases=_case, plateIDs=_plateID, PROGRESS_BAR=False, CALCULATE_AT_POINTS=False)
 
@@ -1254,8 +1259,8 @@ class Optimisation():
                             # _iter_driving_torque = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateID, var="driving_torque_mag")
                             # _iter_residual_torque = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateID, var= "residual_torque_mag")
 
-                            _iter_driving_torque = _iter_torques["driving_torque_mag"][_iter_torques["plateID"] == _plateID].values[0]
-                            _iter_residual_torque = _iter_torques["residual_torque_mag"][_iter_torques["plateID"] == _plateID].values[0]
+                            _iter_driving_torque = _iter_torques[_iter_torques["plateID"] == _plateID]["driving_torque_mag"].values
+                            _iter_residual_torque = _iter_torques[_iter_torques["plateID"] == _plateID]["residual_torque_mag"].values
 
                             # # Extract driving torque
                             # _iter_driving_torque_x = self.plate_torques.extract_data_through_time(ages=_age, cases=_case, plateIDs=_plateID, var="driving_torque_x")

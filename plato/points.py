@@ -265,8 +265,12 @@ class Points:
         :type cases:            str, list
         :param plateIDs:        plateIDs of interest (default: None)
         :type plateIDs:         list, numpy.ndarray
-        :param seafloor_grids:  seafloor age grids (default: None)
-        :type seafloor_grids:   dict
+        :param grids:           seafloor age grids (default: None)
+        :type grids:            dict
+        :param vars:            variables to sample (default: ["seafloor_age"])
+        :type vars:             str, list
+        :param PROGRESS_BAR:    flag to enable progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Sample grid
         self.sample_grid(
@@ -280,6 +284,44 @@ class Points:
 
         # Set sampling flag to true
         self.sampled_seafloor = True
+
+    def sample_lab_depths(
+            self,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            grids: Optional[Dict[Union[int, float], _xarray.Dataset]] = None,
+            vars: Optional[List[str]] = ["LAB_depth"],
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Samples the depth of the lithosphere-asthenosphere boundary (LAB) at points.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param grids:           grids to sample (default: None)
+        :type grids:            dict
+        :param vars:            variables to sample (default: ["LAB_depth"])
+        :type vars:             str, list
+        :param PROGRESS_BAR:    flag to enable progress bar (default: True)
+        :type PROGRESS_BAR:     bool
+        """
+        # Sample grid
+        self.sample_grid(
+            ages,
+            cases,
+            plateIDs,
+            grids,
+            vars,
+            PROGRESS_BAR = PROGRESS_BAR,
+        )
+
+        # Set sampling flag to true
+        self.sampled_LAB = True
 
     def sample_grid(
             self,

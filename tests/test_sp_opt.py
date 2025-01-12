@@ -6,6 +6,7 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import contextlib
+import xarray as xr
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "..")))
 
@@ -15,23 +16,70 @@ from plato.plot import PlotReconstruction
 
 from copy import deepcopy
 
-# %%
 # Set parameters
 # Plate reconstruction
 reconstruction_name = "Muller2016" 
 
 # Reconstruction ages of interest
 # ages = np.arange(0, 51, 5)
-ages = [10]
+ages = [0]
 
 # Set directory to save the results
 # results_dir = "01-Results"
 
+path = "/Users/thomas/Documents/_Plato/Plato/sample_data/M2016"
+
+# Load seafloor age grids
+seafloor_age_grids = {}
+for age in ages:
+    seafloor_age_grids[age] = xr.open_dataset(f"{path}/seafloor_age_grids/M2016_SeafloorAgeGrid_{age}Ma.nc")
+
+continental_grids = {}
+for age in ages:
+    continental_grids[age] = xr.open_dataset(f"{path}/continental_grids/M2016_ContinentalGrid_{age}Ma.nc")
+
 # Set up PlateTorques object
-M2016 = PlateTorques(reconstruction_name = reconstruction_name, ages = ages)
+M2016 = PlateTorques(reconstruction_name = reconstruction_name, ages = ages, seafloor_age_grids = seafloor_age_grids, continental_grids = continental_grids)
 
 # Sample seafloor ages
 M2016.sample_seafloor_ages()
+
+# Sample LAB depth
+M2016.sample_lab_depths()
+
+# %%
+M2016.calculate_gpe_torque()
+M2016.points.data[0]["ref"]["lithospheric_mantle_thickness"]
+# %%
+plt.scatter(
+    M2016.points.data[0]["ref"]["lon"],
+    M2016.points.data[0]["ref"]["lat"],
+    c=M2016.points.data[0]["ref"]["lithospheric_mantle_thickness"] + M2016.points.data[0]["ref"]["crustal_thickness"],
+    cmap="viridis",
+    vmin=0, vmax=2.5e5
+)
+plt.scatter(
+    M2016.points.data[0]["ref"]["lon"],
+    M2016.points.data[0]["ref"]["lat"],
+    c=M2016.points.data[0]["ref"]["LAB_depth"],
+    cmap="viridis",
+    vmin=0, vmax=2.5e5
+)
+plt.colorbar()
+plt.show()
+
+# %%
+plt.scatter(
+    M2016.points.data[0]["ref"]["lon"],
+    M2016.points.data[0]["ref"]["lat"],
+    c=M2016.points.data[0]["ref"]["LAB_depth"],
+    cmap="viridis",
+    vmin=0, vmax=2.5e5
+)
+plt.colorbar()
+plt.show()
+
+# %%
 
 # Calculate torques
 M2016.calculate_all_torques()

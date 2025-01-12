@@ -411,6 +411,96 @@ class PlotReconstruction():
             
         return im
     
+    def plot_LAB_depth_map(
+            self,
+            ax: object,
+            age: int = None,
+            case: str = None,
+            cmap = "cmc.davos_r",
+            vmin: Union[int, float] = 0,
+            vmax: Union[int, float] = 1e6,
+            log_scale: bool = False,
+            coastlines_facecolour: str = "none",
+            coastlines_edgecolour: str = "none",
+            coastlines_linewidth: Union[int, float] = 0,
+            plate_boundaries_linewidth: Union[int, float] = 1,
+        ):
+        """
+        Function to create subplot of the reconstruction with continental lithosphere-asthenosphere boundary (LAB) depths.
+        Erosion rates are plotted as the grid stored in the continent grid with the key corresponding to the 'Sample erosion rate' option.
+
+        :param ax:                      axes object
+        :type ax:                       matplotlib.axes.Axes
+        :param age:                     the age for which to display the map
+        :type age:                      int
+        :param case:                    case for which to plot the sediments
+        :type case:                     str
+        :param cmap:                    colormap to use
+        :type cmap:                     str
+        :param vmin:                    minimum value for colormap
+        :type vmin:                     int, float
+        :param vmax:                    maximum value for colormap
+        :type vmax:                     int, float
+        :param log_scale:               whether or not to use log scale (default is False)
+        :type log_scale:                bool
+        :param coastlines_facecolour:   facecolour for coastlines
+        :type coastlines_facecolour:    str
+        :param coastlines_edgecolour:   edgecolour for coastlines
+        :type coastlines_edgecolour:    str
+        :param coastlines_linewidth:    linewidth for coastlines
+        :type coastlines_linewidth:     int, float
+        :param plate_boundaries_linewidth: linewidth for plate boundaries
+        :type plate_boundaries_linewidth: int, float
+
+        :return:                        image object
+        :rtype:                         matplotlib.image.AxesImage
+        """
+        # Set age to first in list if not provided
+        if age is None or age not in self.settings.ages:
+            warnings.warn("Invalid reconstruction age, using youngest age.")
+            age = self.settings.ages[0]
+        
+        # Set case to first in list if not provided
+        if case is None or case not in self.settings.cases:
+            warnings.warn("Invalid case, using first case.")
+            case = self.settings.cases[0]
+        
+        # Set basemap
+        gl = self.plot_basemap(ax)
+
+        # NOTE: We need to explicitly turn of top and right labels here, otherwise they will still show up sometimes
+        gl.top_labels = False
+        gl.right_labels = False
+
+        # Get LAB depth grid
+        if age in self.grids.continent and self.settings.options[case]["Sample LAB depth"] in self.grids.continent[age].data_vars:           
+            grid = self.grids.continent[age].LAB_depth.values
+            # Get LAB depth grid
+            im = self.plot_grid(
+                ax,
+                grid,
+                cmap = cmap,
+                vmin = vmin,
+                vmax = vmax,
+                log_scale = log_scale
+            )
+
+        else:
+            warnings.warn("No continental grid available, only plotting the reconstruction")
+            im = None
+        
+        # Plot plates and coastlines
+        ax = self.plot_reconstruction(
+            ax,
+            age,
+            coastlines_facecolour = coastlines_facecolour,
+            coastlines_edgecolour = coastlines_edgecolour,
+            coastlines_linewidth = coastlines_linewidth,
+            plate_boundaries_linewidth = plate_boundaries_linewidth,
+        )
+            
+        return im
+    
     def plot_velocity_map(
             self,
             ax,

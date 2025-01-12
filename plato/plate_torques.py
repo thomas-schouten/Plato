@@ -421,6 +421,27 @@ class PlateTorques():
         # Sample slab sediment thickness
         self.slabs.sample_slab_sediment_thickness(ages, cases, plateIDs, self.grids.sediment, PROGRESS_BAR)
 
+    def sample_lab_depths(
+            self,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Function to sample the depth of the lithosphere-asthenosphere boundary (LAB) at points.
+        This calls the sample_lab_depths method in the Points class.
+
+        :param ages:        ages of interest (default: None)
+        :type ages:         float, int, list, numpy.ndarray
+        :param cases:       cases of interest (default: None)
+        :type cases:        str, list
+        :param plateIDs:    plateIDs of interest (default: None)
+        :type plateIDs:     int, float, list, numpy.ndarray
+        """
+        # Sample LAB depths
+        self.points.sample_lab_depths(ages, cases, plateIDs, self.grids.continent, PROGRESS_BAR)
+
     def calculate_all_torques(
             self,
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
