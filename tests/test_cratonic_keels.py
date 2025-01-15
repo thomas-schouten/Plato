@@ -43,25 +43,29 @@ def reconstruct_raster(
     
     # Convert reconstructed raster back to xarray.Dataset
     output_raster = xr.Dataset(
-        data_vars={target_variable: (["latitude", "longitude"], reconstructed_raster.data)},
-        coords={"latitude": (["latitude"], reconstructed_raster.lats),
-                "longitude": (["longitude"], reconstructed_raster.lons)}
+        data_vars={target_variable: (["lat", "lon"], reconstructed_raster.data)},
+        coords={"lat": (["lat"], reconstructed_raster.lats),
+                "lon": (["lon"], reconstructed_raster.lons)}
     )
 
     return output_raster
 
 # %%
+seafloor_grids = {}
+for age in np.arange(0, 151):
+    seafloor_grids[age] = xr.open_dataset(f"/Users/thomas/Documents/_Plato/Plato/sample_data/M2016/seafloor_age_grids/M2016_SeafloorAgeGrid_{age}Ma.nc")
 lithoref = xr.open_dataset("/Users/thomas/Documents/_Data/Lithosphere/Lithoref18.nc")
-seafloor_grid = xr.open_dataset("/Users/thomas/Documents/_Plato/Plato/sample_data/M2016/seafloor_age_grids/M2016_SeafloorAgeGrid_0Ma.nc")
 
 # %%
-plt.imshow(seafloor_grid.z, origin="lower")
+lithoref
+# %%
+plt.imshow(seafloor_grids[0].z, origin="lower")
 plt.colorbar()
 # %%
-litho = lithoref.interp_like(seafloor_grid)
+litho = lithoref.interp_like(seafloor_grids[0])
 for var in litho.data_vars:
     litho[var].values = np.where(
-        ~np.isnan(seafloor_grid.z.values),
+        ~np.isnan(seafloor_grids[0].z.values),
         np.nan,
         litho[var].values
     )
@@ -91,7 +95,7 @@ polgyons = pygplates.FeatureCollection("/Users/thomas/Documents/_Plato/Plato/sam
 reconstruction_model = gplately.PlateReconstruction(rotations, topologies)
 
 # %%
-for age in [180]:#np.arange(0, 181):
+for age in [100]:#np.arange(0, 181):
     # if age == 100:
     #     continue
 
@@ -102,14 +106,39 @@ for age in [180]:#np.arange(0, 181):
     
     reconstructed_ds = xr.Dataset(
         data_vars=reconstructed_da,
-        coords={"latitude": reconstructed_litho.latitude, "longitude": reconstructed_litho.longitude}
+        coords={"lat": reconstructed_litho.lat, "lon": reconstructed_litho.lon}
     )
+
+    # Interpolate to resolution of the seafloor grid
+    reconstructed_ds = reconstructed_ds.interp_like(seafloor_grids[age])
+
+    # Interpolate NaN values
+    for var in reconstructed_ds.data_vars:
+        reconstructed_ds[var] = reconstructed_ds[var].interpolate_na(dim="lat").interpolate_na(dim="lon")
 
     plt.imshow(reconstructed_ds.LAB_depth, origin="lower")
     plt.colorbar()
     plt.show()
 
-    reconstructed_ds.to_netcdf(f"/Users/thomas/Documents/_Plato/Plato/sample_data/M2016/continental_grids/M2016_ContinentalGrid_{age}Ma.nc")
+    # Remove seafloor ages
+    for var in reconstructed_ds.data_vars:
+        reconstructed_ds[var].values = np.where(
+            ~np.isnan(seafloor_grids[age].z.values),
+            np.nan,
+            reconstructed_ds[_var].values
+        )
+
+    # Interpolate back to the original resolution
+    reconstructed_ds = reconstructed_ds.interp_like(lithoref)
+
+    # Modify the origin to "lower" by flipping the 'lat' axis
+    reconstructed_ds = reconstructed_ds.reindex(lat=list(reversed(reconstructed_ds.lat)))
+
+    plt.imshow(reconstructed_ds.LAB_depth, origin="lower")
+    plt.colorbar()
+    plt.show()
+
+    # reconstructed_ds.to_netcdf(f"/Users/thomas/Documents/_Plato/Plato/sample_data/M2016/continental_grids/M2016_ContinentalGrid_{age}Ma.nc")
     print(f"Reconstructed continental grids for {age} Ma")
 # %%
 reconstructed_ds

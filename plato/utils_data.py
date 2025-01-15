@@ -261,6 +261,7 @@ def get_point_data(
     points["lithospheric_mantle_thickness"] = 0.
     points["crustal_thickness"] = 0.
     points["water_depth"] = 0.
+    # points["LAB_depth"] = 0.
     points["U"] = 0.
 
     # Add additional columns to store forces

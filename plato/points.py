@@ -479,9 +479,6 @@ class Points:
                     # Select points
                     _data = self.data[_age][key].copy()
 
-                    # Remove continents (i.e. points with NaN values)
-                    _data = _data[_data["seafloor_age"].notna()]
-
                     # Calculate LAB depths
                     computed_data = utils_calc.compute_LAB_depth(
                         _data,

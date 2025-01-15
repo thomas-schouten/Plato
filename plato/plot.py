@@ -418,7 +418,7 @@ class PlotReconstruction():
             case: str = None,
             cmap = "cmc.davos_r",
             vmin: Union[int, float] = 0,
-            vmax: Union[int, float] = 1e6,
+            vmax: Union[int, float] = 2.5e5,
             log_scale: bool = False,
             coastlines_facecolour: str = "none",
             coastlines_edgecolour: str = "none",
@@ -473,12 +473,33 @@ class PlotReconstruction():
         gl.right_labels = False
 
         # Get LAB depth grid
-        if age in self.grids.continent and self.settings.options[case]["Sample LAB depth"] in self.grids.continent[age].data_vars:           
-            grid = self.grids.continent[age].LAB_depth.values
-            # Get LAB depth grid
+        if age in self.grids.continent: 
+
+            data = self.points.data[age][case]
+
+            grid = _xarray.Dataset(
+                {
+                    "LAB_depth": _xarray.DataArray(
+                        data=data.LAB_depth.values.reshape(
+                            data.lat.unique().size, data.lon.unique().size
+                        ),
+                        coords={
+                            "lat": data.lat.unique(),
+                            "lon": data.lon.unique(),
+                        },
+                        dims=["lat", "lon"],
+                    )
+                },
+                coords={
+                    "lat": (["lat"], data.lat.unique()),
+                    "lon": (["lon"], data.lon.unique()),
+                },
+            )
+            grid = grid.interp_like(self.grids.seafloor_age[age], method="spline")
+
             im = self.plot_grid(
                 ax,
-                grid,
+                grid.LAB_depth.values,
                 cmap = cmap,
                 vmin = vmin,
                 vmax = vmax,

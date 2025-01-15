@@ -786,14 +786,23 @@ def compute_LAB_depth(
     :return:                updated point data with LAB depths.
     :rtype:                 pandas.DataFrame
     """
+    # Mask entries with seafloor age
+    seafloor_mask = ~point_data["seafloor_age"].isna()
+
     # Compute lithospheric mantle thickness, crustal thickness, and water depth
-    point_data["lithospheric_mantle_thickness"], point_data["crustal_thickness"], point_data["water_depth"] = compute_thicknesses(
-        point_data["seafloor_age"],
+    point_data.loc[seafloor_mask, "lithospheric_mantle_thickness"], point_data.loc[seafloor_mask, "crustal_thickness"], point_data.loc[seafloor_mask, "water_depth"] = compute_thicknesses(
+        point_data.loc[seafloor_mask, "seafloor_age"],
         options
     )
 
     # Calculate LAB depth
-    point_data["LAB_depth"] = point_data["lithospheric_mantle_thickness"] + point_data["crustal_thickness"] + point_data["water_depth"]
+    point_data.loc[seafloor_mask, "LAB_depth"] = point_data.loc[seafloor_mask, "lithospheric_mantle_thickness"] + point_data.loc[seafloor_mask, "crustal_thickness"] + point_data.loc[seafloor_mask, "water_depth"]
+
+    # Mask entries with no LAB depth
+    nan_mask = point_data["LAB_depth"].isna()
+
+    # Fill NaN values with 0
+    point_data.loc[nan_mask, "LAB_depth"] = mech.cont_crust_thick + mech.cont_lith_thick
 
     return point_data
 
