@@ -751,13 +751,25 @@ class Slabs:
         """
         Function to compute slab pull force along trenches.
 
-        
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param PROGRESS_BAR:    flag to show progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+        if cases == "reconstructed":
+            _iterable = utils_data.select_iterable(None, self.settings.reconstructed_cases)
+        elif cases == "synthetic":
+            _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
+        else:
+            _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
@@ -831,12 +843,26 @@ class Slabs:
         ):
         """
         Function to compute slab suction force along trenches.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param PROGRESS_BAR:    flag to show progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.slab_suction_cases)
+        if cases == "reconstructed":
+            _iterable = utils_data.select_iterable(None, self.settings.reconstructed_cases)
+        elif cases == "synthetic":
+            _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
+        else:
+            _iterable = utils_data.select_iterable(cases, self.settings.slab_suction_cases)
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
@@ -898,12 +924,26 @@ class Slabs:
         ):
         """
         Function to compute slab bend force along trenches.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param PROGRESS_BAR:    flag to show progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+        if cases == "reconstructed":
+            _iterable = utils_data.select_iterable(None, self.settings.reconstructed_cases)
+        elif cases == "synthetic":
+            _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
+        else:
+            _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab bend torque needs to be sampled
@@ -969,12 +1009,28 @@ class Slabs:
         ):
         """
         Function to calculate residual torque along trenches.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param residual_torque: residual torque to use for the calculation (default: None)
+        :type residual_torque:  dict
+        :param PROGRESS_BAR:    flag to show progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+        if cases == "reconstructed":
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic":
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.slab_pull_cases)
 
         # Loop through ages and cases
         for _case in _tqdm(
@@ -1027,6 +1083,15 @@ class Slabs:
         ):
         """
         Function to extract data on slabs through time as a pandas.DataFrame.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param var:             variable to extract (default: None)
+        :type var:              str, list
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -1103,7 +1168,16 @@ class Slabs:
         Function to save the 'Slabs' object.
         Data of the 'Slabs' object is saved to .parquet files.
 
-
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param file_dir:        directory to save the data (default: None)
+        :type file_dir:         str
+        :param PROGRESS_BAR:    flag to show progress bar (default: True)
+        :type PROGRESS_BAR:     bool
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
@@ -1154,7 +1228,16 @@ class Slabs:
         Function to export the 'Slabs' object.
         Data of the 'Slabs' object is exported to .csv files.
 
-
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         list, numpy.ndarray
+        :param file_dir:        directory to save the data (default: None)
+        :type file_dir:         str
+        :param PROGRESS_BAR:    flag to show progress bar (default: True)
+        :type PROGRESS_BAR:     bool       
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)

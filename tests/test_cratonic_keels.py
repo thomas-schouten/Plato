@@ -91,7 +91,7 @@ polgyons = pygplates.FeatureCollection("/Users/thomas/Documents/_Plato/Plato/sam
 reconstruction_model = gplately.PlateReconstruction(rotations, topologies)
 
 # %%
-for age in np.arange(0, 181):
+for age in [180]:#np.arange(0, 181):
     # if age == 100:
     #     continue
 

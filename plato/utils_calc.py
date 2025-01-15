@@ -41,6 +41,7 @@ class set_mech_params:
         self.L = 130e3                                      # compensation depth [m]
         self.L0 = 100e3                                     # lithospheric shell thickness [m]
         self.La = 200e3                                     # asthenospheric thickness [m]
+        self.za = 300e3                                     # maximum depth of asthenosphere [m]
         self.visc_a = 1e20                                  # reference astheospheric viscosity [Pa s]
         self.lith_visc = 500e20                             # lithospheric viscosity [Pa s]
         self.lith_age_RP = 60                               # age of oldest sea-floor in approximate ridge push calculation  [Ma]
@@ -295,12 +296,6 @@ def compute_GPE_force(
     minus_dy_lon = _numpy.where(minus_dy_lat < -90, points.lon + 180, points.lon)
     minus_dy_lon = _numpy.where(minus_dy_lon > 180, minus_dy_lon - 360, minus_dy_lon)
 
-    # Sample ages and compute crustal thicknesses at points
-    points["lithospheric_mantle_thickness"], points["crustal_thickness"], points["water_depth"] = compute_thicknesses(
-                points["seafloor_age"],
-                options
-    )
-
     # Height of layers for integration
     zw = mech.L - points.water_depth
     zc = mech.L - (points.water_depth + points.crustal_thickness)
@@ -388,23 +383,32 @@ def compute_mantle_drag_force(
     """
     # Get velocities at points
     if options["Reconstructed motions"]:
+        # if options["Continental keels"]:
+        #     # Mask points with seafloor age
+        #     mask = ~points["seafloor_age"].isna()
+
+        #     # Calculate mantle drag force under continents
+        #     points.loc[~mask, "mantle_drag_force_lat"] = -1 * points.loc[~mask, "velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] * options["Lateral viscosity variation"] / mech.La
+        #     points.loc[~mask, "mantle_drag_force_lon"] = -1 * points.loc[~mask, "velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] * options["Lateral viscosity variation"] / mech.La
+
+        # else:
+        #     # Select all points
+        #     mask = points.index
+
+        # # Calculate mantle drag force
+        # points.loc[mask, "mantle_drag_force_lat"] = -1 * points.loc[mask, "velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        # points.loc[mask, "mantle_drag_force_lon"] = -1 * points.loc[mask, "velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+        # points.loc[:, "mantle_drag_force_mag"] = _numpy.linalg.norm([points["mantle_drag_force_lat"], points["mantle_drag_force_lon"]], axis=0)
+
         if options["Continental keels"]:
-            # Mask points with seafloor age
-            mask = ~points["seafloor_age"].isna()
-
-            # Calculate mantle drag force under continents
-            points.loc[~mask, "mantle_drag_force_lat"] = -1 * points.loc[~mask, "velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] * options["Lateral viscosity variation"] / mech.La
-            points.loc[~mask, "mantle_drag_force_lon"] = -1 * points.loc[~mask, "velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] * options["Lateral viscosity variation"] / mech.La
-
+            points["mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / (300e3 - points["LAB_depth"])
+            points["mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / (300e3 - points["LAB_depth"])
         else:
-            # Select all points
-            mask = points.index
+            points["mantle_drag_force_lat"] = -1 * points["velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
+            points["mantle_drag_force_lon"] = -1 * points["velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
 
-        # Calculate mantle drag force
-        points.loc[mask, "mantle_drag_force_lat"] = -1 * points.loc[mask, "velocity_lat"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
-        points.loc[mask, "mantle_drag_force_lon"] = -1 * points.loc[mask, "velocity_lon"] * constants.cm_a2m_s * options["Mantle viscosity"] / mech.La
-        points.loc[:, "mantle_drag_force_mag"] = _numpy.linalg.norm([points["mantle_drag_force_lat"], points["mantle_drag_force_lon"]], axis=0)
-
+        points["mantle_drag_force_mag"] = _numpy.linalg.norm([points["mantle_drag_force_lat"], points["mantle_drag_force_lon"]], axis=0)
+        
     return points
 
 def compute_residual_force(
@@ -530,12 +534,6 @@ def compute_torque_on_plates(
     point_data[torque_var + "_torque_x"] = torques_xyz[0]
     point_data[torque_var + "_torque_y"] = torques_xyz[1]
     point_data[torque_var + "_torque_z"] = torques_xyz[2]
-    point_data[torque_var + "_torque_mag"] = _numpy.linalg.norm(
-        _numpy.array([
-            torques_xyz[0],
-            torques_xyz[1], torques_xyz[2]
-            ])
-        )
 
     # Sum components of plates based on plateID and fill NaN values with 0
     summed_data = point_data.groupby("plateID", as_index=False).sum().fillna(0)
@@ -555,6 +553,11 @@ def compute_torque_on_plates(
 
     # Restore the old index
     plate_data.index = old_index
+
+    # Calculate torque magnitude
+    plate_data[torque_var + "_torque_mag"] = _numpy.sqrt(
+        plate_data[torque_var + "_torque_x"]**2 + plate_data[torque_var + "_torque_y"]**2 + plate_data[torque_var + "_torque_z"]**2
+    )
 
     # Calculate the position vector of the centroid of the plate in Cartesian coordinates
     centroid_position_xyz = geocentric_spherical2cartesian(plate_data.centroid_lat, plate_data.centroid_lon, constants.mean_Earth_radius_m)
@@ -765,6 +768,34 @@ def compute_thicknesses(
             water_depth = _numpy.nan
 
     return lithospheric_mantle_thickness, crustal_thickness, water_depth
+
+def compute_LAB_depth(
+        point_data: _pandas.DataFrame,
+        options: Dict[str, Any],
+    ) -> _pandas.DataFrame:
+    """
+    Function to calculate LAB depths based on seafloor ages.
+
+    :param point_data:      point data.
+    :type point_data:       pandas.DataFrame
+    :param seafloor_ages:   seafloor ages for which LAB depths are calculated.
+    :type seafloor_ages:    array-like
+    :param options:         options for controlling the calculation, including the seafloor age profile.
+    :type options:          dict
+
+    :return:                updated point data with LAB depths.
+    :rtype:                 pandas.DataFrame
+    """
+    # Compute lithospheric mantle thickness, crustal thickness, and water depth
+    point_data["lithospheric_mantle_thickness"], point_data["crustal_thickness"], point_data["water_depth"] = compute_thicknesses(
+        point_data["seafloor_age"],
+        options
+    )
+
+    # Calculate LAB depth
+    point_data["LAB_depth"] = point_data["lithospheric_mantle_thickness"] + point_data["crustal_thickness"] + point_data["water_depth"]
+
+    return point_data
 
 def compute_subduction_flux(
         plate_data: _pandas.DataFrame,
@@ -1062,7 +1093,7 @@ def compute_synthetic_stage_rotation(
 
     # Normalise the rotation poles by the drag coefficient and the area of a plate
     if options["Continental keels"]:
-        stage_rotation_poles_mag /= options["Mantle viscosity"] * (1 + plates.continental_fraction * options["Lateral viscosity variation"]) / mech.La * plates.area
+        stage_rotation_poles_mag /= options["Mantle viscosity"] / (300e3 - plates.mean_LAB_depth) * plates.area
     else:
         stage_rotation_poles_mag /= options["Mantle viscosity"] / mech.La * plates.area
 

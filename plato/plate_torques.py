@@ -421,7 +421,7 @@ class PlateTorques():
         # Sample slab sediment thickness
         self.slabs.sample_slab_sediment_thickness(ages, cases, plateIDs, self.grids.sediment, PROGRESS_BAR)
 
-    def sample_lab_depths(
+    def calculate_lab_depths(
             self,
             ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             cases: Optional[Union[str, List[str]]] = None,
@@ -439,8 +439,11 @@ class PlateTorques():
         :param plateIDs:    plateIDs of interest (default: None)
         :type plateIDs:     int, float, list, numpy.ndarray
         """
-        # Sample LAB depths
-        self.points.sample_lab_depths(ages, cases, plateIDs, self.grids.continent, PROGRESS_BAR)
+        # Calculate LAB depths at points
+        self.points.calculate_lab_depths(ages, cases, plateIDs, self.grids.continent, PROGRESS_BAR)
+
+        # Calculate mean LAB depths for each plate
+        self.plates.calculate_mean_lab_depth(self.points, ages, cases, plateIDs, PROGRESS_BAR)
 
     def calculate_all_torques(
             self,

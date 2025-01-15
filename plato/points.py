@@ -10,6 +10,9 @@ import pandas as _pandas
 import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
+# Testing
+import matplotlib.pyplot as plt
+
 # Local libraries
 from . import utils_data, utils_calc, utils_init
 from .settings import Settings
@@ -154,15 +157,18 @@ class Points:
 
         # Calculate velocities at points
         if CALCULATE_VELOCITIES:
-            for _age in self.NEW_DATA.keys():
-                self.calculate_velocities(
-                    _age,
-                    self.NEW_DATA[_age],
-                    PROGRESS_BAR = False
-                )
+            for _age in self.settings.ages:
+                for _case in self.settings.reconstructed_cases:
+                    if _age in self.NEW_DATA.keys() or self.data[_age][_case]["velocity_mag"].mean() == 0:
+                        self.calculate_velocities(
+                            _age,
+                            _case,
+                            PROGRESS_BAR = False
+                        )
 
         # Set flags for computed torques
         self.sampled_seafloor = False
+        self.sampled_LAB = False
         self.computed_gpe_torque = False
         self.computed_mantle_drag_torque = False
 
@@ -279,6 +285,7 @@ class Points:
             plateIDs,
             grids,
             vars,
+            default_cases = "gpe",
             PROGRESS_BAR = PROGRESS_BAR,
         )
 
@@ -317,6 +324,7 @@ class Points:
             plateIDs,
             grids,
             vars,
+            default_cases = "mantle drag",
             PROGRESS_BAR = PROGRESS_BAR,
         )
 
@@ -331,7 +339,8 @@ class Points:
             grids: Dict[Union[int, float], Union[_xarray.Dataset, Dict[str, _xarray.Dataset]]] = None,
             vars: List[str] = ["seafloor_age"],
             sampling_coords: List[str] = ["lat", "lon"],
-            cols: List[str] = ["seafloor_age"],
+            cols: Optional[List[str]] = None,
+            default_cases: Optional[str] = None,
             PROGRESS_BAR: bool = True,
         ):
         """
@@ -354,9 +363,19 @@ class Points:
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define default case if not provided
+        if not default_cases:
+            default_cases = self.settings.cases
+        elif default_cases == "mantle drag":
+            default_cases = self.settings.mantle_drag_cases
+        elif default_cases == "gpe":
+            default_cases = self.settings.gpe_cases
+        elif default_cases == "points":
+            default_cases = self.settings.points
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
+        _iterable = utils_data.select_iterable(cases, default_cases)
 
         # Define variables if not provided
         if vars is not None and isinstance(vars, str):
@@ -397,7 +416,7 @@ class Points:
                 _vars = list(_grid.data_vars) if not _vars else _vars
 
                 # Set columns to _vars if not already defined or if not of the same length
-                _cols = _vars if not cols or len(cols) != len(_vars) else cols
+                _cols = _vars if cols is None or len(cols) != len(_vars) else cols
 
                 # Sample grid at points for each variable
                 for _var, _col in zip(_vars, _cols):
@@ -417,6 +436,69 @@ class Points:
                         entries, 
                         [_col],
                     )
+
+    def calculate_lab_depths(
+            self,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            grids: Optional[Dict[Union[int, float], _xarray.Dataset]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Function to compute the depth of the lithosphere-asthenosphere boundary (LAB) at points.
+
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+
+        # Define cases if not provided
+        _iterable = utils_data.select_iterable(cases, self.settings.mantle_drag_cases)
+
+        # Sample LAB depths, if not already sampled
+        if not self.sampled_LAB:
+            self.sample_lab_depths(
+                ages,
+                cases,
+                plateIDs,
+                grids,
+            )
+        
+        # Loop through ages and cases
+        for _age in _tqdm(
+                _ages, 
+                desc="Calculating LAB depths at points", 
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            for key, entries in _iterable.items():
+                if self.settings.options[key]["Continental keels"]:
+                    # Select points
+                    _data = self.data[_age][key].copy()
+
+                    # Remove continents (i.e. points with NaN values)
+                    _data = _data[_data["seafloor_age"].notna()]
+
+                    # Calculate LAB depths
+                    computed_data = utils_calc.compute_LAB_depth(
+                        _data,
+                        self.settings.options[key],
+                    )
+
+                    # Enter sampled data back into the DataFrame
+                    self.data[_age][key].loc[_data.index, "LAB_depth"] = computed_data.copy()
+                    
+                    # Copy to other entries
+                    if len(entries) > 1:
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries,
+                            ["LAB_depth"],
+                        )
     
     def calculate_gpe_force(
             self,
@@ -442,7 +524,12 @@ class Points:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
+        if cases == "reconstructed":
+            _iterable = utils_data.select_iterable(None, self.settings.reconstructed_cases)
+        elif cases == "synthetic":
+            _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
+        else:
+            _iterable = utils_data.select_iterable(cases, self.settings.gpe_cases)
 
         # Loop through reconstruction times
         for _age in _tqdm(
@@ -517,7 +604,12 @@ class Points:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.mantle_drag_cases)
+        if cases == "reconstructed":
+            _iterable = utils_data.select_iterable(None, self.settings.reconstructed_cases)
+        elif cases == "synthetic":
+            _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
+        else:
+            _iterable = utils_data.select_iterable(cases, self.settings.mantle_drag_cases)
 
         # Loop through reconstruction times
         for _age in _tqdm(
@@ -542,20 +634,21 @@ class Points:
                         logging.info(f"No valid points found for case {key} at age {_age} Ma.")
                         continue
                         
-                    # Calculate GPE force
-                    _data = utils_calc.compute_mantle_drag_force(
+                    # Calculate mantle force
+                    computed_data = utils_calc.compute_mantle_drag_force(
                         _data,
                         self.settings.options[key],
                         self.settings.constants,
                     )
 
                     # Enter sampled data back into the DataFrame
-                    self.data[_age][key].loc[_data.index] = _data
+                    self.data[_age][key].loc[_data.index] = computed_data
                     
                     # Copy to other entries
                     cols = [
                         "mantle_drag_force_lat",
                         "mantle_drag_force_lon",
+                        "mantle_drag_force_mag",
                     ]
                     self.data[_age] = utils_data.copy_values(
                         self.data[_age], 
@@ -588,7 +681,12 @@ class Points:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+        if cases == "reconstructed":
+            _, _cases = self.settings.reconstructed_cases.items()
+        elif cases == "synthetic":
+            _, _cases = self.settings.synthetic_cases.items()
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Loop through ages and cases
         for _case in _tqdm(

@@ -41,29 +41,75 @@ for age in ages:
 # Set up PlateTorques object
 M2016 = PlateTorques(reconstruction_name = reconstruction_name, ages = ages, seafloor_age_grids = seafloor_age_grids, continental_grids = continental_grids)
 
-# Sample seafloor ages
-M2016.sample_seafloor_ages()
-
-# Sample LAB depth
-M2016.sample_lab_depths()
+for age in M2016.ages:
+    for case in M2016.cases:
+        M2016.points.data[age][case]["LAB_depth"] = 0.
+        M2016.plates.data[age][case]["mean_LAB_depth"] = 0.
 
 # %%
+M2016.calculate_slab_pull_torque()
 M2016.calculate_gpe_torque()
-M2016.points.data[0]["ref"]["lithospheric_mantle_thickness"]
+for i in range(0,3):
+    # Sample seafloor ages
+    M2016.sample_seafloor_ages()
+
+    # Sample LAB depth
+    M2016.calculate_lab_depths()
+    
+    if i > 0:
+        M2016.settings.options["ref"]["Continental keels"] = True
+    else:
+        M2016.settings.options["ref"]["Continental keels"] = False
+    
+    if i > 1:
+        M2016.settings.options["ref"]["Slab suction torque"] = True
+        M2016.calculate_slab_suction_torque()
+    else:
+        M2016.settings.options["ref"]["Slab suction torque"] = False
+
+    print(i, M2016.settings.options["ref"]["Continental keels"], M2016.settings.options["ref"]["Slab suction torque"])    
+    
+    M2016.calculate_mantle_drag_torque()
+
+    optimise_M2016 = Optimisation(M2016)
+    optimise_M2016.minimise_residual_torque_v4(plateIDs=[901, 911, 201, 101])
+# %%
+
+# %%
+M2016.plates.data[0]["ref"].mantle_drag_torque_mag
+
 # %%
 plt.scatter(
     M2016.points.data[0]["ref"]["lon"],
     M2016.points.data[0]["ref"]["lat"],
-    c=M2016.points.data[0]["ref"]["lithospheric_mantle_thickness"] + M2016.points.data[0]["ref"]["crustal_thickness"],
-    cmap="viridis",
-    vmin=0, vmax=2.5e5
+    c=M2016.points.data[0]["ref"]["mantle_drag_force_mag"],
 )
+plt.colorbar()
+# M2016.points.data[0]["ref"]["mantle_drag_force_mag"]
+
+# %%
+for index, row in M2016.plates.data[0]["ref"].iterrows():
+    print(row.plateID, row.mean_LAB_depth)
+
+# %%
+print(np.sum(M2016.plates.data[0]["ref"]["mean_LAB_depth"] * M2016.plates.data[0]["ref"]["area"]) / np.sum(M2016.plates.data[0]["ref"]["area"]))
+# %%
+M2016.calculate_gpe_torque()
+M2016.points.data[0]["ref"]["lithospheric_mantle_thickness"]
+# %%
+# plt.scatter(
+#     M2016.points.data[0]["ref"]["lon"],
+#     M2016.points.data[0]["ref"]["lat"],
+#     c=M2016.points.data[0]["ref"]["lithospheric_mantle_thickness"] + M2016.points.data[0]["ref"]["crustal_thickness"],
+#     cmap="viridis",
+#     vmin=1.2e5, vmax=2.5e5
+# )
 plt.scatter(
     M2016.points.data[0]["ref"]["lon"],
     M2016.points.data[0]["ref"]["lat"],
     c=M2016.points.data[0]["ref"]["LAB_depth"],
     cmap="viridis",
-    vmin=0, vmax=2.5e5
+    vmin=1.2e5, vmax=2.5e5
 )
 plt.colorbar()
 plt.show()

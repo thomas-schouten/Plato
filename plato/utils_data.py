@@ -581,7 +581,7 @@ def get_options(
         False,
         False,
         1,
-        "half space cooling",
+        "plate model",
         False,
         0,
         False,

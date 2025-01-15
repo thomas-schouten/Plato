@@ -317,6 +317,71 @@ class Plates:
                             entries, 
                             ["continental_fraction"], 
                         )
+
+    def calculate_mean_lab_depth(
+            self,
+            points: Optional[Points] = None,
+            ages: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            cases: Optional[Union[str, List[str]]] = None,
+            plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
+            PROGRESS_BAR: bool = True,
+        ):
+        """
+        Function to calculate the continental fraction of the plates.
+
+        :param points:          `Points` object (default: None)
+        :type points:           plato.points.Points
+        :param ages:            ages of interest (default: None)
+        :type ages:             float, int, list, numpy.ndarray
+        :param cases:           cases of interest (default: None)
+        :type cases:            str, list
+        :param plateIDs:        plateIDs of interest (default: None)
+        :type plateIDs:         int, float, list, numpy.ndarray
+        :param PROGRESS_BAR:    flag to enable the tqdm progress bar (default: True)
+        :type PROGRESS_BAR:     bool
+        """
+        # Define ages if not provided
+        _ages = utils_data.select_ages(ages, self.settings.ages)
+        
+        # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
+        _iterable = utils_data.select_iterable(cases, self.settings.cases)
+
+        # Loop through ages
+        for _age in _tqdm(
+                _ages, 
+                desc="Calculating mean LAB depths",
+                disable=(self.settings.logger.level in [logging.INFO, logging.DEBUG] or not PROGRESS_BAR)
+            ):
+            # Check if age in point data
+            if _age in points.data.keys():
+                # Loop through cases
+                for key, entries in _iterable.items():
+                    # Define plateIDs if not provided
+                    _plateIDs = utils_data.select_plateIDs(
+                        plateIDs,
+                        self.data[_age][key].plateID,
+                    )
+
+                    # Loop through plateIDs
+                    for _plateID in _plateIDs:
+                        # Select point data
+                        _data = points.data[_age][key]
+                        _data = _data[_data.plateID == _plateID]
+
+                        if _data.empty:
+                            continue
+
+                        # Calculate continental fraction for plate
+                        self.data[_age][key].loc[self.data[_age][key]["plateID"] == _plateID, "mean_LAB_depth"] = _numpy.sum(_data["LAB_depth"] * _data["segment_area"]) / _data["segment_area"].sum()
+
+                    # Copy values to other cases, if necessary
+                    if len(entries) > 1:
+                        self.data[_age] = utils_data.copy_values(
+                            self.data[_age], 
+                            key, 
+                            entries, 
+                            ["mean_LAB_depth"], 
+                        )
                     
     def calculate_rms_velocity(
             self,
@@ -490,7 +555,7 @@ class Plates:
             ):
             logging.info(f"Calculating torque on plates at {_age} Ma")
             for key, entries in _iterable.items():
-
+                # Select data
                 _plate_data = self.data[_age][key].copy()
                 _point_data = point_data[_age][key].copy()
 
