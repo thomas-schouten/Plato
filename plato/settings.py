@@ -104,12 +104,16 @@ class Settings:
         self.slab_pull_cases = self.process_cases([
             "Slab pull torque", "Seafloor age profile", "Sample sediment grid", 
             "Active margin sediments", "Sediment subduction", "Sample erosion grid", 
-            "Slab pull constant", "Shear zone width", "Slab length"
+            "Slab pull constant", "Shear zone width", "Slab length", "Slab tesselation spacing"
         ])
-        self.slab_bend_cases = self.process_cases(["Slab bend torque", "Seafloor age profile"])
-        self.slab_suction_cases = self.process_cases(["Slab suction torque", "Seafloor age profile"])
+        self.slab_suction_cases = self.process_cases([
+            "Slab suction torque", "Slab pull torque", "Seafloor age profile", "Sample sediment grid", 
+            "Active margin sediments", "Sediment subduction", "Sample erosion grid", 
+            "Slab pull constant", "Shear zone width", "Slab length", "Slab tesselation spacing"
+        ])
+        self.slab_bend_cases = self.process_cases(["Slab bend torque", "Seafloor age profile", "Slab tesselation spacing"])
         self.gpe_cases = self.process_cases(["Continental crust", "Seafloor age profile", "Grid spacing"])
-        self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing", "Continental keels"])
+        self.mantle_drag_cases = self.process_cases(["Reconstructed motions", "Grid spacing", "Continental keels", "Mantle viscosity"])
 
         # Split cases with synthetic and reconstructed motions:
         self.reconstructed_cases = []; self.synthetic_cases = []
@@ -134,14 +138,13 @@ class Settings:
             645, # East Sunda
             678, # East Philippine
             679, # Halmahera
-            673, # Woyla
             688, # Proto-Caroline
             806, # Hikurangi
             821, # Tonga-Kermadec
             827, # New Hebrides
             847, # Vityaz
             853, # West Solomon Sea
-            609, 844, 841, 865, 869, 943, # Junction
+            609, 786, 844, 841, 865, 869, 943, # Junction
             1072, 1073, 1080, # Insular
             2007, # Antilles
             9052, 95104, # Central America
@@ -149,6 +152,19 @@ class Settings:
             9040, # Angayucham
             67350, # Woyla
         ]
+        self.continental_arc_plateIDs = [
+            101, 2000, # North America
+            201, 291, # South America
+            301, 735, 7250, # Eurasia
+            501, # India
+            503, # Arabia
+            505, # Iran
+            606, # Xigaze
+            802, # Antarctica
+            833, # Gondwanaland
+            8680, # East Australia
+        ]
+        self.OVERRIDE_ARC_TYPES = True if self.name in ["Seton2012", "Muller2016", "Muller2019", "Matthews2016", "Clennett2020"] else False
 
         logging.info("Settings initialisation complete.")
 

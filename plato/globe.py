@@ -260,7 +260,12 @@ class Globe:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            return
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Calculate the net rotation of the Earth's lithosphere
         for i, _age in enumerate(_tqdm(
@@ -360,7 +365,12 @@ class Globe:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            return
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Calculate the net migration of the Earth's subduction zones
         for i, _age in enumerate(_tqdm(

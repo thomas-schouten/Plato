@@ -130,6 +130,7 @@ class PlateTorques():
             self.points = Points(
                 self.settings,
                 self.reconstruction,
+                plate_data = self.plates.data,
                 resolved_geometries = self.plates.resolved_geometries
             )
 

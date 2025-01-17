@@ -70,9 +70,16 @@ for var in litho.data_vars:
         litho[var].values
     )
 # %%
-plt.imshow(litho.LAB, origin="lower")
+plt.imshow(litho.LAB.values, origin="lower")
 plt.colorbar()
+plt.show()
 
+# %%
+selected_litho = np.where(litho.LAB.values > -120e3, litho.LAB.values, np.nan)
+plt.imshow(np.abs(selected_litho), origin="lower", vmin=0, vmax=250e3)
+plt.colorbar()
+plt.show()
+print(np.nanmean(selected_litho))
 # %%
 # Interpolate back to the original resolution
 litho_cut = litho.interp_like(lithoref)

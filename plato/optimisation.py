@@ -576,11 +576,11 @@ class Optimisation():
         # Loop through ages
         for _age in _ages:
             for _case in _cases:
-
                 # Set range of slab pull coefficients
                 if self.settings.options[_case]["Sediment subduction"]:
                     # Range is smaller with sediment subduction
-                    sp_consts = _numpy.linspace(1e-5, 0.25, grid_size)
+                    sp_consts = _numpy.linspace(1e-5, 0.1, grid_size)
+                    print("smaller range")
                 else:
                     sp_consts = _numpy.linspace(1e-5, 1., grid_size)
 
@@ -670,7 +670,7 @@ class Optimisation():
 
                 # Plot
                 if plot == True:
-                    fig, ax = plt.subplots(1, 2, figsize=(15, 12))
+                    fig, ax = plt.subplots(1, 1, figsize=(15, 12))
                     im = ax.imshow(residual_mag_normalised[:, :, opt_k], cmap="cmc.lapaz_r", vmin=-1.5, vmax=1.5)
                     ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
                     ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))
@@ -682,7 +682,7 @@ class Optimisation():
                     fig.colorbar(im, label = "Log(residual torque/driving torque)")
                     plt.show()
 
-                    fig, ax = plt.subplots(1, 2, figsize=(15, 12))
+                    fig, ax = plt.subplots(1, 1, figsize=(15, 12))
                     im = ax.imshow(residual_mag_normalised[:, :, opt_k], cmap="cmc.lapaz_r", vmin=-1.5, vmax=1.5)
                     ax.set_yticks(_numpy.linspace(0, grid_size - 1, 5))
                     ax.set_xticks(_numpy.linspace(0, grid_size - 1, 5))

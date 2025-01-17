@@ -22,7 +22,7 @@ reconstruction_name = "Muller2016"
 
 # Reconstruction ages of interest
 # ages = np.arange(0, 51, 5)
-ages = [0]
+ages = [100, 180]
 
 # Set directory to save the results
 # results_dir = "01-Results"
@@ -41,10 +41,27 @@ for age in ages:
 # Set up PlateTorques object
 M2016 = PlateTorques(reconstruction_name = reconstruction_name, ages = ages, seafloor_age_grids = seafloor_age_grids, continental_grids = continental_grids)
 
-for age in M2016.ages:
-    for case in M2016.cases:
-        M2016.points.data[age][case]["LAB_depth"] = 0.
-        M2016.plates.data[age][case]["mean_LAB_depth"] = 0.
+M2016.sample_arc_seafloor_ages()
+# %%
+plot_age = 180
+fig, ax = plt.subplots(subplot_kw={"projection": ccrs.Robinson()})
+ax.imshow(
+    M2016.grids.seafloor_age[plot_age].seafloor_age, 
+    vmin=0, vmax=250, 
+    origin="lower", 
+    transform=ccrs.PlateCarree(),
+    alpha=.5
+)
+ax.scatter(
+    M2016.slabs.data[plot_age]["ref"].arc_sampling_lon,
+    M2016.slabs.data[plot_age]["ref"].arc_sampling_lat,
+    c=M2016.slabs.data[plot_age]["ref"].continental_arc,
+    vmin=0, vmax=1,
+    transform = ccrs.PlateCarree()
+)
+ax.set_global()
+# fig.colorbar()
+plt.show()
 
 # %%
 M2016.calculate_slab_pull_torque()

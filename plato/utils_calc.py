@@ -46,8 +46,9 @@ class set_mech_params:
         self.lith_visc = 500e20                             # lithospheric viscosity [Pa s]
         self.lith_age_RP = 60                               # age of oldest sea-floor in approximate ridge push calculation  [Ma]
         self.yield_stress = 1050e6                          # Byerlee yield strength at 40km, i.e. 60e6 + 0.6*(3300*10.0*40e3) [Pa]
-        self.cont_lith_thick = 100e3                        # continental lithospheric thickness (where there is no age) [m]
-        self.cont_crust_thick = 33e3                        # continental crustal thickness (where there is no age) [m]
+        self.cont_lith_thick = 100e3                        # reference continental lithospheric thickness (where there is no age) [m]
+        self.cont_crust_thick = 33e3                        # reference continental crustal thickness (where there is no age) [m]
+        self.cont_LAB_depth = 60e3                          # reference depth of the lithosphere-asthenosphere boundary below continents [m]
         self.island_arc_lith_thick = 50e3                   # island arc lithospheric thickness (where there is an age) [m]
         self.ocean_crust_thick = 8e3                        # oceanic crustal thickness [m]
 
@@ -676,7 +677,7 @@ def sample_grid(
 
     # Interpolate age value at point
     sampled_values = _numpy.asarray(
-        grid.interp({coords[0]: points_lat_da, coords[1]: points_lon_da}, method="nearest").values.tolist()
+        grid.interp({coords[0]: points_lat_da, coords[1]: points_lon_da}, method="linear").values.tolist()
     )
 
     # Close the grid to free memory space
@@ -802,7 +803,7 @@ def compute_LAB_depth(
     nan_mask = point_data["LAB_depth"].isna()
 
     # Fill NaN values with 0
-    point_data.loc[nan_mask, "LAB_depth"] = mech.cont_crust_thick + mech.cont_lith_thick
+    point_data.loc[nan_mask, "LAB_depth"] = mech.cont_LAB_depth
 
     return point_data
 

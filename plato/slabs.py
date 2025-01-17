@@ -10,6 +10,10 @@ import pandas as _pandas
 import xarray as _xarray
 from tqdm import tqdm as _tqdm
 
+# Testing
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+
 # Local libraries
 from . import utils_data, utils_calc, utils_init
 from .settings import Settings
@@ -107,10 +111,13 @@ class Slabs:
         # Initialise dictionary to store data that was newly initialised
         self.NEW_DATA = {age: [] for age in self.settings.ages}
 
+        # Get iterable
+        _iterable = utils_data.select_iterable(None, self.settings.cases)
+
         # Loop through times
         for _age in _tqdm(self.settings.ages, desc="Loading slab data", disable=self.settings.logger.level==logging.INFO):
             # Load available data
-            for key, entries in self.settings.point_cases.items():
+            for key, entries in _iterable.items():
                 # Make list to store available cases
                 available_cases = []
 
@@ -207,7 +214,12 @@ class Slabs:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            return
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Loop through ages and cases
         for _age in _tqdm(
@@ -429,6 +441,7 @@ class Slabs:
             cases: Optional[Union[str, List[str]]] = None,
             plateIDs: Optional[Union[int, float, List[Union[int, float]], _numpy.ndarray]] = None,
             PROGRESS_BAR: bool = True,
+            OVERRIDE: Optional[bool] = None,
         ):
         """
         Function to set whether a trench has a continental arc.
@@ -450,7 +463,11 @@ class Slabs:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.slab_cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.cases)
+
+        # Define whether or not to override arc types
+        if OVERRIDE is None:
+            OVERRIDE = self.settings.OVERRIDE_ARC_TYPES
 
         # Loop through slab cases
         for key, entries in _iterable.items():
@@ -460,12 +477,30 @@ class Slabs:
                 _plateIDs = utils_data.select_plateIDs(plateIDs, self.data[_age][key]["trench_plateID"].unique())
 
                 # Select points
-                _data = self.data[_age][key]
+                _data = self.data[_age][key].copy()
                 if plateIDs is not None:
                     _data = _data[_data.trench_plateID.isin(_plateIDs)]
 
-                # Set continental arc
-                _data.loc[_data.arc_seafloor_age.isna() & ~_data.trench_plateID.isin(self.settings.oceanic_arc_plateIDs), "continental_arc"] = True
+                # Set points with a seafloor age to False
+                _data.loc[~_numpy.isnan(_data.arc_seafloor_age), "continental_arc"] = False
+
+                if OVERRIDE:
+                    # # NOTE: this is partly hardcoded, as some oceanic arcs of the Earthbyte reconstructions^* are masked (i.e. value is NaN) on the seafloor age grid (e.g. Caribbean)
+                    # ^* Earthbyte reconstructions: Seton et al. (2012), Müller et al. (2016, 2019), Matthews et al. (2016), Clennett et al. (2020)
+                    _data.loc[_data.trench_plateID.isin(self.settings.oceanic_arc_plateIDs), "continental_arc"] = False
+
+                    # Additional manual override: Kohistan-Ladakh Arc prior to rifting
+                    if _age > 157:
+                        _data.loc[_data.trench_plateID == 518, "continental_arc"] = True
+
+                    # Additional manual override: Woyla Arc prior to rifting
+                    if _age > 145:
+                        _data.loc[_data.trench_plateID.isin([673, 67350]), "continental_arc"] = True
+
+                    _data.loc[_data.trench_plateID.isin(self.settings.continental_arc_plateIDs), "continental_arc"] = True
+
+                    # Additional manual override: East Gondwana
+                    _data.loc[(_data.trench_plateID == 801) & (_data.lat < -57), "continental_arc"] = True
 
                 # Enter sampled data back into the DataFrame
                 self.data[_age][key].loc[_data.index] = _data
@@ -498,7 +533,7 @@ class Slabs:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+        _iterable = utils_data.select_iterable(cases, self.settings.cases)
 
         # Define sampling points
         type = "arc" if plate == "upper" else "slab"
@@ -602,7 +637,7 @@ class Slabs:
                             iter_num = 20
                         if plate == "upper":
                             current_sampling_distance = +100
-                            iter_num = 4
+                            iter_num = 6
 
                         for i in range(iter_num):
                             # Mask data
@@ -648,7 +683,7 @@ class Slabs:
                                     current_sampling_distance -= 30 * (2 ** (i // 2))
 
                             elif plate == "upper":
-                                current_sampling_distance += 100
+                                current_sampling_distance += 50
 
                     # Enter sampled data back into the DataFrame
                     self.data[_age][key].loc[_data.index, _col] = accumulated_data
@@ -769,7 +804,7 @@ class Slabs:
         elif cases == "synthetic":
             _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
         else:
-            _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+            _iterable = utils_data.select_iterable(cases, self.settings.cases)
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
@@ -862,7 +897,7 @@ class Slabs:
         elif cases == "synthetic":
             _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
         else:
-            _iterable = utils_data.select_iterable(cases, self.settings.slab_suction_cases)
+            _iterable = utils_data.select_iterable(cases, self.settings.cases)
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
@@ -943,7 +978,7 @@ class Slabs:
         elif cases == "synthetic":
             _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
         else:
-            _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
+            _iterable = utils_data.select_iterable(cases, self.settings.cases)
 
         # Loop through valid cases
         # Order of loops is flipped to skip cases where no slab bend torque needs to be sampled
@@ -1030,7 +1065,7 @@ class Slabs:
         elif cases == "synthetic":
             _cases = self.settings.synthetic_cases
         else:
-            _cases = utils_data.select_cases(cases, self.settings.slab_pull_cases)
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Loop through ages and cases
         for _case in _tqdm(

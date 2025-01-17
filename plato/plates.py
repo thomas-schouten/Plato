@@ -426,8 +426,13 @@ class Plates:
                 resolved_geometries = self.resolved_geometries
             )
         
-        # Define cases if not provided, default to GPE cases because it only depends on the grid spacing
-        _iterable = utils_data.select_iterable(cases, self.settings.cases)
+        # Define cases if not provided
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _iterable = utils_data.select_iterable(None, self.settings.reconstructed_cases)
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
+        else:
+            _iterable = utils_data.select_iterable(cases, self.settings.slab_pull_cases)
 
         # Loop through ages
         for _age in _tqdm(
@@ -521,18 +526,24 @@ class Plates:
      
         # Define cases if not provided, defaulting to the cases that are relevant for the torque variable
         if torque_var == "slab_pull":
-            matching_cases = self.settings.slab_pull_cases
+            matching_cases = self.settings.cases
         elif torque_var == "slab_bend":
             matching_cases = self.settings.slab_bend_cases
         elif torque_var == "slab_suction":
-            matching_cases = self.settings.slab_suction_cases
+            matching_cases = self.settings.cases
         elif torque_var == "GPE":
             matching_cases = self.settings.gpe_cases
         elif torque_var == "mantle_drag":
             matching_cases = self.settings.mantle_drag_cases
         
         # Define iterable, if cases not provided
-        _iterable = utils_data.select_iterable(cases, matching_cases)
+        # Define cases if not provided
+        if cases == "reconstructed":
+            _iterable = utils_data.select_iterable(None, self.settings.reconstructed_cases)
+        elif cases == "synthetic":
+            _iterable = utils_data.select_iterable(None, self.settings.synthetic_cases)
+        else:
+            _iterable = utils_data.select_iterable(cases, matching_cases)
 
         # Define plateID column of point data
         if torque_var == "slab_pull" or torque_var == "slab_bend":
@@ -629,7 +640,12 @@ class Plates:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Inform the user that the driving torques are being calculated
         logging.info("Computing driving torques...")
@@ -685,7 +701,12 @@ class Plates:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Inform the user that the driving torques are being calculated
         logging.info(f"Computing residual torques...")
@@ -745,9 +766,14 @@ class Plates:
         """
         # Define ages if not provided
         _ages = utils_data.select_ages(ages, self.settings.ages)
-        
+
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            return
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Loop through cases
         # Order of loops is flipped to skip cases where no slab pull torque needs to be sampled
@@ -816,7 +842,12 @@ class Plates:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Check if reference case is provided, otherwise default to first case in list
         if reference_case == None:
@@ -888,7 +919,12 @@ class Plates:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Define plateIDs if not provided
         # Default is to select all major plates in the Müller et al. (2016) reconstruction
@@ -979,7 +1015,12 @@ class Plates:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir
@@ -1054,7 +1095,12 @@ class Plates:
         _ages = utils_data.select_ages(ages, self.settings.ages)
 
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
         
         # Get file dir
         _file_dir = self.settings.dir_path if file_dir is None else file_dir

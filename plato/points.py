@@ -69,6 +69,7 @@ class Points:
             cases_file: Optional[str] = None,
             cases_sheet: str = "Sheet1",
             files_dir: Optional[str] = None,
+            plate_data: Optional[Dict[float, Dict[str, _pandas.DataFrame]]] = None,
             resolved_geometries: Dict[float, Dict[str, _geopandas.GeoDataFrame]] = None,
             PARALLEL_MODE: bool = False,
             DEBUG_MODE: bool = False,
@@ -163,6 +164,7 @@ class Points:
                         self.calculate_velocities(
                             _age,
                             _case,
+                            plate_data,
                             PROGRESS_BAR = False
                         )
 
@@ -199,7 +201,12 @@ class Points:
         _ages = utils_data.select_ages(ages, self.settings.ages)
         
         # Define cases if not provided
-        _cases = utils_data.select_cases(cases, self.settings.point_cases)
+        if cases == "reconstructed" or cases == ["reconstructed"]:
+            _cases = self.settings.reconstructed_cases
+        elif cases == "synthetic" or cases == ["synthetic"]:
+            _cases = self.settings.synthetic_cases
+        else:
+            _cases = utils_data.select_cases(cases, self.settings.cases)
 
         # Loop through ages and cases
         for _age in _tqdm(
@@ -218,6 +225,11 @@ class Points:
                     ):
                         # Get stage rotation from the provided DataFrame in the dictionary
                         _stage_rotation = stage_rotation[_age][_case][stage_rotation[_age][_case].plateID == plateID]
+
+                        if _stage_rotation.empty or _stage_rotation.area.values[0] < self.settings.options[_case]["Minimum plate area"]:
+                            continue
+
+                        area = _stage_rotation.area
                 
                     # Get stage rotation, if not provided
                     else:
@@ -227,6 +239,7 @@ class Points:
                             from_time=_age + self.settings.options[_case]["Velocity time step"],
                             anchor_plate_id = self.settings.options[_case]["Anchor plateID"]
                         ).get_lat_lon_euler_pole_and_angle_degrees()
+                        area = None
 
                         # Organise as DataFrame
                         _stage_rotation = _pandas.DataFrame({
@@ -236,8 +249,11 @@ class Points:
                                 "pole_angle": [stage_rotation[2]],
                             })
                         
-                    # Make mask for plate
-                    mask = self.data[_age][_case].plateID == plateID
+                    # Make mask for plates
+                    if area is not None:
+                        mask = self.data[_age][_case].plateID == plateID
+                    else:
+                        mask = self.data[_age][_case].index
                                             
                     # Compute velocities
                     velocities = utils_calc.compute_velocity(
